@@ -29,7 +29,7 @@ class DataRepository {
 
     // 3. Load equipment YAML files
     final equipPaths = manifestMap.keys.where(
-      (p) => p.startsWith('data/equipment/') && p.endsWith('.yaml'),
+      (p) => p.startsWith('data/learn_equipment/') && p.endsWith('.yaml'),
     );
 
     for (final path in equipPaths) {
