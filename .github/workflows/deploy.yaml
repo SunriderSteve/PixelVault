@@ -1,14 +1,16 @@
+# .github/workflows/deploy.yml
 name: Deploy Flutter Web to GitHub Pages
 
 on:
   push:
-    branches: [main] # or whichever branch you work on
+    branches: [main]
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
-      # 1. Checkout your code
+      # 1. Check out the repo
       - uses: actions/checkout@v4
 
       # 2. Install Flutter
@@ -19,10 +21,16 @@ jobs:
       # 3. Build the web app
       - run: flutter build web --release --base-href /${{ github.repository }}
 
-      # 4. Deploy to GitHub Pages
+      # 4. Configure GitHub Pages
       - uses: actions/configure-pages@v3
+
+      # 5. Upload the build output
       - uses: actions/upload-pages-artifact@v3
         with:
           path: build/web
+
+      # 6. Deploy to GitHub Pages
       - uses: actions/deploy-pages@v4
-        needs: [upload-pages-artifact]
+        with:
+          # optional: wait for the Pages deployment to complete
+          wait-for-deployment: true
