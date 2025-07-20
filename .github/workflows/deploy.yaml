@@ -5,6 +5,11 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read # default, needed to checkout code
+  pages: write # needed to upload/publish Pages
+  id-token: write # needed to mint the OIDC token for deploy-pages
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
