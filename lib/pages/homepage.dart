@@ -1,41 +1,92 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart'; // For navigation between pages
+import 'package:flutter_avif/flutter_avif.dart';
 
+class NavCard extends StatelessWidget {
+  final String title;
+  final String imagePath;
+  final VoidCallback onTap;
+  const NavCard({
+    super.key,
+    required this.title,
+    required this.imagePath,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12), // Rounded corners
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          mainAxisSize: MainAxisSize.min, // Wrap content height
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Image with fixed aspect ratio for responsive height
+            AspectRatio(
+              aspectRatio: 16 / 9, // Adjust ratio as needed
+              child: AvifImage.asset(imagePath, fit: BoxFit.cover),
+            ),
+            // Title area
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+              child: Text(
+                title,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The homepage showing three navigation cards
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // Blue horizontal bar with title; no back button on homepage
       appBar: AppBar(
-        title: const Text('PixelVault'), // Main app bar title
-        actions: [
-          // Popup menu for quick navigation to all main pages
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.menu),
-            onSelected: (value) {
-              switch (value) {
-                case 'home':
-                  context.go('/'); // Navigate to Home
-                  break;
-                case 'equipment':
-                  context.go('/equip'); // Navigate to Equipment List
-                  break;
-                case 'scenarios':
-                  context.go('/scenarios'); // Navigate to Scenarios List
-                  break;
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'home', child: Text('Home')),
-              PopupMenuItem(value: 'equipment', child: Text('Equipment List')),
-              PopupMenuItem(value: 'scenarios', child: Text('Scenarios List')),
-            ],
-          ),
-        ],
+        backgroundColor: Colors.blue,
+        automaticallyImplyLeading: false,
+        title: const Text('PixelVault'),
+        centerTitle: true,
       ),
-      body: const Center(
-        child: Text('Welcome to PixelVault!'), // Placeholder welcome text
+      // Grid with responsive cards
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: GridView.count(
+          crossAxisCount: 2, // Two cards per row
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+          childAspectRatio: 6 / 4, // Width to height ratio for cards
+          children: [
+            NavCard(
+              title: 'Learn',
+              imagePath: 'assets/images/homepage/learn.avif',
+              onTap: () => context.go('/equip'),
+            ),
+            NavCard(
+              title: 'Production Scenarios',
+              imagePath: 'assets/images/homepage/scenarios.avif',
+              onTap: () => context.go('/scenarios'),
+            ),
+            NavCard(
+              title: 'Inventory List',
+              imagePath: 'assets/images/homepage/inventory.avif',
+              onTap: () => context.go('/inventory'), // Route stub
+            ),
+          ],
+        ),
       ),
     );
   }

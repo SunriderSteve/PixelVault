@@ -1,12 +1,11 @@
 id: cam-sony-a7s3
-name: Sony A7S III
+name: Sony FX3
 category: Cameras
 description: >
   Full-frame mirrorless camera popular for low-light video.
-storage: Cabinet A, Shelf 2
+storage: Cabinet 5
 images:
-  - images/cameras/a7s3.avif
-  - images/cameras/a7s3-back.avif
+  - assets/images/sony_fx3_1.avif
 functions:
   shutter: Takes a photo or starts/stops video recording.
   record: Dedicated REC button for video.
