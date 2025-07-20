@@ -1,45 +1,41 @@
+# .github/workflows/deploy.yml
 name: Deploy Flutter Web to GitHub Pages
 
-# Trigger on pushes to the main branch
 on:
   push:
     branches: [main]
 
-# Grant the permissions needed by each action
 permissions:
-  contents: read # to checkout code
-  pages: write # to publish to GitHub Pages
-  id-token: write # to mint OIDC token for deploy-pages
+  contents: read # default, needed to checkout code
+  pages: write # needed to upload/publish Pages
+  id-token: write # needed to mint the OIDC token for deploy-pages
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout your repository
+      # 1. Check out the repo
       - uses: actions/checkout@v4
 
-      # 2. Install Flutter SDK
+      # 2. Install Flutter
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
 
-      # 3. Build the web app for production
-      - name: Build Flutter Web
-        run: flutter build web --release --base-href ./
+      # 3. Build the web app
+      - run: flutter build web --release --base-href /SunriderSteve/${{ github.repository }}/
 
       # 4. Configure GitHub Pages
-      - name: Configure Pages
-        uses: actions/configure-pages@v3
+      - uses: actions/configure-pages@v3
 
-      # 5. Upload the built web assets
-      - name: Upload Pages Artifact
-        uses: actions/upload-pages-artifact@v3
+      # 5. Upload the build output
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: build/web
 
-      # 6. Publish to GitHub Pages
-      - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v4
+      # 6. Deploy to GitHub Pages
+      - uses: actions/deploy-pages@v4
         with:
+          # optional: wait for the Pages deployment to complete
           wait-for-deployment: true
