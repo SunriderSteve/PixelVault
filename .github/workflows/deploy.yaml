@@ -24,7 +24,7 @@ jobs:
           channel: "stable"
 
       # 3. Build the web app
-      - run: flutter build web --release --base-href /${{ github.repository }}/
+      - run: flutter build web --release --base-href ./
 
       # 4. Configure GitHub Pages
       - uses: actions/configure-pages@v3
