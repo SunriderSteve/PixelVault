@@ -23,21 +23,21 @@ class NavCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Column(
-          mainAxisSize: MainAxisSize.min, // Wrap content height
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Image with fixed aspect ratio for responsive height
+            // Image area with fixed aspect ratio
             AspectRatio(
-              aspectRatio: 16 / 9, // Adjust ratio as needed
+              aspectRatio: 16 / 9,
               child: AvifImage.asset(imagePath, fit: BoxFit.cover),
             ),
-            // Title area
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-              child: Text(
-                title,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium,
+            // Title area below the image, centered
+            Expanded(
+              child: Center(
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ),
             ),
           ],
@@ -56,10 +56,16 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       // Blue horizontal bar with title; no back button on homepage
       appBar: AppBar(
-        backgroundColor: Colors.blue,
+        backgroundColor: Color.fromARGB(255, 0, 71, 187),
         automaticallyImplyLeading: false,
-        title: const Text('PixelVault'),
-        centerTitle: true,
+        title: const Text(
+          'PixelVault',
+          style: TextStyle(
+            fontVariations: [FontVariation('wght', 800)],
+            color: Colors.white,
+          ),
+        ),
+        centerTitle: false,
       ),
       // Grid with responsive cards
       body: Padding(

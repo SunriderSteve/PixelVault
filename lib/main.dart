@@ -9,12 +9,17 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'PixelVault',
       routerConfig: appRouter,
-      theme: ThemeData(useMaterial3: true),
+      theme: ThemeData(
+        primaryColor: const Color.fromARGB(255, 0, 71, 187),
+        fontFamily: 'Noto Sans',
+      ),
     );
   }
 }
