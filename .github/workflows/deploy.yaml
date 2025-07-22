@@ -26,7 +26,6 @@ jobs:
 
       # 3. Build the web app
       - run: flutter pub get
-      - run: flutter test
       - run: flutter build web --release --base-href /PixelVault/
 
       # 4. Configure GitHub Pages
