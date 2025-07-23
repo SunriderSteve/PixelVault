@@ -32,14 +32,14 @@ class HomePage extends StatelessWidget {
           );
 
           return Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(8),
             child: GridView.builder(
               itemCount: _items.length,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: crossAxisCount,
                 mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: 6 / 4, // adjust to taste
+                crossAxisSpacing: 8,
+                childAspectRatio: 3 / 2,
               ),
               itemBuilder: (context, i) {
                 final item = _items[i];
@@ -106,23 +106,22 @@ class _NavCard extends StatelessWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(child: AvifImage.asset(imagePath, fit: BoxFit.cover)),
-            const SizedBox(height: 12),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.fromLTRB(12, 3, 12, 3),
               child: Text(
                 title,
                 textAlign: TextAlign.center,
-                style: textTheme.titleMedium,
+                maxLines: 1,
+                style: TextStyle(fontVariations: [FontVariation('wght', 500)]),
               ),
             ),
-            const SizedBox(height: 12),
           ],
         ),
       ),
