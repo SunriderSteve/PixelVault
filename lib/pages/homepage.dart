@@ -32,14 +32,14 @@ class HomePage extends StatelessWidget {
           );
 
           return Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(16),
             child: GridView.builder(
               itemCount: _items.length,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: crossAxisCount,
                 mainAxisSpacing: 16,
-                crossAxisSpacing: 8,
-                childAspectRatio: 3 / 2,
+                crossAxisSpacing: 16,
+                childAspectRatio: 6 / 4, // adjust to taste
               ),
               itemBuilder: (context, i) {
                 final item = _items[i];
@@ -71,9 +71,9 @@ class _HomeItem {
 
 const List<_HomeItem> _items = [
   _HomeItem(
-    title: 'Learn',
+    title: 'Learning Guides',
     imagePath: 'assets/images/homepage/learn.avif',
-    route: '/equip',
+    route: '/learn',
   ),
   _HomeItem(
     title: 'Production Scenarios',
@@ -106,22 +106,23 @@ class _NavCard extends StatelessWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(child: AvifImage.asset(imagePath, fit: BoxFit.cover)),
+            const SizedBox(height: 12),
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 3, 12, 3),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Text(
                 title,
                 textAlign: TextAlign.center,
-                maxLines: 1,
-                style: TextStyle(fontVariations: [FontVariation('wght', 500)]),
+                style: textTheme.titleMedium,
               ),
             ),
+            const SizedBox(height: 12),
           ],
         ),
       ),
