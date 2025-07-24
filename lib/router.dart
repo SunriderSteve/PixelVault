@@ -8,7 +8,7 @@ import 'pages/homepage.dart';
 final GoRouter appRouter = GoRouter(
   routes: [
     GoRoute(path: '/', builder: (_, _) => const HomePage()),
-    GoRoute(path: '/equip', builder: (_, _) => const EquipListPage()),
+    GoRoute(path: '/equip', builder: (_, _) => const LearnEquipListPage()),
     GoRoute(
       path: '/equip/:id',
       builder: (_, state) =>
