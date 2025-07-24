@@ -73,7 +73,7 @@ const List<_HomeItem> _items = [
   _HomeItem(
     title: 'Learning Guides',
     imagePath: 'assets/images/homepage/learn.avif',
-    route: '/equip',
+    route: '/learn',
   ),
   _HomeItem(
     title: 'Production Scenarios',
@@ -101,7 +101,7 @@ class _NavCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    //final textTheme = Theme.of(context).textTheme;
+    final textTheme = Theme.of(context).textTheme;
 
     return Card(
       clipBehavior: Clip.antiAlias,

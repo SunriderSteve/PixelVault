@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'pages/learning_list_page.dart';
 import 'pages/learn_equip_list_page.dart';
 import 'pages/learn_equip_detail_page.dart';
 import 'pages/scenario_list_page.dart';
@@ -8,6 +9,7 @@ import 'pages/homepage.dart';
 final GoRouter appRouter = GoRouter(
   routes: [
     GoRoute(path: '/', builder: (_, _) => const HomePage()),
+    GoRoute(path: '/learn', builder: (_, _) => const LearningListPage()),
     GoRoute(path: '/equip', builder: (_, _) => const LearnEquipListPage()),
     GoRoute(
       path: '/equip/:id',
