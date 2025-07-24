@@ -22,12 +22,14 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
+      - run: flutter --version
 
       # 3. Build the web app
+      - run: flutter pub get
       - run: flutter build web --release --base-href /PixelVault/
 
       # 4. Configure GitHub Pages
-      - uses: actions/configure-pages@v3
+      - uses: actions/configure-pages@v5
 
       # 5. Upload the build output
       - uses: actions/upload-pages-artifact@v3
