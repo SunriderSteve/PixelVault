@@ -8,14 +8,21 @@ import 'pages/homepage.dart';
 
 final GoRouter appRouter = GoRouter(
   routes: [
+    // Home
     GoRoute(path: '/', builder: (_, _) => const HomePage()),
+
+    // Learning Guides
     GoRoute(path: '/learn', builder: (_, _) => const LearningListPage()),
-    GoRoute(path: '/equip', builder: (_, _) => const LearnEquipListPage()),
     GoRoute(
-      path: '/equip/:id',
+      path: '/learn/equip-guides',
+      builder: (_, _) => const LearnEquipListPage(),
+    ),
+    GoRoute(
+      path: '/learn/equip-guides:id',
       builder: (_, state) =>
           EquipDetailPage(itemId: state.pathParameters['id']!),
     ),
+
     GoRoute(path: '/scenarios', builder: (_, _) => const ScenarioListPage()),
     GoRoute(
       path: '/scenarios/:sid',

@@ -25,7 +25,7 @@ class EquipDetailPage extends StatelessWidget {
                   context.go('/');
                   break;
                 case 'equipment':
-                  context.go('/equip');
+                  context.go('/learn/equip-guides');
                   break;
                 case 'scenarios':
                   context.go('/scenarios');
@@ -81,7 +81,7 @@ class EquipDetailPage extends StatelessWidget {
                       return ElevatedButton(
                         onPressed: () {
                           // Navigate to the related equipment detail
-                          context.go('/equip/$relatedId');
+                          context.go('/learn/equip-guides/$relatedId');
                         },
                         child: Text(related?.name ?? relatedId),
                       );

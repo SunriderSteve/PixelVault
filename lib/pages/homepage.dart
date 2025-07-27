@@ -101,7 +101,7 @@ class _NavCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+    //final textTheme = Theme.of(context).textTheme;
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -119,7 +119,7 @@ class _NavCard extends StatelessWidget {
               child: Text(
                 title,
                 textAlign: TextAlign.center,
-                style: textTheme.titleMedium,
+                style: TextStyle(fontVariations: [FontVariation('wght', 500)]),
               ),
             ),
             const SizedBox(height: 12),
