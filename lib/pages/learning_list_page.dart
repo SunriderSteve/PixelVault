@@ -27,12 +27,12 @@ class _LearningListPageState extends State<LearningListPage> {
       const _GuideItem(
         title: 'Equipment Guides',
         imagePath: 'assets/images/homepage/inventory.avif',
-        route: '/equip',
+        route: '/learn/equip-guides',
       ),
       const _GuideItem(
         title: 'Videography Guides',
         imagePath: 'assets/images/homepage/scenarios.avif',
-        route: '/equip/videography-guide',
+        route: '/learn/vid-guides',
       ),
     ];
     // Dynamic items: only equipment for now
@@ -42,7 +42,7 @@ class _LearningListPageState extends State<LearningListPage> {
         _GuideItem(
           title: eq.name,
           imagePath: eq.images.isNotEmpty ? eq.images.first : '',
-          route: '/equip/${eq.id}',
+          route: '/learn/equip-guides/${eq.id}',
         ),
     ];
     // Initialize display with static nav items
@@ -87,7 +87,7 @@ class _LearningListPageState extends State<LearningListPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/'),
         ),
         backgroundColor: const Color(0xFF0047BB),
         title: const Text(
@@ -110,7 +110,7 @@ class _LearningListPageState extends State<LearningListPage> {
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: 'Search Guides',
+                  hintText: 'Search All Guides',
                   prefixIcon: const Icon(Icons.search),
                   suffixIcon: _searchController.text.isEmpty
                       ? null

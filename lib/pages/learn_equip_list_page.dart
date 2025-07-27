@@ -117,7 +117,7 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
                   return _EquipmentCard(
                     title: eq.name,
                     imagePath: imagePath,
-                    onTap: () => context.push('/equip/${eq.id}'),
+                    onTap: () => context.push('/learn/equip-guides${eq.id}'),
                   );
                 },
               ),
