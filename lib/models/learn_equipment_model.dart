@@ -4,6 +4,7 @@ class Equipment {
   final String id;
   final String name;
   final String category;
+  final String brand;
   final String description;
   final String storage;
   final Map<String, String> functions;
@@ -14,6 +15,7 @@ class Equipment {
     required this.id,
     required this.name,
     required this.category,
+    required this.brand,
     required this.description,
     required this.storage,
     required this.functions,
@@ -27,6 +29,7 @@ class Equipment {
       id: yaml['id'] as String,
       name: yaml['name'] as String,
       category: yaml['category'] as String,
+      brand: yaml['brand'] as String? ?? 'Unknown',
       description: yaml['description'] as String,
       storage: yaml['storage'] as String,
       functions: Map<String, String>.from(yaml['functions'] ?? {}),
