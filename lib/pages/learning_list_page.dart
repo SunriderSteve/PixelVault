@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_avif/flutter_avif.dart';
 
 import '../services/data_repository.dart';
-import '../models/learn_equipment_model.dart';
 
 class LearningListPage extends StatefulWidget {
   const LearningListPage({Key? key}) : super(key: key);
@@ -44,7 +43,7 @@ class _LearningListPageState extends State<LearningListPage> {
       _GuideItem(
         title: 'Videography Guides',
         imagePath: 'assets/images/homepage/scenarios.avif',
-        route: '/learn/vid-guides',
+        route: '/learn/videography-guides',
         type: 'Type: Videography Guides',
       ),
     ];
@@ -54,7 +53,7 @@ class _LearningListPageState extends State<LearningListPage> {
           (eq) => _GuideItem(
             title: eq.name,
             imagePath: eq.images.isNotEmpty ? eq.images.first : '',
-            route: '/learn/equip/${eq.id}',
+            route: '/learn/equip-guides/${eq.id}',
             type: 'Type: Equipment Guides',
             category: eq.category,
             brand: eq.brand,

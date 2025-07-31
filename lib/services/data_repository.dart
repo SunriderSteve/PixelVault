@@ -3,6 +3,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:yaml/yaml.dart';
 
 import '../models/learn_equipment_model.dart';
+import '../models/learn_videography_model.dart';
 import '../models/scenario_model.dart';
 
 /// Loads all YAML files once at start-up and keeps them in memory.
@@ -15,19 +16,21 @@ class DataRepository {
   // -------------------------------------------
 
   late final Map<String, Equipment> _equipment;
+  late final Map<String, VideographyGuide> _videography;
   late final Map<String, Scenario> _scenarios;
 
   /// Reads every .yaml file under /data/equipment/ and /data/scenarios/
   Future<void> init() async {
-    // 1. AssetManifest.json lists every file bundled by Flutter.
+    // AssetManifest.json lists every file bundled by Flutter
     final manifestContent = await rootBundle.loadString('AssetManifest.json');
     final manifestMap = jsonDecode(manifestContent) as Map<String, dynamic>;
 
-    // 2. Prepare empty maps to fill.
+    // Prepare empty maps to fill
     _equipment = {};
+    _videography = {};
     _scenarios = {};
 
-    // 3. Load equipment YAML files
+    // Load equipment YAML files
     final equipPaths = manifestMap.keys.where(
       (p) => p.startsWith('data/learn_equipment/') && p.endsWith('.yaml'),
     );
@@ -39,7 +42,19 @@ class DataRepository {
       _equipment[eq.id] = eq;
     }
 
-    // 4. Load scenario YAML files
+    // Load videography YAML files
+    final videoPaths = manifestMap.keys.where(
+      (p) => p.startsWith('data/learn_videography/') && p.endsWith('.yaml'),
+    );
+
+    for (final path in videoPaths) {
+      final yamlString = await rootBundle.loadString(path);
+      final yamlMap = loadYaml(yamlString) as YamlMap;
+      final guide = VideographyGuide.fromYaml(yamlMap);
+      _videography[guide.id] = guide;
+    }
+
+    // Load scenario YAML files
     final scenPaths = manifestMap.keys.where(
       (p) => p.startsWith('data/scenarios/') && p.endsWith('.yaml'),
     );
@@ -55,7 +70,10 @@ class DataRepository {
   // ---------- public helpers ----------
   List<Equipment> getAllEquipment() => _equipment.values.toList();
   List<Scenario> getAllScenarios() => _scenarios.values.toList();
+  List<VideographyGuide> getAllVideographyGuides() =>
+      _videography.values.toList();
 
   Equipment? getEquipment(String id) => _equipment[id];
+  VideographyGuide? getVideographyGuide(String id) => _videography[id];
   Scenario? getScenario(String id) => _scenarios[id];
 }
