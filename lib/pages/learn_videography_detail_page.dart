@@ -53,7 +53,7 @@ class _VideographyDetailPageState extends State<VideographyDetailPage> {
           // Cover images carousel or single image
           if (_guide.covers.length > 1)
             SizedBox(
-              height: 200,
+              height: 500,
               child: PageView.builder(
                 itemCount: _guide.covers.length,
                 itemBuilder: (context, index) {
@@ -61,7 +61,7 @@ class _VideographyDetailPageState extends State<VideographyDetailPage> {
                     borderRadius: BorderRadius.circular(12),
                     child: AvifImage.asset(
                       _guide.covers[index],
-                      fit: BoxFit.cover,
+                      fit: BoxFit.scaleDown,
                     ),
                   );
                 },
@@ -85,6 +85,8 @@ class _SectionTile extends StatelessWidget {
   final GuideSection section;
   const _SectionTile({required this.section});
 
+  static const double _maxImageHeight = 360; // cap large section images
+
   @override
   Widget build(BuildContext context) {
     return ExpansionTile(
@@ -94,16 +96,29 @@ class _SectionTile extends StatelessWidget {
       ),
       childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       children: [
-        // Section images
+        // Section images (size-limited)
         for (var img in section.images) ...[
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: AvifImage.asset(img, fit: BoxFit.cover),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                // limit height, allow width to follow layout constraints
+                maxHeight: _maxImageHeight,
+              ),
+              child: Center(
+                // scale down if too large; never scale up
+                child: AvifImage.asset(img, fit: BoxFit.scaleDown),
+              ),
+            ),
           ),
           const SizedBox(height: 12),
         ],
         // Section body text
-        Text(section.body, style: Theme.of(context).textTheme.bodyMedium),
+        Text(
+          section.body,
+          style: Theme.of(context).textTheme.bodyMedium,
+          textAlign: TextAlign.start,
+        ),
         const SizedBox(height: 16),
       ],
     );
