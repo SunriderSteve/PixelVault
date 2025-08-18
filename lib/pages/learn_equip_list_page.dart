@@ -260,7 +260,9 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
                 ),
                 itemBuilder: (context, index) {
                   final eq = _filteredItems[index];
-                  final imagePath = eq.images.isNotEmpty ? eq.images.first : '';
+                  final imagePath = eq.coverImages.isNotEmpty
+                      ? eq.coverImages.first
+                      : '';
                   return _EquipmentCard(
                     title: eq.name,
                     imagePath: imagePath,

@@ -51,26 +51,29 @@ class _VideographyDetailPageState extends State<VideographyDetailPage> {
           ),
           const SizedBox(height: 16),
           // Cover images carousel or single image
-          if (_guide.covers.length > 1)
+          if (_guide.coverImages.length > 1)
             SizedBox(
               height: 500,
               child: PageView.builder(
-                itemCount: _guide.covers.length,
+                itemCount: _guide.coverImages.length,
                 itemBuilder: (context, index) {
                   return ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: AvifImage.asset(
-                      _guide.covers[index],
+                      _guide.coverImages[index],
                       fit: BoxFit.scaleDown,
                     ),
                   );
                 },
               ),
             )
-          else if (_guide.covers.isNotEmpty)
+          else if (_guide.coverImages.isNotEmpty)
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: AvifImage.asset(_guide.covers.first, fit: BoxFit.cover),
+              child: AvifImage.asset(
+                _guide.coverImages.first,
+                fit: BoxFit.cover,
+              ),
             ),
           const SizedBox(height: 24),
           // Sections as collapsible tiles

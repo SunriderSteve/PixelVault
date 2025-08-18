@@ -22,7 +22,7 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/learn/equip-guides/:id',
       builder: (_, state) =>
-          EquipDetailPage(itemId: state.pathParameters['id']!),
+          EquipDetailPage(itemID: state.pathParameters['id']!),
     ),
     GoRoute(
       path: '/learn/videography-guides',

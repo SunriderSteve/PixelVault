@@ -96,7 +96,9 @@ class _LearnVideographyListPageState extends State<LearnVideographyListPage> {
                 itemBuilder: (_, i) {
                   final guide = _filtered[i];
                   // use first cover if present
-                  final img = guide.covers.isNotEmpty ? guide.covers.first : '';
+                  final img = guide.coverImages.isNotEmpty
+                      ? guide.coverImages.first
+                      : '';
                   return Card(
                     clipBehavior: Clip.antiAlias,
                     shape: RoundedRectangleBorder(
