@@ -17,7 +17,7 @@ class DataRepository {
 
   late final Map<String, Equipment> _equipment;
   late final Map<String, VideographyGuide> _videography;
-  late final Map<String, Scenario> _scenarios;
+  late final Map<String, ScenarioGuide> _scenarios;
 
   /// Reads every .yaml file under /data/equipment/ and /data/scenarios/
   Future<void> init() async {
@@ -55,25 +55,25 @@ class DataRepository {
     }
 
     // Load scenario YAML files
-    final scenPaths = manifestMap.keys.where(
+    final scenariosPaths = manifestMap.keys.where(
       (p) => p.startsWith('data/scenarios/') && p.endsWith('.yaml'),
     );
 
-    for (final path in scenPaths) {
+    for (final path in scenariosPaths) {
       final yamlString = await rootBundle.loadString(path);
       final yamlMap = loadYaml(yamlString) as YamlMap;
-      final sc = Scenario.fromYaml(yamlMap);
-      _scenarios[sc.id] = sc;
+      final s = ScenarioGuide.fromYaml(yamlMap);
+      _scenarios[s.id] = s;
     }
   }
 
   // ---------- public helpers ----------
   List<Equipment> getAllEquipment() => _equipment.values.toList();
-  List<Scenario> getAllScenarios() => _scenarios.values.toList();
+  List<ScenarioGuide> getAllScenarios() => _scenarios.values.toList();
   List<VideographyGuide> getAllVideographyGuides() =>
       _videography.values.toList();
 
   Equipment? getEquipment(String id) => _equipment[id];
   VideographyGuide? getVideographyGuide(String id) => _videography[id];
-  Scenario? getScenario(String id) => _scenarios[id];
+  ScenarioGuide? getScenario(String id) => _scenarios[id];
 }

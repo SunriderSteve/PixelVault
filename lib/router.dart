@@ -35,10 +35,10 @@ final GoRouter appRouter = GoRouter(
     ),
 
     GoRoute(path: '/scenarios', builder: (_, _) => const ScenarioListPage()),
-    GoRoute(
-      path: '/scenarios/:sid',
-      builder: (_, state) =>
-          ScenarioDetailPage(scenarioId: state.pathParameters['sid']!),
-    ),
+    // GoRoute(
+    //   path: '/scenarios/:sid',
+    //   builder: (_, state) =>
+    //       ScenarioDetailPage(scenarioId: state.pathParameters['sid']!),
+    // ),
   ],
 );

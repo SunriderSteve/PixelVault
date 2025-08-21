@@ -1,0 +1,34 @@
+id: event
+name: Event
+covers:
+  - assets/images/scenarios/event/cover1.avif
+description: |
+  A roaming event coverage setup balancing mobility, stabilization, and
+  rapid exposure control across mixed lighting.
+
+sections:
+  - title: Setup Overview
+    images:
+      - assets/images/scenarios/event/setup1.avif
+    body: |
+      Use a gimbal or shoulder rig. Carry spare batteries/media and
+      prep a compact audio kit.
+
+  - title: Audio
+    images:
+      - assets/images/scenarios/event/audio1.avif
+    body: |
+      Use on-camera shotgun for nat sound; grab quick lavs for interviews.
+      Monitor levels constantly in noisy environments.
+
+  - title: Camera & Exposure
+    images:
+      - assets/images/scenarios/event/camera1.avif
+    body: |
+      Auto-ISO with limits can help. Keep shutter angle consistent and set
+      custom white balance for mixed sources when possible.
+
+related:
+  - gimbal_rs3
+  - mic_shotgun_oncamera
+  - light_led_oncamera

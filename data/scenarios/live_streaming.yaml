@@ -1,0 +1,34 @@
+id: live_streaming
+name: Live Streaming
+covers:
+  - assets/images/scenarios/live_streaming/cover1.avif
+description: |
+  A single or multi-cam live streaming setup emphasizing stable signal,
+  proper audio routing, and redundancy.
+
+sections:
+  - title: Setup Overview
+    images:
+      - assets/images/scenarios/live_streaming/setup1.avif
+    body: |
+      Map your signal flow: cameras → switcher → encoder → platform.
+      Test all paths and record program ISO if possible.
+
+  - title: Audio
+    images:
+      - assets/images/scenarios/live_streaming/audio1.avif
+    body: |
+      Mix mics and playback to a dedicated bus feeding the encoder.
+      Use limiters; watch loudness targets (e.g., -16 LUFS).
+
+  - title: Network & Redundancy
+    images:
+      - assets/images/scenarios/live_streaming/network1.avif
+    body: |
+      Prefer wired Ethernet. Bond connections where possible and keep
+      a hotspot failover. Monitor stream health continuously.
+
+related:
+  - switcher_atem_mini
+  - encoder_web_presenter
+  - mic_handheld_wireless
