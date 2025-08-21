@@ -1,40 +1,69 @@
 import 'package:yaml/yaml.dart';
 
+class EquipSection {
+  final String title;
+  final List<String> images;
+  final String body;
+  const EquipSection({
+    required this.title,
+    required this.images,
+    required this.body,
+  });
+
+  factory EquipSection.fromYaml(YamlMap m) {
+    return EquipSection(
+      title: (m['title'] as String?) ?? '',
+      images: List<String>.from(m['images'] ?? const []),
+      body: (m['body'] as String?) ?? '',
+    );
+  }
+}
+
 class Equipment {
   final String id;
   final String name;
   final String category;
   final String brand;
-  final String description;
-  final String storage;
-  final Map<String, String> functions;
-  final List<String> images;
-  final List<String> related;
+
+  // Fields aligned with Videography guide structure
+  final List<String> coverImages; // cover images for carousel
+  final String description; // about/overview text
+  final List<EquipSection> sections; // collapsible sections
+  final List<String> related; // list of related equipment ids
 
   Equipment({
     required this.id,
     required this.name,
     required this.category,
     required this.brand,
+    required this.coverImages,
     required this.description,
-    required this.storage,
-    required this.functions,
-    required this.images,
+    required this.sections,
     required this.related,
   });
 
-  /// Factory constructor that converts a loaded YAML map into an Equipment object
   factory Equipment.fromYaml(YamlMap yaml) {
+    // Allow migration: treat legacy `images:` as `coverImages:` if `coverImages` is absent
+    final cov = List<String>.from(
+      yaml['coverImages'] ?? yaml['images'] ?? const [],
+    );
+
+    final secsYaml = yaml['sections'] as YamlList?;
+    final secs = secsYaml == null
+        ? <EquipSection>[]
+        : secsYaml
+              .map((e) => EquipSection.fromYaml(e as YamlMap))
+              .toList(growable: false);
+
     return Equipment(
       id: yaml['id'] as String,
       name: yaml['name'] as String,
-      category: yaml['category'] as String,
-      brand: yaml['brand'] as String? ?? 'Unknown',
-      description: yaml['description'] as String,
-      storage: yaml['storage'] as String,
-      functions: Map<String, String>.from(yaml['functions'] ?? {}),
-      images: List<String>.from(yaml['images'] ?? []),
-      related: List<String>.from(yaml['related'] ?? []),
+      category: (yaml['category'] as String?) ?? '',
+      brand: (yaml['brand'] as String?) ?? 'Unknown',
+      coverImages: cov,
+      description: (yaml['description'] as String?) ?? '',
+      sections: secs,
+      related: List<String>.from(yaml['related'] ?? const []),
     );
   }
 }

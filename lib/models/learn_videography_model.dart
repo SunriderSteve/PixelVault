@@ -3,13 +3,13 @@ import 'package:yaml/yaml.dart';
 class VideographyGuide {
   final String id;
   final String name;
-  final List<String> covers;
+  final List<String> coverImages;
   final List<GuideSection> sections;
 
   VideographyGuide({
     required this.id,
     required this.name,
-    required this.covers,
+    required this.coverImages,
     required this.sections,
   });
 
@@ -26,7 +26,7 @@ class VideographyGuide {
     return VideographyGuide(
       id: yaml['id'] as String,
       name: yaml['name'] as String,
-      covers: List<String>.from(yaml['covers'] ?? []),
+      coverImages: List<String>.from(yaml['coverImages'] ?? []),
       sections: secs,
     );
   }

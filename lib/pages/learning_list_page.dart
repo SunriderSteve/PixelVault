@@ -52,7 +52,7 @@ class _LearningListPageState extends State<LearningListPage> {
         .map(
           (eq) => _GuideItem(
             title: eq.name,
-            imagePath: eq.images.isNotEmpty ? eq.images.first : '',
+            imagePath: eq.coverImages.isNotEmpty ? eq.coverImages.first : '',
             route: '/learn/equip-guides/${eq.id}',
             type: 'Type: Equipment Guides',
             category: eq.category,
