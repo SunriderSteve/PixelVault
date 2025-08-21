@@ -52,7 +52,7 @@ class ScenarioListPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: InkWell(
-                onTap: () => context.push('/learn/scenarios/${s.id}'),
+                onTap: () => context.push('/scenarios/${s.id}'),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
