@@ -29,6 +29,8 @@ class _ScenarioDetailPageState extends State<ScenarioDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    const double coverMaxHeight = 360;
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -56,16 +58,18 @@ class _ScenarioDetailPageState extends State<ScenarioDetailPage> {
 
           // Covers: single or carousel
           if (_scenario.covers.length > 1)
-            SizedBox(
-              height: 500,
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: coverMaxHeight),
               child: PageView.builder(
                 itemCount: _scenario.covers.length,
                 itemBuilder: (context, index) {
                   return ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: AvifImage.asset(
-                      _scenario.covers[index],
-                      fit: BoxFit.scaleDown,
+                    child: Center(
+                      child: AvifImage.asset(
+                        _scenario.covers[index],
+                        fit: BoxFit.scaleDown,
+                      ),
                     ),
                   );
                 },
@@ -74,7 +78,15 @@ class _ScenarioDetailPageState extends State<ScenarioDetailPage> {
           else if (_scenario.covers.isNotEmpty)
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: AvifImage.asset(_scenario.covers.first, fit: BoxFit.cover),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: coverMaxHeight),
+                child: Center(
+                  child: AvifImage.asset(
+                    _scenario.covers.first,
+                    fit: BoxFit.scaleDown,
+                  ),
+                ),
+              ),
             ),
 
           const SizedBox(height: 24),

@@ -1,31 +1,28 @@
 id: outdoor_interview
 name: Outdoor Interview
 covers:
-  - assets/images/scenarios/outdoor_interview/cover1.avif
+  - assets/images/scenarios/outdoor_interview.avif
 description: |
-  An exterior sit-down interview where wind, ambient noise, and changing
-  light demand careful control.
+  An exterior sit-down interview where wind, ambient noise, and changing light demand careful control.
 
 sections:
   - title: Setup Overview
     images:
-      - assets/images/scenarios/outdoor_interview/setup1.avif
+      - assets/images/scenarios/outdoor_interview.avif
     body: |
       Choose open shade or diffuse with a scrim. Avoid direct sun on skin.
 
   - title: Audio
     images:
-      - assets/images/scenarios/outdoor_interview/audio1.avif
+      - assets/images/scenarios/outdoor_interview.avif
     body: |
-      Use lavs with fur windshields or a shotgun with a blimp/deadcat.
-      Engage a high-pass filter and keep mic close.
+      Use lavs with fur windshields or a shotgun with a blimp/deadcat. Engage a high-pass filter and keep mic close.
 
   - title: Camera & Exposure
     images:
-      - assets/images/scenarios/outdoor_interview/camera1.avif
+      - assets/images/scenarios/outdoor_interview.avif
     body: |
-      Use ND filters to hold shutter/ISO, lock white balance, and watch for
-      color shifts as clouds pass.
+      Use ND filters to hold shutter/ISO, lock white balance, and watch for color shifts as clouds pass.
 
 related:
   - cam_sony_fx3

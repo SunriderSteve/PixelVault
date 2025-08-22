@@ -1,32 +1,28 @@
 id: indoor_interview
 name: Indoor Interview
 covers:
-  - assets/images/scenarios/indoor_interview/cover1.avif
+  - assets/images/scenarios/indoor_interview.avif
 description: |
-  A controlled indoor setup prioritizing clean audio, flattering lighting,
-  and consistent exposure for sit-down interviews.
+  A controlled indoor setup prioritizing clean audio, flattering lighting, and consistent exposure for sit-down interviews.
 
 sections:
   - title: Setup Overview
     images:
-      - assets/images/scenarios/indoor_interview/setup1.avif
+      - assets/images/scenarios/indoor_interview.avif
     body: |
-      Position subject ~1.5m from background. Place key light at 45°,
-      fill to taste, and use a backlight for separation.
+      Position subject ~1.5m from background. Place key light at 45°, fill to taste, and use a backlight for separation.
 
   - title: Audio
     images:
-      - assets/images/scenarios/indoor_interview/audio1.avif
+      - assets/images/scenarios/indoor_interview.avif
     body: |
-      Use a lavalier or shotgun mic on a boom just out of frame.
-      Monitor with closed-back headphones; aim for peaks around -12 dB.
+      Use a lavalier or shotgun mic on a boom just out of frame. Monitor with closed-back headphones; aim for peaks around -12 dB.
 
   - title: Camera & Exposure
     images:
-      - assets/images/scenarios/indoor_interview/camera1.avif
+      - assets/images/scenarios/indoor_interview.avif
     body: |
-      24/25/30 fps as required. Shutter at 180° rule, lock white balance,
-      expose skin around 55–65 IRE depending on profile.
+      24/25/30 fps as required. Shutter at 180° rule, lock white balance, expose skin around 55–65 IRE depending on profile.
 
 related:
   - cam_sony_fx3

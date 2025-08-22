@@ -117,10 +117,13 @@ class _DescriptionTile extends StatelessWidget {
       title: Text('About', style: Theme.of(context).textTheme.titleMedium),
       childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       children: [
-        Text(
-          text,
-          style: Theme.of(context).textTheme.bodyMedium,
-          textAlign: TextAlign.start,
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            text,
+            style: Theme.of(context).textTheme.bodyMedium,
+            textAlign: TextAlign.start,
+          ),
         ),
         const SizedBox(height: 16),
       ],
@@ -153,10 +156,13 @@ class _EquipSectionTile extends StatelessWidget {
           ),
           const SizedBox(height: 12),
         ],
-        Text(
-          section.body,
-          style: Theme.of(context).textTheme.bodyMedium,
-          textAlign: TextAlign.start,
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            section.body,
+            style: Theme.of(context).textTheme.bodyMedium,
+            textAlign: TextAlign.start,
+          ),
         ),
         const SizedBox(height: 16),
       ],
@@ -214,7 +220,7 @@ class _RelatedGrid extends StatelessWidget {
                 e.name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
+                textAlign: TextAlign.start,
                 style: const TextStyle(
                   fontVariations: [FontVariation('wght', 500)],
                 ),

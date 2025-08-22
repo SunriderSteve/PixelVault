@@ -6,10 +6,10 @@ import 'package:flutter_avif/flutter_avif.dart';
 import '../services/data_repository.dart';
 
 class LearningListPage extends StatefulWidget {
-  const LearningListPage({Key? key}) : super(key: key);
+  const LearningListPage({super.key});
 
   @override
-  _LearningListPageState createState() => _LearningListPageState();
+  State<LearningListPage> createState() => _LearningListPageState();
 }
 
 class _LearningListPageState extends State<LearningListPage> {
@@ -36,13 +36,13 @@ class _LearningListPageState extends State<LearningListPage> {
     _staticNavItems = const [
       _GuideItem(
         title: 'Equipment Guides',
-        imagePath: 'assets/images/homepage/inventory.avif',
+        imagePath: 'assets/images/homepage/learn/equipment_guides.avif',
         route: '/learn/equip-guides',
         type: 'Type: Equipment Guides',
       ),
       _GuideItem(
         title: 'Videography Guides',
-        imagePath: 'assets/images/homepage/scenarios.avif',
+        imagePath: 'assets/images/homepage/learn/videography_guides.avif',
         route: '/learn/videography-guides',
         type: 'Type: Videography Guides',
       ),

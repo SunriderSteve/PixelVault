@@ -7,10 +7,10 @@ import '../services/data_repository.dart';
 import '../models/learn_equipment_model.dart';
 
 class LearnEquipListPage extends StatefulWidget {
-  const LearnEquipListPage({Key? key}) : super(key: key);
+  const LearnEquipListPage({super.key});
 
   @override
-  _LearnEquipListPageState createState() => _LearnEquipListPageState();
+  State<LearnEquipListPage> createState() => _LearnEquipListPageState();
 }
 
 class _LearnEquipListPageState extends State<LearnEquipListPage> {
@@ -194,10 +194,10 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
                                       ),
                                       selected: _selectedCategories.contains(c),
                                       onSelected: (sel) => setState(() {
-                                        if (sel)
-                                          _selectedCategories.add(c);
-                                        else
-                                          _selectedCategories.remove(c);
+                                        (sel)
+                                            ? _selectedCategories.add(c)
+                                            : _selectedCategories.remove(c);
+
                                         _updateFilters();
                                       }),
                                     ),
@@ -209,10 +209,10 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
                                       ),
                                       selected: _selectedBrands.contains(b),
                                       onSelected: (sel) => setState(() {
-                                        if (sel)
-                                          _selectedBrands.add(b);
-                                        else
-                                          _selectedBrands.remove(b);
+                                        (sel)
+                                            ? _selectedBrands.add(b)
+                                            : _selectedBrands.remove(b);
+
                                         _updateFilters();
                                       }),
                                     ),
