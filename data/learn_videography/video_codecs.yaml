@@ -1,0 +1,37 @@
+id: video_codecs
+name: Video Codecs
+covers: []
+description: |
+  Codecs compress video for recording and delivery. Know the trade-offs between intra-frame (All-I) and inter-frame (Long-GOP), chroma subsampling, bit depth, and bitrate so you can choose the right format for capture and post.
+
+sections:
+  - title: Containers vs. Codecs
+    images: []
+    body: |
+      • Container (e.g., MOV, MP4) is a wrapper; the codec defines compression.
+      • Audio, timecode, and metadata can live alongside the video stream.
+
+  - title: Intra vs. Inter (All-I vs. Long-GOP)
+    images: []
+    body: |
+      • Intra (All-I): each frame compressed independently → easier to edit, larger files.
+      • Inter (Long-GOP): uses temporal prediction across frames → smaller files, more CPU.
+
+  - title: Chroma Subsampling & Bit Depth
+    images: []
+    body: |
+      • 4:2:0 reduces color resolution the most; 4:2:2 is better for grading/keying; 4:4:4 is best.
+      • 10-bit captures finer gradations than 8-bit; helpful for log/HDR workflows.
+
+  - title: Common Families
+    images: []
+    body: |
+      • H.264/AVC & H.265/HEVC: efficient inter-frame codecs widely supported.
+      • Apple ProRes: intra-frame family (Proxy/LT/422/422HQ/4444/4444XQ) tuned for editing.
+
+  - title: Choosing for the Job
+    images: []
+    body: |
+      • Acquisition: pick what your camera supports with enough color/bit depth for the grade.
+      • Editing: intra-frame or use proxies if Long-GOP is sluggish.
+      • Delivery: H.264/HEVC balance quality and size; follow platform specs.

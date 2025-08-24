@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'router.dart';
 import 'services/data_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await DataRepository().init(); // load YAML before UI starts
+
+  GoRouter.optionURLReflectsImperativeAPIs = true;
   runApp(MyApp());
 }
 

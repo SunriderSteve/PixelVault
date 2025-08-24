@@ -1,0 +1,45 @@
+id: cam_sony_a73
+name: Sony A7 III (A7 III)
+brand: Sony
+category: Camera
+covers: []
+description: |
+  A full-frame hybrid stills/video camera with 24 MP sensor, strong autofocus, solid dynamic range, and 4K recording. A popular, affordable option for interviews, events, and documentary work.
+
+sections:
+  - title: Key Specs Overview
+    images: []
+    body: |
+      • 24 MP full-frame sensor, wide dynamic range.
+      • 4K UHD up to 30p (from 6K oversample at 24/25p).
+      • S-Log3 and HLG profiles; 8-bit internal.
+      • Fast AF with face/eye detection (video).
+
+  - title: Practical Video Setup
+    images: []
+    body: |
+      • Use 24/25/30p depending on delivery; set shutter near 1/50 or 1/60.
+      • Choose S-Log3 for grading; expose skin tones carefully and consider monitoring LUTs.
+      • Lock WB; set zebras for 70–75% on skin (non-log) or follow your log exposure practice.
+
+  - title: Stabilization & Focus
+    images: []
+    body: |
+      • In-body stabilization (IBIS) helps handheld; add a gimbal for movement.
+      • AF drive speed/sensitivity can be tuned for smoother pulls.
+
+  - title: Power, Media & Heat
+    images: []
+    body: |
+      • NP-FZ100 batteries have good endurance; carry spares for all-day shoots.
+      • Use V90 SD cards for higher bitrates; watch for thermal limits in hot environments.
+
+  - title: Common Pitfalls
+    images: []
+    body: |
+      • 8-bit can band if heavily pushed; expose carefully and consider external 10-bit recorders.
+      • For flicker, avoid Auto shutter in certain LED environments.
+
+related:
+  - cam_sony_fx3
+  - mic_sennheiser_g4

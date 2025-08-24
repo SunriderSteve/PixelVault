@@ -1,54 +1,84 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../services/data_repository.dart'; // Provides scenario data
+import 'package:flutter_avif/flutter_avif.dart';
+
+import '../services/data_repository.dart';
+import '../models/scenario_model.dart';
 
 class ScenarioListPage extends StatelessWidget {
   const ScenarioListPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Fetch all scenarios from the repository
-    final scenarios = DataRepository().getAllScenarios();
+    final List<ScenarioGuide> items = DataRepository().getAllScenarios();
+
+    const maxTileWidth = 420.0;
+    final cols = math.max(
+      2,
+      (MediaQuery.of(context).size.width / maxTileWidth).floor(),
+    );
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Scenarios'),
-        actions: [
-          // Navigation menu for main pages
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.menu),
-            onSelected: (value) {
-              switch (value) {
-                case 'home':
-                  context.go('/');
-                  break;
-                case 'equipment':
-                  context.go('/equip');
-                  break;
-                case 'scenarios':
-                  context.go('/scenarios');
-                  break;
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'home', child: Text('Home')),
-              PopupMenuItem(value: 'equipment', child: Text('Equipment List')),
-              PopupMenuItem(value: 'scenarios', child: Text('Scenarios List')),
-            ],
-          ),
-        ],
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/'),
+        ),
+        backgroundColor: const Color(0xFF0047BB),
+        title: const Text(
+          'Production Scenarios',
+          style: TextStyle(color: Colors.white),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        automaticallyImplyLeading: false,
       ),
-      body: ListView.builder(
-        itemCount: scenarios.length,
-        itemBuilder: (context, index) {
-          final s = scenarios[index];
-          return ListTile(
-            title: Text(s.title), // Display scenario title
-            onTap: () {
-              // Navigate to scenario detail page
-              context.go('/scenarios/${s.id}');
-            },
-          );
-        },
+      body: Padding(
+        padding: const EdgeInsets.all(8),
+        child: GridView.builder(
+          itemCount: items.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: cols,
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 8,
+            childAspectRatio: 3 / 2,
+          ),
+          itemBuilder: (context, i) {
+            final s = items[i];
+            final cover = s.covers.isNotEmpty ? s.covers.first : '';
+            return Card(
+              clipBehavior: Clip.antiAlias,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: InkWell(
+                onTap: () => context.push('/scenarios/${s.id}'),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: cover.isNotEmpty
+                          ? AvifImage.asset(cover, fit: BoxFit.cover)
+                          : const SizedBox.shrink(),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(
+                        s.name,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontVariations: [FontVariation('wght', 500)],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

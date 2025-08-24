@@ -10,7 +10,7 @@ class VideographyDetailPage extends StatefulWidget {
   const VideographyDetailPage({super.key, required this.itemID});
 
   @override
-  _VideographyDetailPageState createState() => _VideographyDetailPageState();
+  State<VideographyDetailPage> createState() => _VideographyDetailPageState();
 }
 
 class _VideographyDetailPageState extends State<VideographyDetailPage> {
@@ -47,7 +47,7 @@ class _VideographyDetailPageState extends State<VideographyDetailPage> {
           Text(
             _guide.name,
             style: Theme.of(context).textTheme.headlineSmall,
-            textAlign: TextAlign.left,
+            textAlign: TextAlign.start,
           ),
           const SizedBox(height: 16),
           // Cover images carousel or single image
@@ -72,7 +72,7 @@ class _VideographyDetailPageState extends State<VideographyDetailPage> {
               borderRadius: BorderRadius.circular(12),
               child: AvifImage.asset(
                 _guide.coverImages.first,
-                fit: BoxFit.cover,
+                fit: BoxFit.scaleDown,
               ),
             ),
           const SizedBox(height: 24),
@@ -117,10 +117,13 @@ class _SectionTile extends StatelessWidget {
           const SizedBox(height: 12),
         ],
         // Section body text
-        Text(
-          section.body,
-          style: Theme.of(context).textTheme.bodyMedium,
-          textAlign: TextAlign.start,
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            section.body,
+            style: Theme.of(context).textTheme.bodyMedium,
+            textAlign: TextAlign.start,
+          ),
         ),
         const SizedBox(height: 16),
       ],

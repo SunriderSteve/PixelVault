@@ -1,0 +1,57 @@
+id: event
+name: Event
+covers:
+  - assets/images/scenarios/event.avif
+description: |
+  Run-and-gun event coverage balances mobility, stabilization, and fast exposure control across mixed lighting. Preparation and predictable settings keep you agile.
+
+sections:
+  - title: Coverage Strategy
+    images: []
+    body: |
+      • Identify key moments (openers, speakers, crowd reactions, cutaways).
+      • Build a shot list: wides for context, mediums for action, close-ups for emotion.
+      • Move with purpose; avoid blocking guests and staff.
+
+  - title: Camera Settings & Stabilization
+    images: []
+    body: |
+      • Set a base profile (S-Cinetone/neutral) for quick turnaround; use Log only if you can light/expose well.
+      • Use IBIS + gimbal/monopod for longer lenses; mind rolling shutter on fast pans.
+      • Maintain shutter near 180°; rely on ISO and ND to adjust exposure quickly.
+
+  - title: Mixed Lighting & White Balance
+    images: []
+    body: |
+      • Create a custom WB per location or use gelled LEDs to match practicals.
+      • In extreme mixes, prioritize skin tone accuracy and avoid green/magenta shifts.
+
+  - title: Audio in Noisy Environments
+    images: []
+    body: |
+      • On-camera shotgun for nat sound; wireless handheld or lav for interviews.
+      • Watch for clipping on applause/music; use limiters and conservative gain.
+
+  - title: Logistics & Power
+    images: []
+    body: |
+      • Carry spare batteries/media on you; mark full vs. empty cards.
+      • Plan dump points for long events; label clips or use reels for quick handoff.
+
+  - title: Safety & Etiquette
+    images: []
+    body: |
+      • Tape down cables in public areas; mind trip hazards.
+      • Follow venue rules; get releases where needed.
+
+  - title: Troubleshooting
+    images: []
+    body: |
+      • Flicker from LED walls/stage: adjust shutter or frequency match if the camera allows.
+      • AF hunting in low light: use single-point AF or pre-focus/manual; add a little fill.
+
+related:
+  - cam_sony_fx3
+  - cam_sony_a73
+  - cam_osmo_pocket_3
+  - mic_sennheiser_g4

@@ -9,7 +9,7 @@ import '../models/learn_videography_model.dart';
 class LearnVideographyListPage extends StatefulWidget {
   const LearnVideographyListPage({super.key});
   @override
-  _LearnVideographyListPageState createState() =>
+  State<LearnVideographyListPage> createState() =>
       _LearnVideographyListPageState();
 }
 

@@ -34,11 +34,14 @@ final GoRouter appRouter = GoRouter(
           VideographyDetailPage(itemID: state.pathParameters['id']!),
     ),
 
-    GoRoute(path: '/scenarios', builder: (_, _) => const ScenarioListPage()),
     GoRoute(
-      path: '/scenarios/:sid',
-      builder: (_, state) =>
-          ScenarioDetailPage(scenarioId: state.pathParameters['sid']!),
+      path: '/scenarios',
+      builder: (context, state) => const ScenarioListPage(),
+    ),
+    GoRoute(
+      path: '/scenarios/:id',
+      builder: (context, state) =>
+          ScenarioDetailPage(id: state.pathParameters['id']!),
     ),
   ],
 );
