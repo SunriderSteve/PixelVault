@@ -1,0 +1,45 @@
+id: mic_sennheiser_g4
+name: Sennheiser EW G4 Wireless (Lavalier/Handheld)
+brand: Sennheiser
+category: Audio
+covers: []
+description: |
+  A robust UHF wireless system widely used for ENG, interviews, and events.
+  Reliable RF, easy syncing, and interchangeable capsules make it a staple kit mic.
+
+sections:
+  - title: System Overview
+    images: []
+    body: |
+      • Typical kit: bodypack (SK 100 G4) + lav, handheld (SKM 100 G4), and receiver (EM 100 G4/EK 100 G4).
+      • Wide frequency ranges (region dependent) with user-selectable banks and channels.
+
+  - title: Quick Setup
+    images: []
+    body: |
+      • Scan for free frequencies on the receiver; sync to the transmitter via IR.
+      • Set transmitter input sensitivity to prevent clipping; aim for healthy RF and AF levels.
+
+  - title: Gain, Squelch & RF Hygiene
+    images: []
+    body: |
+      • Adjust AF Out on the receiver to match your recorder/camera input.
+      • Use correct squelch settings to avoid RF noise; keep TX-RX line-of-sight when possible.
+
+  - title: Mic Technique (Lavaliers)
+    images: []
+    body: |
+      • Place 6–8 inches below the mouth; avoid fabric rub and necklaces.
+      • In windy conditions, use furry windshields; tape/rig carefully for hidden mounts.
+
+  - title: Troubleshooting
+    images: []
+    body: |
+      • If you hear dropouts, rescan and re-sync; check antennas and cable strain.
+      • For distortion, reduce TX sensitivity first, then adjust receiver/output gain.
+
+related:
+  - rec_zoom_f8
+  - cam_sony_fx3
+  - cam_sony_a73
+  - cam_osmo_pocket_3

@@ -3,28 +3,61 @@ name: Indoor Interview
 covers:
   - assets/images/scenarios/indoor_interview.avif
 description: |
-  A controlled indoor setup prioritizing clean audio, flattering lighting, and consistent exposure for sit-down interviews.
+  A controlled, sit-down interview emphasizes intelligible dialogue, flattering lighting, and stable exposure. This setup suits corporate, documentary, or educational pieces shot in offices, homes, or studios.
 
 sections:
   - title: Setup Overview
-    images:
-      - assets/images/scenarios/indoor_interview.avif
+    images: []
     body: |
-      Position subject ~1.5m from background. Place key light at 45°, fill to taste, and use a backlight for separation.
+      • Place the subject ~1.5–2 m from the background to reduce shadows and create separation.
+      • Seat the subject at a slight angle to camera; keep eyeline close to lens if addressing interviewer.
+      • Use a tripod or solid support; tidy the frame and remove visual distractions.
+
+  - title: Lighting
+    images: []
+    body: |
+      • Key: Soft light at ~45° from camera and slightly above eye level (softbox/bounced LED).
+      • Fill: Add or subtract fill to taste; aim for gentle contrast (key-to-fill ratio ~2:1–4:1).
+      • Back/edge: A small light behind and opposite the key adds separation on hair/shoulder.
+      • White balance lights first; match color temperatures to avoid mixed casts.
 
   - title: Audio
-    images:
-      - assets/images/scenarios/indoor_interview.avif
+    images: []
     body: |
-      Use a lavalier or shotgun mic on a boom just out of frame. Monitor with closed-back headphones; aim for peaks around -12 dB.
+      • Primary: Lavalier mic on chest (6–8 inches below mouth) or a boomed shotgun just out of frame.
+      • Engage high-pass filter to tame rumble; aim for peaks around −12 dBFS on recorder.
+      • Minimize clothing rustle; hide lav cables with strain relief; monitor with closed-back headphones.
 
   - title: Camera & Exposure
-    images:
-      - assets/images/scenarios/indoor_interview.avif
+    images: []
     body: |
-      24/25/30 fps as required. Shutter at 180° rule, lock white balance, expose skin around 55–65 IRE depending on profile.
+      • Frame rate: 24/25/30p as required; set shutter near 180° rule (e.g., 1/50 at 25p).
+      • Aperture: f/2.8–4 for a modestly shallow background; stop down if subject moves a lot.
+      • ISO: stay near base ISO for best DR; use lights instead of raising ISO where possible.
+      • Use zebras or false color to expose skin consistently; lock WB.
+
+  - title: Composition & Background
+    images: []
+    body: |
+      • Rule of thirds for headroom and nose-room when in profile; center if speaking to camera.
+      • Add depth with practicals/books/plants but keep background tidy and relevant.
+      • Avoid reflective surfaces that reveal crew; turn off flickery fixtures.
+
+  - title: B-roll & Coverage
+    images: []
+    body: |
+      • Capture room tone (30–60 s). Shoot cutaways (hands, nods, environment, tools) for smoother edits.
+      • Consider a second angle (tight CU) if available to ease cutting.
+
+  - title: Troubleshooting
+    images: []
+    body: |
+      • Echoey rooms: add rugs/blankets/soft furnishings; move away from bare walls.
+      • Flicker/banding: adjust shutter slightly (e.g., 1/50↔1/60) or enable anti-flicker.
+      • Skin too shiny: powder or lower key; increase diffusion.
 
 related:
   - cam_sony_fx3
-  - cam_sony_a7s3
-  - mic_lav_wired
+  - cam_sony_a73
+  - rec_zoom_f8
+  - mic_sennheiser_g4

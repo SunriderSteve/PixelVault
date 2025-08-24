@@ -214,7 +214,7 @@ class _RelatedGrid extends StatelessWidget {
         final e = items[i];
         final cover = e.coverImages.isNotEmpty ? e.coverImages.first : '';
         return InkWell(
-          onTap: () => context.push('/learn/equip/${e.id}'),
+          onTap: () => context.push('/learn/equip-guides/${e.id}'),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

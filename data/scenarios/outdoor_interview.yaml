@@ -3,29 +3,51 @@ name: Outdoor Interview
 covers:
   - assets/images/scenarios/outdoor_interview.avif
 description: |
-  An exterior sit-down interview where wind, ambient noise, and changing light demand careful control.
+  Exterior interviews add real-world context but introduce wind, traffic, and changing light. Prioritize clean audio and consistent exposure while keeping the background meaningful.
 
 sections:
-  - title: Setup Overview
-    images:
-      - assets/images/scenarios/outdoor_interview.avif
+  - title: Location & Light
+    images: []
     body: |
-      Choose open shade or diffuse with a scrim. Avoid direct sun on skin.
+      • Choose open shade or create it with a scrim; avoid direct midday sun on faces.
+      • Backlight the subject and fill from camera side for flattering skin and separation.
+      • Use ND filters to maintain shutter angle and desired aperture.
 
-  - title: Audio
-    images:
-      - assets/images/scenarios/outdoor_interview.avif
+  - title: Wind & Noise Control
+    images: []
     body: |
-      Use lavs with fur windshields or a shotgun with a blimp/deadcat. Engage a high-pass filter and keep mic close.
+      • Use lavs with furry windshields or a shotgun in a blimp with a deadcat.
+      • Place subject upwind from mic; shield with flags/vehicles/walls if possible.
+      • Monitor RF and interference; rescan wireless when changing spots.
 
   - title: Camera & Exposure
-    images:
-      - assets/images/scenarios/outdoor_interview.avif
+    images: []
     body: |
-      Use ND filters to hold shutter/ISO, lock white balance, and watch for color shifts as clouds pass.
+      • Lock WB (daylight/tungsten/custom) to avoid color shifts with clouds.
+      • Keep shutter near 180° rule; vary ND and aperture to control exposure.
+      • Watch highlights (sky) with zebras/false color; protect skin tones.
+
+  - title: Framing & Background
+    images: []
+    body: |
+      • Position subject away from busy roads or crowds where possible to reduce distractions.
+      • Keep horizon lines from cutting through heads; mind passersby entering frame.
+
+  - title: Continuity & Coverage
+    images: []
+    body: |
+      • Capture clean room tone/ambience for the edit. Shoot b-roll matching the subject’s topic.
+      • Get insurance takes in case of wind gusts or sirens ruining audio.
+
+  - title: Troubleshooting
+    images: []
+    body: |
+      • Wind overload: increase windshielding, reposition, or move to partial shelter.
+      • Harsh backlight: add fill with reflector/LED or relocate to open shade.
+      • RF dropouts: change frequencies/banks; keep line-of-sight; check squelch.
 
 related:
   - cam_sony_fx3
-  - cam_sony_fx30
-  - mic_shotgun_blimp
-  - filter_nd_var
+  - cam_sony_a73
+  - mic_sennheiser_g4
+  - rec_zoom_f8

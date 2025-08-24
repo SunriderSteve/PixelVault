@@ -1,0 +1,44 @@
+id: audio_zoom_f8
+name: Zoom F8
+brand: Zoom
+category: Audio
+covers: []
+description: |
+  An 8-input/10-track field recorder with high-quality preamps, timecode,
+  dual-record safeguards, and flexible power—suited for narrative, doc, and events.
+
+sections:
+  - title: Core Features
+    images: []
+    body: |
+      • 8 XLR/TRS combo inputs with low-noise preamps and up to 192 kHz/24-bit PCM.
+      • Record up to 10 tracks (8 iso + stereo mix); dual SD card recording available.
+      • Timecode I/O for camera sync; limiters and safety tracks.
+
+  - title: Input & Gain Staging
+    images: []
+    body: |
+      • Set input type (mic/line); enable phantom power per channel if using condensers.
+      • Aim for peaks around −12 dBFS on iso tracks; leave headroom on the mix bus.
+
+  - title: Routing, Mix & Safety
+    images: []
+    body: |
+      • Route lavs/boom to iso tracks; build a conservative stereo mix for camera scratch.
+      • Consider dual-record at a lower level for insurance against sudden peaks.
+
+  - title: Power & Media
+    images: []
+    body: |
+      • Use external DC or battery sleds for long days; keep spare AAs.
+      • Mirror to two SD cards for redundancy; slate at head for sync.
+
+  - title: Field Tips
+    images: []
+    body: |
+      • Monitor with closed-back headphones; engage HPF to tame rumble.
+      • Label channels, talent, and mics clearly to speed post.
+
+related:
+  - mic_sennheiser_g4
+  - cam_sony_fx3

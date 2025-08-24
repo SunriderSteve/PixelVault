@@ -3,28 +3,50 @@ name: Live Streaming
 covers:
   - assets/images/scenarios/live_streaming.avif
 description: |
-  A single or multi-cam live streaming setup emphasizing stable signal, proper audio routing, and redundancy.
+  A live workflow requires stable signal flow, reliable audio mixing, network resilience, and clear roles. Plan redundancy and test thoroughly before going live.
 
 sections:
-  - title: Setup Overview
-    images:
-      - assets/images/scenarios/live_streaming.avif
+  - title: Signal Flow Overview
+    images: []
     body: |
-      Map your signal flow: cameras → switcher → encoder → platform. Test all paths and record program ISO if possible.
+      • Cameras → switcher → program out → encoder → platform (RTMP/SRT).
+      • Record ISO or program as backup; keep a slate to sync with on-camera audio.
 
-  - title: Audio
-    images:
-      - assets/images/scenarios/live_streaming.avif
+  - title: Audio Routing & Mix
+    images: []
     body: |
-      Mix mics and playback to a dedicated bus feeding the encoder. Use limiters; watch loudness targets (e.g., -16 LUFS).
+      • Mix mics and playback to a dedicated bus feeding the encoder/switcher.
+      • Use limiters and conservative levels (-18 to -16 LUFS integrated); monitor latency.
 
-  - title: Network & Redundancy
-    images:
-      - assets/images/scenarios/live_streaming.avif
+  - title: Graphics & Monitoring
+    images: []
     body: |
-      Prefer wired Ethernet. Bond connections where possible and keep a hotspot failover. Monitor stream health continuously.
+      • Prepare lower thirds/bugs/titles; check safe areas.
+      • Monitor program, confidence, and platform return feeds; verify sync (lips vs. audio).
+
+  - title: Networking & Redundancy
+    images: []
+    body: |
+      • Prefer wired Ethernet; avoid congested Wi-Fi bands.
+      • Bond or failover to secondary internet (hotspot/5G router) if possible.
+      • Keep a second encoder/stream profile ready to switch.
+
+  - title: Preflight Checklist
+    images: []
+    body: |
+      • Test all sources (cameras, screen capture, playback). Verify audio on every mic.
+      • Confirm stream key and platform ingest server; run a private test stream.
+      • Battery/AC checks, media space, timecode/scene naming consistent.
+
+  - title: Troubleshooting
+    images: []
+    body: |
+      • Dropped frames: lower bitrate/resolution; prioritize encoder hardware; check CPU/GPU load.
+      • Audio drift: lock sample rates; avoid sample-rate mismatches between devices.
+      • Network instability: switch to backup path; reduce encoder bitrate and GOP size.
 
 related:
-  - switcher_atem_mini
-  - encoder_web_presenter
-  - mic_handheld_wireless
+  - cam_sony_fx3
+  - cam_sony_a73
+  - rec_zoom_f8
+  - mic_sennheiser_g4

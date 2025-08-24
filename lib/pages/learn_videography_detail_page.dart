@@ -72,7 +72,7 @@ class _VideographyDetailPageState extends State<VideographyDetailPage> {
               borderRadius: BorderRadius.circular(12),
               child: AvifImage.asset(
                 _guide.coverImages.first,
-                fit: BoxFit.cover,
+                fit: BoxFit.scaleDown,
               ),
             ),
           const SizedBox(height: 24),

@@ -1,0 +1,37 @@
+id: cam_osmo_pocket_3
+name: DJI Osmo Pocket 3
+brand: DJI
+category: Camera
+covers: []
+description: |
+  A pocket-sized 3-axis gimbal camera with a 1-inch sensor, 4K/120 capability,
+  and a rotatable touchscreen—ideal for travel, BTS, vlogging, and quick social content.
+
+sections:
+  - title: What It’s Good At
+    images: []
+    body: |
+      • Ultra-portable stabilized video with mechanical gimbal.
+      • Fast autofocus and face tracking for solo shooting.
+      • 10-bit profiles (D-Log M/HLG) for flexible color.
+
+  - title: Shooting Modes & Frame Rates
+    images: []
+    body: |
+      • 24/25/30p for standard footage; 50/60p for smooth motion; 100/120p for slow-mo.
+      • Keep shutter near 180° rule; use ND filters outdoors to hold aperture/ISO.
+
+  - title: Sound & Accessories
+    images: []
+    body: |
+      • Use the built-in mics for scratch; consider external wireless mics for critical audio.
+      • Add wider lenses or handle accessories for ergonomics when needed.
+
+  - title: Workflow Tips
+    images: []
+    body: |
+      • Shoot 10-bit when grading; otherwise use Normal/HLG for speed.
+      • Back up microSD cards frequently; mind file splits on long takes.
+
+related:
+  - mic_sennheiser_g4

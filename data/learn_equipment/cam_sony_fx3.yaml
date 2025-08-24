@@ -1,0 +1,58 @@
+id: cam_sony_fx3
+name: Sony FX3
+brand: Sony
+category: Camera
+
+# cover images for the carousel
+coverImages:
+  - assets/images/sony_fx3_1.avif
+
+# high‑level description shown in an "About" section
+description: |
+  Sony’s FX3 is a compact full-frame Cinema Line camera built around a 12 MP BSI sensor optimized for video. It offers excellent low-light performance, 10-bit 4:2:2 internal recording, robust autofocus, and pro-friendly ergonomics (top handle, tally lamps, multiple 1/4-20 mounts).
+
+  Ideal for solo shooters and small crews.
+
+# collapsible sections, each with images stacked vertically then body text
+sections:
+  - title: Key Specs & What It Means
+    images:
+      - assets/images/equipment/sony_fx3/setup1.avif
+      - assets/images/equipment/sony_fx3/setup2.avif
+    body: |
+      • 4K up to 120p (10-bit 4:2:2), S-Log3/S-Cinetone; great for grading or quick turnarounds.
+      • Fast Hybrid AF with Eye AF for video; sticky, reliable subject tracking.
+      • Dual card slots (CFexpress A/SDXC); active cooling for long record times.
+      • Full-size HDMI for external recorders/monitors.
+
+  - title: Recommended Video Setup
+    images: []
+    body: |
+      • Picture profiles: S-Cinetone for straight-out-of-camera, S-Log3 for grading.
+      • White balance: Avoid Auto for interviews; set a custom WB or use presets.
+      • Audio: Use the top-handle XLR unit for clean preamps and locking connectors.
+
+  - title: Exposure & Shutter
+    images: []
+    body: |
+      • Use the 180° shutter guideline (e.g., 1/50 at 25 fps) for natural motion blur.
+      • Control exposure with ND filters rather than changing shutter speed.
+      • Base ISO (in Cine EI / Log workflows) helps maximize dynamic range.
+
+  - title: Autofocus & Stabilization
+    images: []
+    body: |
+      • AF Transition Speed and Sensitivity let you tune rack-focus behavior.
+      • Use active stabilization for handheld; pair with a gimbal for moving shots.
+
+  - title: Media, Power & Thermal
+    images: []
+    body: |
+      • CFexpress Type A for high-bitrate slow-motion; V90 SD works for many modes.
+      • External USB-PD power extends runtime; active cooling reduces overheating risk.
+
+# related equipment cards (by id)
+related:
+  - cam_sony_a73
+  - rec_zoom_f8
+  - mic_sennheiser_g4

@@ -73,7 +73,7 @@ class _LearnEquipDetailPageState extends State<EquipDetailPage> {
               borderRadius: BorderRadius.circular(12),
               child: AvifImage.asset(
                 _equip.coverImages.first,
-                fit: BoxFit.cover,
+                fit: BoxFit.scaleDown,
               ),
             ),
 
@@ -203,7 +203,7 @@ class _RelatedGrid extends StatelessWidget {
         final e = items[i];
         final cover = e.coverImages.isNotEmpty ? e.coverImages.first : '';
         return InkWell(
-          onTap: () => context.push('/learn/equip/${e.id}'),
+          onTap: () => context.push('/learn/equip-guides/${e.id}'),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

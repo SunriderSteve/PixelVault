@@ -1,0 +1,38 @@
+id: exposure_triangle
+name: Exposure Triangle
+covers: []
+description: |
+  Exposure is controlled by three linked settings: aperture, shutter speed, and ISO. Changing one often requires compensating with another to keep brightness constant—and each has creative side-effects.
+
+sections:
+  - title: Aperture (f-stop)
+    images: []
+    body: |
+      • Controls lens opening → more/less light.
+      • Affects depth of field (lower f-numbers = shallower DOF).
+      • Diffraction at very high f-numbers can reduce sharpness.
+
+  - title: Shutter Speed (or Shutter Angle)
+    images: []
+    body: |
+      • Controls exposure time per frame; affects motion blur.
+      • For natural motion in video, use ~180° shutter (e.g., 1/50 at 25 fps).
+      • Deviation (faster/slower) changes motion feel; can reduce or exaggerate blur.
+
+  - title: ISO (Sensor Gain)
+    images: []
+    body: |
+      • Adjusts sensor amplification; higher ISO brightens but increases noise.
+      • Many log profiles have “base ISO” values for best dynamic range.
+
+  - title: ND Filters & Bright Light
+    images: []
+    body: |
+      • Use ND filters to maintain ideal shutter and aperture in daylight.
+      • Variable ND offers convenience; fixed NDs are most consistent.
+
+  - title: Practical Starting Points
+    images: []
+    body: |
+      • Interviews: f/2.8–4, 1/50 at 25 fps, ISO near base; add light as needed.
+      • Action: raise shutter (1/100–1/250) for crisper motion; mind strobing.
