@@ -5,6 +5,7 @@ import 'package:yaml/yaml.dart';
 import '../models/learn_equipment_model.dart';
 import '../models/learn_videography_model.dart';
 import '../models/scenario_model.dart';
+import '../models/inventory_model.dart';
 
 /// Loads all YAML files once at start-up and keeps them in memory.
 /// Call `await DataRepository().init()` in main() *before* runApp().
@@ -18,6 +19,7 @@ class DataRepository {
   late final Map<String, Equipment> _equipment;
   late final Map<String, VideographyGuide> _videography;
   late final Map<String, ScenarioGuide> _scenarios;
+  late final Map<String, InventoryItem> _inventory;
 
   /// Reads every .yaml file under /data/equipment/ and /data/scenarios/
   Future<void> init() async {
@@ -29,6 +31,7 @@ class DataRepository {
     _equipment = {};
     _videography = {};
     _scenarios = {};
+    _inventory = {};
 
     // Load equipment YAML files
     final equipPaths = manifestMap.keys.where(
@@ -65,6 +68,18 @@ class DataRepository {
       final s = ScenarioGuide.fromYaml(yamlMap);
       _scenarios[s.id] = s;
     }
+
+    // Load inventory YAML files
+    final invPaths = manifestMap.keys.where(
+      (p) => p.startsWith('data/inventory/') && p.endsWith('.yaml'),
+    );
+
+    for (final path in invPaths) {
+      final yamlString = await rootBundle.loadString(path);
+      final yamlMap = loadYaml(yamlString) as YamlMap;
+      final item = InventoryItem.fromYaml(yamlMap);
+      _inventory[item.id] = item;
+    }
   }
 
   // ---------- public helpers ----------
@@ -72,8 +87,10 @@ class DataRepository {
   List<ScenarioGuide> getAllScenarios() => _scenarios.values.toList();
   List<VideographyGuide> getAllVideographyGuides() =>
       _videography.values.toList();
+  List<InventoryItem> getAllInventory() => _inventory.values.toList();
 
   Equipment? getEquipment(String id) => _equipment[id];
   VideographyGuide? getVideographyGuide(String id) => _videography[id];
   ScenarioGuide? getScenario(String id) => _scenarios[id];
+  InventoryItem? getInventory(String id) => _inventory[id];
 }

@@ -66,6 +66,7 @@ flutter:
     - data/learn_equipment/
     - data/learn_videography/
     - data/scenarios/
+    - data/inventory/
     - assets/images/
     - assets/images/scenarios/
     - assets/images/homepage/
