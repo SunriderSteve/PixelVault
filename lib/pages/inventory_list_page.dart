@@ -353,7 +353,6 @@ class _InventoryCard extends StatelessWidget {
 
     Widget thumb;
     if (coverPath.isEmpty) {
-      // no cover available
       thumb = Stack(
         fit: StackFit.expand,
         children: [
@@ -374,6 +373,7 @@ class _InventoryCard extends StatelessWidget {
           ? Stack(
               fit: StackFit.expand,
               children: [
+                // requires: import 'dart:ui' as ui;
                 ImageFiltered(
                   imageFilter: ui.ImageFilter.blur(sigmaX: 3, sigmaY: 3),
                   child: base,
@@ -401,14 +401,28 @@ class _InventoryCard extends StatelessWidget {
             Expanded(child: thumb),
             Padding(
               padding: const EdgeInsets.all(8),
-              child: Text(
-                title,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontVariations: [FontVariation('wght', 500)],
-                ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontVariations: [FontVariation('wght', 500)],
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$quantity Left',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: isUnavailable ? Colors.grey : Colors.deepOrange,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
