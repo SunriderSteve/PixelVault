@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_avif/flutter_avif.dart';
 
 import '../services/data_repository.dart';
-import '../models/inventory_model.dart';
+import '../models/learn_equipment_model.dart'; // Class inside is now `Equipment`
 
 class InventoryListPage extends StatefulWidget {
   const InventoryListPage({super.key});
@@ -26,8 +26,8 @@ class _InventoryListPageState extends State<InventoryListPage> {
   final Set<String> _selectedBrands = {};
 
   // Data
-  late final List<_InvViewItem> _all; // inventory + mapped equip meta
-  late List<_InvViewItem> _display; // after search/filters
+  late final List<_Row> _all; // inventory view rows
+  late List<_Row> _display;
 
   // Facets
   late final List<String> _allCategories;
@@ -38,23 +38,23 @@ class _InventoryListPageState extends State<InventoryListPage> {
     super.initState();
 
     final repo = DataRepository();
-    final inv = repo.getAllInventory(); // List<InventoryItem>
-    final equipById = {for (final e in repo.getAllEquipment()) e.id: e};
+    // Inventory is any Equipment with a non-null quantity
+    final List<Equipment> invItems = repo.getInventoryItems();
 
-    _all = inv.map((it) {
-      final eq = equipById[it.id];
-      return _InvViewItem(
-        item: it,
-        brand: eq?.brand ?? 'Unknown',
-        category: eq?.category ?? 'Unknown',
-        cover: (eq != null && eq.coverImages.isNotEmpty)
-            ? eq.coverImages.first
-            : '',
-      );
-    }).toList();
+    _all = invItems
+        .map(
+          (e) => _Row(
+            eq: e,
+            brand: e.brand,
+            category: e.category,
+            cover: e.coverImages.isNotEmpty ? e.coverImages.first : '',
+            quantity: e.quantity ?? 0,
+          ),
+        )
+        .toList();
 
-    _allCategories = _all.map((e) => e.category).toSet().toList()..sort();
-    _allBrands = _all.map((e) => e.brand).toSet().toList()..sort();
+    _allCategories = _all.map((r) => r.category).toSet().toList()..sort();
+    _allBrands = _all.map((r) => r.brand).toSet().toList()..sort();
 
     _display = List.from(_all);
     _searchController.addListener(_applyFilters);
@@ -63,14 +63,14 @@ class _InventoryListPageState extends State<InventoryListPage> {
   void _applyFilters() {
     final q = _searchController.text.toLowerCase().trim();
     setState(() {
-      _display = _all.where((row) {
-        final matchesQ = q.isEmpty || row.item.name.toLowerCase().contains(q);
-        final matchesC =
+      _display = _all.where((r) {
+        final matchQ = q.isEmpty || r.eq.name.toLowerCase().contains(q);
+        final matchC =
             _selectedCategories.isEmpty ||
-            _selectedCategories.contains(row.category);
-        final matchesB =
-            _selectedBrands.isEmpty || _selectedBrands.contains(row.brand);
-        return matchesQ && matchesC && matchesB;
+            _selectedCategories.contains(r.category);
+        final matchB =
+            _selectedBrands.isEmpty || _selectedBrands.contains(r.brand);
+        return matchQ && matchC && matchB;
       }).toList();
     });
   }
@@ -102,7 +102,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/'),
         ),
         backgroundColor: const Color(0xFF0047BB),
         title: const Text('Inventory', style: TextStyle(color: Colors.white)),
@@ -279,12 +279,12 @@ class _InventoryListPageState extends State<InventoryListPage> {
                   childAspectRatio: 3 / 2,
                 ),
                 itemBuilder: (context, i) {
-                  final v = _display[i];
+                  final r = _display[i];
                   return _InventoryCard(
-                    title: v.item.name,
-                    coverPath: v.cover,
-                    quantity: v.item.quantity,
-                    onTap: () => context.push('/learn/equip/${v.item.id}'),
+                    title: r.eq.name,
+                    coverPath: r.cover,
+                    quantity: r.quantity,
+                    onTap: () => context.push('/learn/equip-guides/${r.eq.id}'),
                   );
                 },
               ),
@@ -296,17 +296,19 @@ class _InventoryListPageState extends State<InventoryListPage> {
   }
 }
 
-class _InvViewItem {
-  final InventoryItem item;
+class _Row {
+  final Equipment eq;
   final String brand;
   final String category;
-  final String cover; // first cover from LearnEquipmentModel
+  final String cover;
+  final int quantity;
 
-  _InvViewItem({
-    required this.item,
+  _Row({
+    required this.eq,
     required this.brand,
     required this.category,
     required this.cover,
+    required this.quantity,
   });
 }
 
@@ -349,31 +351,43 @@ class _InventoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isUnavailable = quantity <= 0;
 
-    Widget imageChild;
+    Widget thumb;
     if (coverPath.isEmpty) {
-      imageChild = const SizedBox.shrink();
-    } else {
-      final baseImage = AvifImage.asset(coverPath, fit: BoxFit.cover);
-      if (isUnavailable) {
-        imageChild = Stack(
-          fit: StackFit.expand,
-          children: [
-            ImageFiltered(
-              imageFilter: ui.ImageFilter.blur(sigmaX: 3, sigmaY: 3),
-              child: baseImage,
-            ),
-            Container(color: Colors.white.withOpacity(0.6)),
+      // no cover available
+      thumb = Stack(
+        fit: StackFit.expand,
+        children: [
+          const ColoredBox(color: Color(0xFFE0E0E0)),
+          if (isUnavailable) Container(color: Colors.white.withOpacity(0.6)),
+          if (isUnavailable)
             const Center(
               child: Text(
                 'Unavailable',
                 style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
               ),
             ),
-          ],
-        );
-      } else {
-        imageChild = baseImage;
-      }
+        ],
+      );
+    } else {
+      final base = AvifImage.asset(coverPath, fit: BoxFit.cover);
+      thumb = isUnavailable
+          ? Stack(
+              fit: StackFit.expand,
+              children: [
+                ImageFiltered(
+                  imageFilter: ui.ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+                  child: base,
+                ),
+                Container(color: Colors.white.withOpacity(0.6)),
+                const Center(
+                  child: Text(
+                    'Unavailable',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                  ),
+                ),
+              ],
+            )
+          : base;
     }
 
     return Card(
@@ -384,11 +398,7 @@ class _InventoryCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: coverPath.isNotEmpty
-                  ? imageChild
-                  : const SizedBox.shrink(),
-            ),
+            Expanded(child: thumb),
             Padding(
               padding: const EdgeInsets.all(8),
               child: Text(

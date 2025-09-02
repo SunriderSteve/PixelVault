@@ -1,4 +1,0 @@
-id: cam_sony_fx3 # must match LearnEquipmentModel.id
-name: Sony FX3
-cabinet: C3 # your cabinet labeling scheme
-quantity: 2 # set to 0 to test the "Unavailable" overlay

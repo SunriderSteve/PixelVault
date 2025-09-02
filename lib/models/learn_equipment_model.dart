@@ -31,11 +31,19 @@ class Equipment {
   final List<EquipSection> sections; // collapsible sections
   final List<String> related; // list of related equipment ids
 
+  // Optional inventory metadata (integrated into equipment YAML)
+  // If `cabinet` is omitted, it simply won't be shown.
+  // If `quantity` is omitted, the item won't appear in the Inventory module.
+  final String? cabinet;
+  final int? quantity;
+
   Equipment({
     required this.id,
     required this.name,
     required this.category,
     required this.brand,
+    this.cabinet,
+    this.quantity,
     required this.coverImages,
     required this.description,
     required this.sections,
@@ -43,10 +51,8 @@ class Equipment {
   });
 
   factory Equipment.fromYaml(YamlMap yaml) {
-    // Allow migration: treat legacy `images:` as `coverImages:` if `coverImages` is absent
-    final cov = List<String>.from(
-      yaml['coverImages'] ?? yaml['images'] ?? const [],
-    );
+    // Allow migration: treat legacy `images:` as `covers:` if `covers` is absent
+    final cov = List<String>.from(yaml['covers'] ?? yaml['images'] ?? const []);
 
     final secsYaml = yaml['sections'] as YamlList?;
     final secs = secsYaml == null
@@ -64,6 +70,8 @@ class Equipment {
       description: (yaml['description'] as String?) ?? '',
       sections: secs,
       related: List<String>.from(yaml['related'] ?? const []),
+      cabinet: yaml['cabinet'] as String?,
+      quantity: (yaml['quantity'] as num?)?.toInt(),
     );
   }
 }
