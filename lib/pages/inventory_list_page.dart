@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_avif/flutter_avif.dart';
 
 import '../services/data_repository.dart';
-import '../models/learn_equipment_model.dart'; // Class inside is now `Equipment`
+import '../models/learn_equipment_model.dart'; // class: Equipment (with coverImages)
 
 class InventoryListPage extends StatefulWidget {
   const InventoryListPage({super.key});
@@ -19,14 +19,19 @@ class _InventoryListPageState extends State<InventoryListPage> {
 
   // UI state
   bool _showFilters = false;
-  int _activeTab = 0; // 0: Category, 1: Brand
+  int _activeTab =
+      0; // 0: Availability, 1: Category, 2: Brand (Availability first as requested)
+  bool _sortAsc = true; // A→Z by default
+
+  // Availability tri-state: 0 = all, 1 = available only, 2 = unavailable only
+  int _availability = 0;
 
   // Selections
   final Set<String> _selectedCategories = {};
   final Set<String> _selectedBrands = {};
 
   // Data
-  late final List<_Row> _all; // inventory view rows
+  late final List<_Row> _all;
   late List<_Row> _display;
 
   // Facets
@@ -38,7 +43,6 @@ class _InventoryListPageState extends State<InventoryListPage> {
     super.initState();
 
     final repo = DataRepository();
-    // Inventory is any Equipment with a non-null quantity
     final List<Equipment> invItems = repo.getInventoryItems();
 
     _all = invItems
@@ -58,6 +62,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
 
     _display = List.from(_all);
     _searchController.addListener(_applyFilters);
+    _applyFilters();
   }
 
   void _applyFilters() {
@@ -70,8 +75,23 @@ class _InventoryListPageState extends State<InventoryListPage> {
             _selectedCategories.contains(r.category);
         final matchB =
             _selectedBrands.isEmpty || _selectedBrands.contains(r.brand);
-        return matchQ && matchC && matchB;
+
+        bool matchAvail = true;
+        if (_availability == 1) {
+          matchAvail = r.quantity > 0; // available only
+        } else if (_availability == 2) {
+          matchAvail = r.quantity <= 0; // unavailable only
+        }
+
+        return matchQ && matchC && matchB && matchAvail;
       }).toList();
+
+      _display.sort(
+        (a, b) => a.eq.name.toLowerCase().compareTo(b.eq.name.toLowerCase()),
+      );
+      if (!_sortAsc) {
+        _display = _display.reversed.toList();
+      }
     });
   }
 
@@ -79,6 +99,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
     setState(() {
       _selectedCategories.clear();
       _selectedBrands.clear();
+      _availability = 0;
       _applyFilters();
     });
   }
@@ -96,13 +117,16 @@ class _InventoryListPageState extends State<InventoryListPage> {
       2,
       (MediaQuery.of(context).size.width / maxTile).floor(),
     );
-    final totalFilters = _selectedCategories.length + _selectedBrands.length;
+    final totalFilters =
+        _selectedCategories.length +
+        _selectedBrands.length +
+        (_availability == 0 ? 0 : 1);
 
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/'),
+          onPressed: () => context.pop(),
         ),
         backgroundColor: const Color(0xFF0047BB),
         title: const Text('Inventory', style: TextStyle(color: Colors.white)),
@@ -111,7 +135,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
       ),
       body: Column(
         children: [
-          // Sticky search + filter row
+          // Sticky search + sort + filter row
           Container(
             color: Theme.of(context).scaffoldBackgroundColor,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -138,6 +162,20 @@ class _InventoryListPageState extends State<InventoryListPage> {
                     ),
                   ),
                 ),
+                // Sort button toggles A→Z / Z→A
+                IconButton(
+                  tooltip: _sortAsc ? 'Sort Z → A' : 'Sort A → Z',
+                  icon: Icon(
+                    _sortAsc
+                        ? Icons.sort_by_alpha
+                        : Icons.sort_by_alpha_outlined,
+                  ),
+                  onPressed: () {
+                    setState(() => _sortAsc = !_sortAsc);
+                    _applyFilters();
+                  },
+                ),
+                // Filter button with count badge
                 GestureDetector(
                   onTap: () => setState(() => _showFilters = !_showFilters),
                   child: Stack(
@@ -169,7 +207,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
             ),
           ),
 
-          // Filter panel (tabs: Category | Brand)
+          // Filter panel (tabs: Availability | Category | Brand)
           if (_showFilters)
             Container(
               color: Colors.white,
@@ -178,24 +216,30 @@ class _InventoryListPageState extends State<InventoryListPage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   SizedBox(
-                    height: 200,
+                    height: 220,
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         SizedBox(
-                          width: 150,
+                          width: 170,
                           child: ListView(
                             children: [
                               _TabButton(
                                 label:
-                                    'Category (${_selectedCategories.length})',
+                                    'Availability (${_availability == 0 ? 0 : 1})',
                                 selected: _activeTab == 0,
                                 onTap: () => setState(() => _activeTab = 0),
                               ),
                               _TabButton(
-                                label: 'Brand (${_selectedBrands.length})',
+                                label:
+                                    'Category (${_selectedCategories.length})',
                                 selected: _activeTab == 1,
                                 onTap: () => setState(() => _activeTab = 1),
+                              ),
+                              _TabButton(
+                                label: 'Brand (${_selectedBrands.length})',
+                                selected: _activeTab == 2,
+                                onTap: () => setState(() => _activeTab = 2),
                               ),
                             ],
                           ),
@@ -207,7 +251,44 @@ class _InventoryListPageState extends State<InventoryListPage> {
                               spacing: 8,
                               runSpacing: 8,
                               children: [
+                                // Availability chip styled like other FilterChips
+                                // Availability chip (tri-state): All → ✓ Available → ✕ Unavailable → All
                                 if (_activeTab == 0)
+                                  FilterChip(
+                                    selected: _availability != 0,
+                                    showCheckmark:
+                                        false, // prevent the default trailing ✓ overlay
+                                    label: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (_availability == 1) ...[
+                                          const Icon(
+                                            Icons.check,
+                                            size: 16,
+                                            color: Colors.green,
+                                          ), // green tick, no circle
+                                          const SizedBox(width: 6),
+                                        ] else if (_availability == 2) ...[
+                                          const Icon(
+                                            Icons.close,
+                                            size: 16,
+                                            color: Colors.redAccent,
+                                          ), // red cross
+                                          const SizedBox(width: 6),
+                                        ],
+                                        const Text('Available'),
+                                      ],
+                                    ),
+                                    onSelected: (_) {
+                                      setState(() {
+                                        // 0 -> 1 (available) -> 2 (unavailable) -> 0 (all)
+                                        _availability = (_availability + 1) % 3;
+                                        _applyFilters();
+                                      });
+                                    },
+                                  ),
+
+                                if (_activeTab == 1)
                                   for (final c in _allCategories)
                                     FilterChip(
                                       label: Text(
@@ -221,7 +302,8 @@ class _InventoryListPageState extends State<InventoryListPage> {
                                         _applyFilters();
                                       }),
                                     ),
-                                if (_activeTab == 1)
+
+                                if (_activeTab == 2)
                                   for (final b in _allBrands)
                                     FilterChip(
                                       label: Text(
@@ -284,7 +366,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
                     title: r.eq.name,
                     coverPath: r.cover,
                     quantity: r.quantity,
-                    onTap: () => context.push('/learn/equip-guides/${r.eq.id}'),
+                    onTap: () => context.push('/learn/equip/${r.eq.id}'),
                   );
                 },
               ),
@@ -362,7 +444,11 @@ class _InventoryCard extends StatelessWidget {
             const Center(
               child: Text(
                 'Unavailable',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 20,
+                  color: Colors.redAccent,
+                ),
               ),
             ),
         ],
@@ -373,7 +459,6 @@ class _InventoryCard extends StatelessWidget {
           ? Stack(
               fit: StackFit.expand,
               children: [
-                // requires: import 'dart:ui' as ui;
                 ImageFiltered(
                   imageFilter: ui.ImageFilter.blur(sigmaX: 3, sigmaY: 3),
                   child: base,
@@ -382,7 +467,11 @@ class _InventoryCard extends StatelessWidget {
                 const Center(
                   child: Text(
                     'Unavailable',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 20,
+                      color: Colors.redAccent,
+                    ),
                   ),
                 ),
               ],
@@ -403,22 +492,27 @@ class _InventoryCard extends StatelessWidget {
               padding: const EdgeInsets.all(8),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start, // left align quantity
                 children: [
-                  Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontVariations: [FontVariation('wght', 500)],
+                  Center(
+                    child: Text(
+                      title,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontVariations: [FontVariation('wght', 500)],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '$quantity Left',
-                    textAlign: TextAlign.center,
+                    '$quantity Left', // no brackets
+                    textAlign: TextAlign.start,
                     style: TextStyle(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
                       color: isUnavailable ? Colors.grey : Colors.deepOrange,
                     ),
                   ),
