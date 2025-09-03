@@ -22,7 +22,7 @@ class ScenarioGuide {
   final String id;
   final String name; // display title
   final String description; // short overview
-  final List<String> covers; // one or more cover images
+  final List<String> coverImages; // one or more cover images
   final List<ScenarioSection> sections;
   final List<String> related; // related equipment ids
 
@@ -30,7 +30,7 @@ class ScenarioGuide {
     required this.id,
     required this.name,
     required this.description,
-    required this.covers,
+    required this.coverImages,
     required this.sections,
     required this.related,
   });
@@ -44,7 +44,7 @@ class ScenarioGuide {
       id: yaml['id'] as String,
       name: yaml['name'] as String,
       description: (yaml['description'] as String?) ?? '',
-      covers: List<String>.from(yaml['covers'] ?? const []),
+      coverImages: List<String>.from(yaml['coverImages'] ?? const []),
       sections: secs,
       related: List<String>.from(yaml['related'] ?? const []), // NEW
     );

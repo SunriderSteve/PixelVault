@@ -2,10 +2,12 @@ id: cam_sony_fx3
 name: Sony FX3
 brand: Sony
 category: Camera
+cabinnet: A
+quantity: 0
 
 # cover images for the carousel
 coverImages:
-  - assets/images/sony_fx3_1.avif
+  - assets/images/equipment/cam_sony_fx3_1.avif
 
 # high‑level description shown in an "About" section
 description: |

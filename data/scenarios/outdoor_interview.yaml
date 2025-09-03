@@ -1,6 +1,6 @@
 id: outdoor_interview
 name: Outdoor Interview
-covers:
+coverImages:
   - assets/images/scenarios/outdoor_interview.avif
 description: |
   Exterior interviews add real-world context but introduce wind, traffic, and changing light. Prioritize clean audio and consistent exposure while keeping the background meaningful.

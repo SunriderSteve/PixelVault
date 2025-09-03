@@ -51,8 +51,10 @@ class Equipment {
   });
 
   factory Equipment.fromYaml(YamlMap yaml) {
-    // Allow migration: treat legacy `images:` as `covers:` if `covers` is absent
-    final cov = List<String>.from(yaml['covers'] ?? yaml['images'] ?? const []);
+    // Allow migration: treat legacy `images:` as `coverImages:` if `coverImages` is absent
+    final cov = List<String>.from(
+      yaml['coverImages'] ?? yaml['images'] ?? const [],
+    );
 
     final secsYaml = yaml['sections'] as YamlList?;
     final secs = secsYaml == null

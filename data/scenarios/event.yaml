@@ -1,6 +1,6 @@
 id: event
 name: Event
-covers:
+coverImages:
   - assets/images/scenarios/event.avif
 description: |
   Run-and-gun event coverage balances mobility, stabilization, and fast exposure control across mixed lighting. Preparation and predictable settings keep you agile.

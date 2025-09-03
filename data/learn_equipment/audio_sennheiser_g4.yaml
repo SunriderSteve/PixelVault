@@ -1,10 +1,11 @@
-id: mic_sennheiser_g4
+id: audio_sennheiser_g4
 name: Sennheiser EW G4 Wireless (Lavalier/Handheld)
 brand: Sennheiser
 category: Audio
 cabinnet: 4
 quantity: 4
-covers: []
+coverImages:
+  - assets/images/equipment/audio_sennheiser_g4_1.avif
 description: |
   A robust UHF wireless system widely used for ENG, interviews, and events.
   Reliable RF, easy syncing, and interchangeable capsules make it a staple kit mic.

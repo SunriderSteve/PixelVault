@@ -45,7 +45,7 @@ class ScenarioListPage extends StatelessWidget {
           ),
           itemBuilder: (context, i) {
             final s = items[i];
-            final cover = s.covers.isNotEmpty ? s.covers.first : '';
+            final cover = s.coverImages.isNotEmpty ? s.coverImages.first : '';
             return Card(
               clipBehavior: Clip.antiAlias,
               shape: RoundedRectangleBorder(

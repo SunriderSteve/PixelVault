@@ -56,18 +56,18 @@ class _ScenarioDetailPageState extends State<ScenarioDetailPage> {
           ),
           const SizedBox(height: 16),
 
-          // Covers: single or carousel
-          if (_scenario.covers.length > 1)
+          // coverImages: single or carousel
+          if (_scenario.coverImages.length > 1)
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: coverMaxHeight),
               child: PageView.builder(
-                itemCount: _scenario.covers.length,
+                itemCount: _scenario.coverImages.length,
                 itemBuilder: (context, index) {
                   return ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: Center(
                       child: AvifImage.asset(
-                        _scenario.covers[index],
+                        _scenario.coverImages[index],
                         fit: BoxFit.scaleDown,
                       ),
                     ),
@@ -75,14 +75,14 @@ class _ScenarioDetailPageState extends State<ScenarioDetailPage> {
                 },
               ),
             )
-          else if (_scenario.covers.isNotEmpty)
+          else if (_scenario.coverImages.isNotEmpty)
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: coverMaxHeight),
                 child: Center(
                   child: AvifImage.asset(
-                    _scenario.covers.first,
+                    _scenario.coverImages.first,
                     fit: BoxFit.scaleDown,
                   ),
                 ),
