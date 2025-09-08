@@ -2,6 +2,8 @@ id: audio_zoom_f8
 name: Zoom F8
 brand: Zoom
 category: Audio
+cabinet: "5"
+quantity: 1
 coverImages: []
 description: |
   An 8-input/10-track field recorder with high-quality preamps, timecode,

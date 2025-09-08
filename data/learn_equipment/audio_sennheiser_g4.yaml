@@ -2,7 +2,7 @@ id: audio_sennheiser_g4
 name: Sennheiser EW G4 Wireless (Lavalier/Handheld)
 brand: Sennheiser
 category: Audio
-cabinnet: 4
+cabinet: "5"
 quantity: 4
 coverImages:
   - assets/images/equipment/audio_sennheiser_g4_1.avif

@@ -19,9 +19,9 @@ class _InventoryListPageState extends State<InventoryListPage> {
 
   // UI state
   bool _showFilters = false;
-  int _activeTab =
-      0; // 0: Availability, 1: Category, 2: Brand (Availability first as requested)
+  int _activeTab = 0; // 0: Availability, 1: Category, 2: Brand
   bool _sortAsc = true; // A→Z by default
+  bool _isAdmin = false;
 
   // Availability tri-state: 0 = all, 1 = available only, 2 = unavailable only
   int _availability = 0;
@@ -38,6 +38,9 @@ class _InventoryListPageState extends State<InventoryListPage> {
   late final List<String> _allCategories;
   late final List<String> _allBrands;
 
+  // Yes I know this not secure at all
+  static const String _adminPassword = 'admin123';
+
   @override
   void initState() {
     super.initState();
@@ -53,6 +56,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
             category: e.category,
             cover: e.coverImages.isNotEmpty ? e.coverImages.first : '',
             quantity: e.quantity ?? 0,
+            cabinet: e.cabinet ?? '',
           ),
         )
         .toList();
@@ -104,6 +108,102 @@ class _InventoryListPageState extends State<InventoryListPage> {
     });
   }
 
+  Future<void> _promptEnterAdmin() async {
+    final controller = TextEditingController();
+    final ok = await showGeneralDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Admin',
+      barrierColor: Colors.black26,
+      pageBuilder: (context, a1, a2) {
+        return Stack(
+          children: [
+            // Blur the background behind the dialog
+            BackdropFilter(
+              filter: ui.ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+              child: const SizedBox.expand(),
+            ),
+            Center(
+              child: Material(
+                color: Colors.transparent,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: AlertDialog(
+                    title: const Text('Enter password to enter Admin Mode'),
+                    content: TextField(
+                      controller: controller,
+                      autofocus: true,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Password',
+                        border: OutlineInputBorder(),
+                      ),
+                      onSubmitted: (_) => Navigator.of(
+                        context,
+                      ).pop(controller.text == _adminPassword),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text('Cancel'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(
+                          context,
+                        ).pop(controller.text == _adminPassword),
+                        child: const Text('Enter'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 150),
+    );
+
+    if (ok == true) {
+      setState(() => _isAdmin = true);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Admin mode enabled')));
+    } else if (ok == false) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Incorrect password')));
+    }
+  }
+
+  Future<void> _confirmExitAdmin() async {
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Switch back to User Mode?'),
+        content: const Text(
+          'You will need to re-enter the password to enter Admin Mode again.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Proceed'),
+          ),
+        ],
+      ),
+    );
+    if (proceed == true) {
+      setState(() => _isAdmin = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Returned to user mode')));
+    }
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -128,10 +228,19 @@ class _InventoryListPageState extends State<InventoryListPage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        backgroundColor: const Color(0xFF0047BB),
+        backgroundColor: _isAdmin ? Colors.red : const Color(0xFF0047BB),
         title: const Text('Inventory', style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         automaticallyImplyLeading: false,
+        actions: [
+          TextButton(
+            onPressed: _isAdmin ? _confirmExitAdmin : _promptEnterAdmin,
+            child: Text(
+              _isAdmin ? 'Admin Mode' : 'User Mode',
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -251,13 +360,11 @@ class _InventoryListPageState extends State<InventoryListPage> {
                               spacing: 8,
                               runSpacing: 8,
                               children: [
-                                // Availability chip styled like other FilterChips
-                                // Availability chip (tri-state): All → ✓ Available → ✕ Unavailable → All
+                                // Availability chip (tri-state) styled like other chips
                                 if (_activeTab == 0)
                                   FilterChip(
                                     selected: _availability != 0,
-                                    showCheckmark:
-                                        false, // prevent the default trailing ✓ overlay
+                                    showCheckmark: false,
                                     label: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
@@ -266,14 +373,14 @@ class _InventoryListPageState extends State<InventoryListPage> {
                                             Icons.check,
                                             size: 16,
                                             color: Colors.green,
-                                          ), // green tick, no circle
+                                          ),
                                           const SizedBox(width: 6),
                                         ] else if (_availability == 2) ...[
                                           const Icon(
                                             Icons.close,
                                             size: 16,
                                             color: Colors.redAccent,
-                                          ), // red cross
+                                          ),
                                           const SizedBox(width: 6),
                                         ],
                                         const Text('Available'),
@@ -281,8 +388,8 @@ class _InventoryListPageState extends State<InventoryListPage> {
                                     ),
                                     onSelected: (_) {
                                       setState(() {
-                                        // 0 -> 1 (available) -> 2 (unavailable) -> 0 (all)
-                                        _availability = (_availability + 1) % 3;
+                                        _availability =
+                                            (_availability + 1) % 3; // 0→1→2→0
                                         _applyFilters();
                                       });
                                     },
@@ -366,7 +473,9 @@ class _InventoryListPageState extends State<InventoryListPage> {
                     title: r.eq.name,
                     coverPath: r.cover,
                     quantity: r.quantity,
-                    onTap: () => context.push('/learn/equip/${r.eq.id}'),
+                    cabinet: r.cabinet,
+                    isAdmin: _isAdmin,
+                    onTap: () => context.push('/learn/equip-guides/${r.eq.id}'),
                   );
                 },
               ),
@@ -384,6 +493,7 @@ class _Row {
   final String category;
   final String cover;
   final int quantity;
+  final String cabinet;
 
   _Row({
     required this.eq,
@@ -391,6 +501,7 @@ class _Row {
     required this.category,
     required this.cover,
     required this.quantity,
+    required this.cabinet,
   });
 }
 
@@ -420,12 +531,16 @@ class _InventoryCard extends StatelessWidget {
   final String title;
   final String coverPath;
   final int quantity;
+  final String cabinet;
+  final bool isAdmin;
   final VoidCallback onTap;
 
   const _InventoryCard({
     required this.title,
     required this.coverPath,
     required this.quantity,
+    required this.cabinet,
+    required this.isAdmin,
     required this.onTap,
   });
 
@@ -484,41 +599,68 @@ class _InventoryCard extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: Stack(
           children: [
-            Expanded(child: thumb),
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment:
-                    CrossAxisAlignment.start, // left align quantity
-                children: [
-                  Center(
-                    child: Text(
-                      title,
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontVariations: [FontVariation('wght', 500)],
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: thumb),
+                Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start, // left align quantity/cabinet
+                    children: [
+                      Center(
+                        child: Text(
+                          title,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontVariations: [FontVariation('wght', 500)],
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$quantity Left',
+                        textAlign: TextAlign.start,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                          color: isUnavailable
+                              ? Colors.grey
+                              : Colors.deepOrange,
+                        ),
+                      ),
+                      if (isAdmin && cabinet.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'Cabinet: $cabinet',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '$quantity Left', // no brackets
-                    textAlign: TextAlign.start,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
-                      color: isUnavailable ? Colors.grey : Colors.deepOrange,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
+
+            // Admin edit button (bottom-right)
+            if (isAdmin)
+              Positioned(
+                right: 8,
+                bottom: 8,
+                child: FloatingActionButton.small(
+                  heroTag: null,
+                  onPressed: () {
+                    // TODO: implement edit behavior
+                  },
+                  child: const Icon(Icons.edit),
+                ),
+              ),
           ],
         ),
       ),
