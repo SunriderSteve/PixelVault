@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_avif/flutter_avif.dart';
 
 import '../services/data_repository.dart';
-import '../models/learn_equipment_model.dart'; // class: Equipment (with coverImages)
+import '../models/equipment_model.dart'; // class: Equipment (with coverImages)
 
 class InventoryListPage extends StatefulWidget {
   const InventoryListPage({super.key});

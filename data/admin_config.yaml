@@ -1,0 +1,5 @@
+gist:
+  id: 82d2701c4f64d1a8b21b7ce7b2588104
+  file: inventory_mutable_fields.yaml
+  raw_url: https://gist.githubusercontent.com/SunriderSteve/82d2701c4f64d1a8b21b7ce7b2588104/raw/inventory_mutable_fields.yaml
+  poll_seconds: 5 # optional, default to 5 if missing

@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_avif/flutter_avif.dart';
 
 import '../services/data_repository.dart';
-import '../models/learn_equipment_model.dart';
+import '../models/equipment_model.dart';
 
 class EquipDetailPage extends StatefulWidget {
   final String itemID;

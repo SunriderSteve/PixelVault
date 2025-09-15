@@ -4,7 +4,7 @@ import 'package:flutter_avif/flutter_avif.dart';
 
 import '../services/data_repository.dart';
 import '../models/scenario_model.dart';
-import '../models/learn_equipment_model.dart';
+import '../models/equipment_model.dart';
 
 class ScenarioDetailPage extends StatefulWidget {
   final String id;
