@@ -1,12 +1,15 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_avif/flutter_avif.dart';
 
 import '../services/data_repository.dart';
-import '../models/equipment_model.dart'; // class: Equipment (with coverImages)
+import '../models/equipment_model.dart'; // Equipment
 
+/// inventory list with search, tri-state availability, category/brand filters, A↔Z sort
+/// admin mode toggles cabinet visibility and shows edit affordance
 class InventoryListPage extends StatefulWidget {
   const InventoryListPage({super.key});
 
@@ -15,36 +18,35 @@ class InventoryListPage extends StatefulWidget {
 }
 
 class _InventoryListPageState extends State<InventoryListPage> {
-  final TextEditingController _searchController = TextEditingController();
+  // search
+  final TextEditingController _search = TextEditingController();
 
-  // UI state
-  bool _showFilters = false;
-  int _activeTab = 0; // 0: Availability, 1: Category, 2: Brand
+  // sort
   bool _sortAsc = true; // A→Z by default
-  bool _isAdmin = false;
 
-  // Availability tri-state: 0 = all, 1 = available only, 2 = unavailable only
-  int _availability = 0;
-
-  // Selections
+  // filters
+  bool _showFilters = false;
+  int _activeTab = 0; // 0 Availability, 1 Category, 2 Brand
+  int _availability = 0; // 0 all, 1 available only, 2 unavailable only
   final Set<String> _selectedCategories = {};
   final Set<String> _selectedBrands = {};
 
-  // Data
-  late final List<_Row> _all;
-  late List<_Row> _display;
+  // admin
+  bool _isAdmin = false;
 
-  // Facets
+  // data
+  late final List<_Row> _all; // immutable base rows derived from repository
+  late List<_Row> _display; // filtered + sorted rows
+
+  // facet values
   late final List<String> _allCategories;
   late final List<String> _allBrands;
-
-  // Yes I know this not secure at all
-  static const String _adminPassword = 'admin123';
 
   @override
   void initState() {
     super.initState();
 
+    // build immutable rows once from repository
     final repo = DataRepository();
     final List<Equipment> invItems = repo.getInventoryItems();
 
@@ -52,6 +54,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
         .map(
           (e) => _Row(
             eq: e,
+            nameKey: e.name.toLowerCase(),
             brand: e.brand,
             category: e.category,
             cover: e.coverImages.isNotEmpty ? e.coverImages.first : '',
@@ -59,66 +62,74 @@ class _InventoryListPageState extends State<InventoryListPage> {
             cabinet: e.cabinet ?? '',
           ),
         )
-        .toList();
+        .toList(growable: false);
 
     _allCategories = _all.map((r) => r.category).toSet().toList()..sort();
     _allBrands = _all.map((r) => r.brand).toSet().toList()..sort();
 
-    _display = List.from(_all);
-    _searchController.addListener(_applyFilters);
+    _display = List.of(_all);
+
+    _search.addListener(_applyFilters);
     _applyFilters();
   }
 
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  // recompute display list based on current query, filters, sort
   void _applyFilters() {
-    final q = _searchController.text.toLowerCase().trim();
-    setState(() {
-      _display = _all.where((r) {
-        final matchQ = q.isEmpty || r.eq.name.toLowerCase().contains(q);
-        final matchC =
-            _selectedCategories.isEmpty ||
-            _selectedCategories.contains(r.category);
-        final matchB =
-            _selectedBrands.isEmpty || _selectedBrands.contains(r.brand);
+    final q = _search.text.trim().toLowerCase();
 
-        bool matchAvail = true;
-        if (_availability == 1) {
-          matchAvail = r.quantity > 0; // available only
-        } else if (_availability == 2) {
-          matchAvail = r.quantity <= 0; // unavailable only
-        }
+    final filtered = _all.where((r) {
+      final matchQ = q.isEmpty || r.nameKey.contains(q);
+      final matchC =
+          _selectedCategories.isEmpty ||
+          _selectedCategories.contains(r.category);
+      final matchB =
+          _selectedBrands.isEmpty || _selectedBrands.contains(r.brand);
 
-        return matchQ && matchC && matchB && matchAvail;
-      }).toList();
-
-      _display.sort(
-        (a, b) => a.eq.name.toLowerCase().compareTo(b.eq.name.toLowerCase()),
-      );
-      if (!_sortAsc) {
-        _display = _display.reversed.toList();
+      bool matchAvail = true;
+      if (_availability == 1) {
+        matchAvail = r.quantity > 0;
+      } else if (_availability == 2) {
+        matchAvail = r.quantity <= 0;
       }
-    });
+
+      return matchQ && matchC && matchB && matchAvail;
+    }).toList();
+
+    filtered.sort((a, b) => a.nameKey.compareTo(b.nameKey));
+    if (!_sortAsc) {
+      filtered.reverseRange(0, filtered.length);
+    }
+
+    setState(() => _display = filtered);
   }
 
+  // clear all filters to defaults
   void _clearFilters() {
-    setState(() {
-      _selectedCategories.clear();
-      _selectedBrands.clear();
-      _availability = 0;
-      _applyFilters();
-    });
+    _selectedCategories.clear();
+    _selectedBrands.clear();
+    _availability = 0;
+    _applyFilters();
+    setState(() {}); // refresh badges
   }
 
+  // prompt for admin password and toggle admin mode
   Future<void> _promptEnterAdmin() async {
     final controller = TextEditingController();
     final ok = await showGeneralDialog<bool>(
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Admin',
-      barrierColor: Colors.black26,
+      barrierColor: Colors.black.withValues(alpha: 0.25), // slight dim
       pageBuilder: (context, a1, a2) {
         return Stack(
           children: [
-            // Blur the background behind the dialog
+            // blur background behind dialog
             BackdropFilter(
               filter: ui.ImageFilter.blur(sigmaX: 6, sigmaY: 6),
               child: const SizedBox.expand(),
@@ -138,9 +149,9 @@ class _InventoryListPageState extends State<InventoryListPage> {
                         labelText: 'Password',
                         border: OutlineInputBorder(),
                       ),
-                      onSubmitted: (_) => Navigator.of(
-                        context,
-                      ).pop(controller.text == _adminPassword),
+                      onSubmitted: (_) => Navigator.of(context).pop(
+                        controller.text == 'admin123', // demo only
+                      ),
                     ),
                     actions: [
                       TextButton(
@@ -148,9 +159,9 @@ class _InventoryListPageState extends State<InventoryListPage> {
                         child: const Text('Cancel'),
                       ),
                       ElevatedButton(
-                        onPressed: () => Navigator.of(
-                          context,
-                        ).pop(controller.text == _adminPassword),
+                        onPressed: () => Navigator.of(context).pop(
+                          controller.text == 'admin123', // demo only
+                        ),
                         child: const Text('Enter'),
                       ),
                     ],
@@ -164,6 +175,8 @@ class _InventoryListPageState extends State<InventoryListPage> {
       transitionDuration: const Duration(milliseconds: 150),
     );
 
+    if (!mounted) return; // guard context after async gap
+
     if (ok == true) {
       setState(() => _isAdmin = true);
       ScaffoldMessenger.of(
@@ -176,13 +189,14 @@ class _InventoryListPageState extends State<InventoryListPage> {
     }
   }
 
+  // confirm exit from admin mode
   Future<void> _confirmExitAdmin() async {
     final proceed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Switch back to User Mode?'),
         content: const Text(
-          'You will need to re-enter the password to enter Admin Mode again.',
+          'You will need to re-enter the password to enter Admin Mode again',
         ),
         actions: [
           TextButton(
@@ -196,6 +210,9 @@ class _InventoryListPageState extends State<InventoryListPage> {
         ],
       ),
     );
+
+    if (!mounted) return; // guard context after async gap
+
     if (proceed == true) {
       setState(() => _isAdmin = false);
       ScaffoldMessenger.of(
@@ -205,18 +222,15 @@ class _InventoryListPageState extends State<InventoryListPage> {
   }
 
   @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    // responsive columns with minimum of 2
     const maxTile = 420.0;
     final cols = math.max(
       2,
       (MediaQuery.of(context).size.width / maxTile).floor(),
     );
+
+    // badge counts across all filters
     final totalFilters =
         _selectedCategories.length +
         _selectedBrands.length +
@@ -244,7 +258,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
       ),
       body: Column(
         children: [
-          // Sticky search + sort + filter row
+          // sticky search + sort + filter row
           Container(
             color: Theme.of(context).scaffoldBackgroundColor,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -252,16 +266,16 @@ class _InventoryListPageState extends State<InventoryListPage> {
               children: [
                 Expanded(
                   child: TextField(
-                    controller: _searchController,
+                    controller: _search,
                     decoration: InputDecoration(
                       hintText: 'Search Inventory',
                       prefixIcon: const Icon(Icons.search),
-                      suffixIcon: _searchController.text.isEmpty
+                      suffixIcon: _search.text.isEmpty
                           ? null
                           : IconButton(
                               icon: const Icon(Icons.clear),
                               onPressed: () {
-                                _searchController.clear();
+                                _search.clear();
                                 _applyFilters();
                               },
                             ),
@@ -271,7 +285,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
                     ),
                   ),
                 ),
-                // Sort button toggles A→Z / Z→A
+                // sort toggles A→Z / Z→A
                 IconButton(
                   tooltip: _sortAsc ? 'Sort Z → A' : 'Sort A → Z',
                   icon: Icon(
@@ -284,7 +298,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
                     _applyFilters();
                   },
                 ),
-                // Filter button with count badge
+                // filter button with count badge
                 GestureDetector(
                   onTap: () => setState(() => _showFilters = !_showFilters),
                   child: Stack(
@@ -316,7 +330,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
             ),
           ),
 
-          // Filter panel (tabs: Availability | Category | Brand)
+          // filter panel with left-side tabs
           if (_showFilters)
             Container(
               color: Colors.white,
@@ -329,6 +343,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // tabs with per-tab active count
                         SizedBox(
                           width: 170,
                           child: ListView(
@@ -354,17 +369,18 @@ class _InventoryListPageState extends State<InventoryListPage> {
                           ),
                         ),
                         const SizedBox(width: 8),
+                        // panel body shows chips for active tab only
                         Expanded(
                           child: SingleChildScrollView(
                             child: Wrap(
                               spacing: 8,
                               runSpacing: 8,
                               children: [
-                                // Availability chip (tri-state) styled like other chips
                                 if (_activeTab == 0)
                                   FilterChip(
                                     selected: _availability != 0,
-                                    showCheckmark: false,
+                                    showCheckmark:
+                                        false, // avoid default ✓ overlay
                                     label: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
@@ -390,11 +406,10 @@ class _InventoryListPageState extends State<InventoryListPage> {
                                       setState(() {
                                         _availability =
                                             (_availability + 1) % 3; // 0→1→2→0
-                                        _applyFilters();
                                       });
+                                      _applyFilters();
                                     },
                                   ),
-
                                 if (_activeTab == 1)
                                   for (final c in _allCategories)
                                     FilterChip(
@@ -402,14 +417,15 @@ class _InventoryListPageState extends State<InventoryListPage> {
                                         '$c (${_all.where((r) => r.category == c).length})',
                                       ),
                                       selected: _selectedCategories.contains(c),
-                                      onSelected: (sel) => setState(() {
-                                        sel
-                                            ? _selectedCategories.add(c)
-                                            : _selectedCategories.remove(c);
+                                      onSelected: (sel) {
+                                        setState(() {
+                                          sel
+                                              ? _selectedCategories.add(c)
+                                              : _selectedCategories.remove(c);
+                                        });
                                         _applyFilters();
-                                      }),
+                                      },
                                     ),
-
                                 if (_activeTab == 2)
                                   for (final b in _allBrands)
                                     FilterChip(
@@ -417,12 +433,14 @@ class _InventoryListPageState extends State<InventoryListPage> {
                                         '$b (${_all.where((r) => r.brand == b).length})',
                                       ),
                                       selected: _selectedBrands.contains(b),
-                                      onSelected: (sel) => setState(() {
-                                        sel
-                                            ? _selectedBrands.add(b)
-                                            : _selectedBrands.remove(b);
+                                      onSelected: (sel) {
+                                        setState(() {
+                                          sel
+                                              ? _selectedBrands.add(b)
+                                              : _selectedBrands.remove(b);
+                                        });
                                         _applyFilters();
-                                      }),
+                                      },
                                     ),
                               ],
                             ),
@@ -455,7 +473,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
               ),
             ),
 
-          // Grid
+          // grid of cards
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(8),
@@ -475,7 +493,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
                     quantity: r.quantity,
                     cabinet: r.cabinet,
                     isAdmin: _isAdmin,
-                    onTap: () => context.push('/learn/equip-guides/${r.eq.id}'),
+                    onTap: () => context.push('/learn/equip/${r.eq.id}'),
                   );
                 },
               ),
@@ -487,16 +505,19 @@ class _InventoryListPageState extends State<InventoryListPage> {
   }
 }
 
+// derived row used for fast filtering and sorting
 class _Row {
   final Equipment eq;
+  final String nameKey;
   final String brand;
   final String category;
   final String cover;
   final int quantity;
   final String cabinet;
 
-  _Row({
+  const _Row({
     required this.eq,
+    required this.nameKey,
     required this.brand,
     required this.category,
     required this.cover,
@@ -505,6 +526,7 @@ class _Row {
   });
 }
 
+// side tab button for filter panel
 class _TabButton extends StatelessWidget {
   final String label;
   final bool selected;
@@ -527,6 +549,7 @@ class _TabButton extends StatelessWidget {
   }
 }
 
+// single inventory card with unavailable overlay and admin affordances
 class _InventoryCard extends StatelessWidget {
   final String title;
   final String coverPath;
@@ -548,13 +571,15 @@ class _InventoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isUnavailable = quantity <= 0;
 
+    // build thumbnail with optional blurred unavailable overlay
     Widget thumb;
     if (coverPath.isEmpty) {
       thumb = Stack(
         fit: StackFit.expand,
         children: [
           const ColoredBox(color: Color(0xFFE0E0E0)),
-          if (isUnavailable) Container(color: Colors.white.withOpacity(0.6)),
+          if (isUnavailable)
+            ColoredBox(color: Colors.white.withValues(alpha: 0.6)),
           if (isUnavailable)
             const Center(
               child: Text(
@@ -578,7 +603,7 @@ class _InventoryCard extends StatelessWidget {
                   imageFilter: ui.ImageFilter.blur(sigmaX: 3, sigmaY: 3),
                   child: base,
                 ),
-                Container(color: Colors.white.withOpacity(0.6)),
+                ColoredBox(color: Colors.white.withValues(alpha: 0.6)),
                 const Center(
                   child: Text(
                     'Unavailable',
@@ -610,7 +635,7 @@ class _InventoryCard extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment:
-                        CrossAxisAlignment.start, // left align quantity/cabinet
+                        CrossAxisAlignment.start, // left align labels
                     children: [
                       Center(
                         child: Text(
@@ -635,11 +660,12 @@ class _InventoryCard extends StatelessWidget {
                               : Colors.deepOrange,
                         ),
                       ),
-                      if (isAdmin && cabinet.isNotEmpty) ...[
+                      if (isAdmin) ...[
                         const SizedBox(height: 2),
                         Text(
-                          'Cabinet: $cabinet',
-                          style: Theme.of(context).textTheme.bodySmall,
+                          'Cabinet: ${cabinet.isEmpty ? '—' : cabinet}',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                       ],
                     ],
@@ -648,7 +674,7 @@ class _InventoryCard extends StatelessWidget {
               ],
             ),
 
-            // Admin edit button (bottom-right)
+            // admin edit affordance bottom-right
             if (isAdmin)
               Positioned(
                 right: 8,
@@ -656,7 +682,7 @@ class _InventoryCard extends StatelessWidget {
                 child: FloatingActionButton.small(
                   heroTag: null,
                   onPressed: () {
-                    // TODO: implement edit behavior
+                    // no-op for now
                   },
                   child: const Icon(Icons.edit),
                 ),
