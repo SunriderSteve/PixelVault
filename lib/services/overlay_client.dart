@@ -100,4 +100,88 @@ class InventoryOverlayClient {
     }
     return out;
   }
+
+  /// update one equipment entry in overlay gist
+  /// pass only fields you want to change
+  Future<void> updateEntry(
+    String equipmentId, {
+    int? quantity,
+    String? cabinet,
+    required String token, // GitHub PAT with gist scope
+  }) async {
+    if (quantity == null && cabinet == null) return; // nothing to change
+
+    // read latest raw to avoid clobber
+    final bust = DateTime.now().millisecondsSinceEpoch;
+    final rawUri = Uri.parse('${admin.gistRawUrl}?t=$bust');
+    final getResp = await http.get(rawUri);
+    if (getResp.statusCode ~/ 100 != 2) {
+      throw Exception('overlay read failed: ${getResp.statusCode}');
+    }
+
+    final current = _overlayYamlToMap(getResp.body);
+
+    // merge minimal change
+    final entry = Map<String, dynamic>.from(current[equipmentId] ?? const {});
+    if (quantity != null) entry['quantity'] = quantity;
+    if (cabinet != null) entry['cabinet'] = cabinet;
+    current[equipmentId] = entry;
+
+    // serialize back to YAML
+    final updatedYaml = _overlayMapToYaml(current);
+
+    // patch gist file
+    final patchUri = Uri.parse('https://api.github.com/gists/${admin.gistId}');
+    final body = jsonEncode({
+      'files': {
+        admin.gistFile: {'content': updatedYaml},
+      },
+    });
+
+    final headers = {
+      'Authorization': 'token $token', // PAT
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'Content-Type': 'application/json',
+    };
+
+    final patchResp = await http.patch(patchUri, headers: headers, body: body);
+    if (patchResp.statusCode ~/ 100 != 2) {
+      throw Exception(
+        'overlay write failed: ${patchResp.statusCode} ${patchResp.body}',
+      );
+    }
+  }
+
+  /// parse overlay yaml to map id -> {quantity, cabinet}
+  Map<String, Map<String, dynamic>> _overlayYamlToMap(String s) {
+    final y = loadYaml(s);
+    if (y is! YamlMap) return {};
+    final out = <String, Map<String, dynamic>>{};
+    for (final e in y.entries) {
+      final id = e.key?.toString() ?? '';
+      final val = e.value;
+      if (id.isEmpty || val is! YamlMap) continue;
+      out[id] = {
+        'quantity': (val['quantity'] as num?)?.toInt(),
+        'cabinet': val['cabinet'] as String?,
+      };
+    }
+    return out;
+  }
+
+  /// write stable minimal yaml from overlay map
+  String _overlayMapToYaml(Map<String, Map<String, dynamic>> m) {
+    final ids = m.keys.toList()..sort();
+    final b = StringBuffer();
+    for (final id in ids) {
+      final v = m[id] ?? const {};
+      b.writeln('$id:');
+      if (v['quantity'] != null) b.writeln('  quantity: ${v['quantity']}');
+      if (v['cabinet'] != null) {
+        b.writeln('  cabinet: ${jsonEncode(v['cabinet'])}');
+      }
+    }
+    return b.toString();
+  }
 }

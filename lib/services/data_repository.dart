@@ -172,6 +172,40 @@ class DataRepository {
     });
   }
 
+  /// apply inventory changes for one equipment id
+  Future<void> applyInventoryChanges(
+    String equipmentId, {
+    int? quantity,
+    String? cabinet,
+  }) async {
+    final client = _overlayClient;
+    if (client == null) {
+      throw StateError('overlay client not ready');
+    }
+    final admin = _admin;
+    final token = admin?.accessToken ?? '';
+    if (token.isEmpty) {
+      throw StateError('missing access token in admin_config.yaml');
+    }
+
+    // write to gist
+    await client.updateEntry(
+      equipmentId,
+      quantity: quantity,
+      cabinet: cabinet,
+      token: token,
+    );
+
+    // optimistic local update
+    final prev = Map<String, dynamic>.from(_overlay[equipmentId] ?? const {});
+    if (quantity != null) prev['quantity'] = quantity;
+    if (cabinet != null) prev['cabinet'] = cabinet;
+    _overlay[equipmentId] = prev;
+
+    // refresh overlay to confirm and pick up concurrent edits
+    await fetchOverlayOnce();
+  }
+
   // ========== public queries ==========
   List<Equipment> getAllEquipment() => _equipment.values.toList();
 

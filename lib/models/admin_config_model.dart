@@ -5,12 +5,14 @@ class AdminConfigModel {
   final String gistFile;
   final String gistRawUrl;
   final int pollSeconds;
+  final String accessToken;
 
   const AdminConfigModel({
     required this.gistId,
     required this.gistFile,
     required this.gistRawUrl,
     required this.pollSeconds,
+    required this.accessToken,
   });
 
   factory AdminConfigModel.fromYaml(String yamlString) {
@@ -22,6 +24,7 @@ class AdminConfigModel {
       gistFile: (g['file'] as String?) ?? 'inventory_mutable.yaml',
       gistRawUrl: (g['raw_url'] as String?) ?? '',
       pollSeconds: (g['poll_seconds'] as int?) ?? 5,
+      accessToken: (g['access_token'] as String?) ?? '',
     );
   }
 }

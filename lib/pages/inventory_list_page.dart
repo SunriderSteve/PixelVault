@@ -489,6 +489,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
                 itemBuilder: (context, i) {
                   final r = _display[i];
                   return _InventoryCard(
+                    id: r.eq.id,
                     title: r.eq.name,
                     coverPath: r.cover,
                     quantity: r.quantity,
@@ -552,6 +553,7 @@ class _TabButton extends StatelessWidget {
 
 // single inventory card with unavailable overlay and admin affordances
 class _InventoryCard extends StatelessWidget {
+  final String id;
   final String title;
   final String coverPath;
   final int quantity;
@@ -560,6 +562,7 @@ class _InventoryCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const _InventoryCard({
+    required this.id,
     required this.title,
     required this.coverPath,
     required this.quantity,
@@ -689,13 +692,32 @@ class _InventoryCard extends StatelessWidget {
                       initialQuantity: quantity,
                       initialCabinet: cabinet,
                     );
-                    if (!context.mounted) {
-                      return; // ✅ fixes async-gap context warning
-                    }
-                    if (res != null && res.changed) {
-                      // write to Gist will be implemented later
+                    if (!context.mounted) return; // guard after async gap
+
+                    if (res == null || !res.changed) return;
+
+                    final int? newQty = (res.quantity != quantity)
+                        ? res.quantity
+                        : null;
+                    final String? newCab = (res.cabinet != cabinet)
+                        ? res.cabinet
+                        : null;
+                    if (newQty == null && newCab == null) return;
+
+                    try {
+                      await DataRepository().applyInventoryChanges(
+                        id,
+                        quantity: newQty,
+                        cabinet: newCab,
+                      );
+                      if (!context.mounted) return; // guard after async gap
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Saved changes for $title')),
+                      );
+                    } catch (e) {
+                      if (!context.mounted) return; // guard after async gap
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to save: $e')),
                       );
                     }
                   },
