@@ -7,6 +7,7 @@ import 'package:flutter_avif/flutter_avif.dart';
 
 import '../services/data_repository.dart';
 import '../models/equipment_model.dart'; // Equipment
+import 'inventory_edit_dialog.dart';
 
 /// inventory list with search, tri-state availability, category/brand filters, A↔Z sort
 /// admin mode toggles cabinet visibility and shows edit affordance
@@ -681,9 +682,24 @@ class _InventoryCard extends StatelessWidget {
                 bottom: 8,
                 child: FloatingActionButton.small(
                   heroTag: null,
-                  onPressed: () {
-                    // no-op for now
+                  onPressed: () async {
+                    final res = await showInventoryEditDialog(
+                      context,
+                      equipmentName: title,
+                      initialQuantity: quantity,
+                      initialCabinet: cabinet,
+                    );
+                    if (!context.mounted) {
+                      return; // ✅ fixes async-gap context warning
+                    }
+                    if (res != null && res.changed) {
+                      // write to Gist will be implemented later
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Saved changes for $title')),
+                      );
+                    }
                   },
+
                   child: const Icon(Icons.edit),
                 ),
               ),
