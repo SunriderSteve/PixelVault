@@ -43,6 +43,8 @@ class _InventoryListPageState extends State<InventoryListPage> {
   late final List<String> _allCategories;
   late final List<String> _allBrands;
 
+  VoidCallback? _overlayListener;
+
   @override
   void initState() {
     super.initState();
@@ -72,12 +74,66 @@ class _InventoryListPageState extends State<InventoryListPage> {
 
     _search.addListener(_applyFilters);
     _applyFilters();
+
+    _overlayListener = _syncOverlayToRows;
+    DataRepository().overlayEpoch.addListener(_overlayListener!);
+  }
+
+  void _syncOverlayToRows() {
+    final repo = DataRepository();
+    bool any = false;
+
+    for (var i = 0; i < _all.length; i++) {
+      final r = _all[i];
+      final o = repo.getOverlayFor(r.eq.id);
+      final newQty = (o?['quantity'] as int?) ?? r.quantity;
+      final newCab = (o?['cabinet'] as String?) ?? r.cabinet;
+
+      if (newQty != r.quantity || newCab != r.cabinet) {
+        _all[i] = _Row(
+          eq: r.eq,
+          nameKey: r.nameKey,
+          brand: r.brand,
+          category: r.category,
+          cover: r.cover,
+          quantity: newQty,
+          cabinet: newCab,
+        );
+        any = true;
+      }
+    }
+
+    if (any) _applyFilters(); // setState happens inside _applyFilters
+  }
+
+  void _applyLocalOptimisticUpdate(
+    String id, {
+    int? quantity,
+    String? cabinet,
+  }) {
+    final idx = _all.indexWhere((r) => r.eq.id == id);
+    if (idx == -1) return;
+    final r = _all[idx];
+    _all[idx] = _Row(
+      eq: r.eq,
+      nameKey: r.nameKey,
+      brand: r.brand,
+      category: r.category,
+      cover: r.cover,
+      quantity: quantity ?? r.quantity,
+      cabinet: cabinet ?? r.cabinet,
+    );
+    _applyFilters(); // setState to refresh UI
   }
 
   @override
   void dispose() {
     _search.dispose();
     super.dispose();
+
+    if (_overlayListener != null) {
+      DataRepository().overlayEpoch.removeListener(_overlayListener!);
+    }
   }
 
   // recompute display list based on current query, filters, sort
@@ -496,6 +552,41 @@ class _InventoryListPageState extends State<InventoryListPage> {
                     cabinet: r.cabinet,
                     isAdmin: _isAdmin,
                     onTap: () => context.push('/learn/equip/${r.eq.id}'),
+                    onSavePatch: (int? q, String? c) async {
+                      // optimistic local UI first
+                      final oldQ = r.quantity;
+                      final oldC = r.cabinet;
+                      _applyLocalOptimisticUpdate(
+                        r.eq.id,
+                        quantity: q,
+                        cabinet: c,
+                      );
+
+                      try {
+                        await DataRepository().applyInventoryChanges(
+                          r.eq.id,
+                          quantity: q,
+                          cabinet: c,
+                        );
+                        if (!mounted) return; // async gap guard
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Saved changes for ${r.eq.name}'),
+                          ),
+                        );
+                      } catch (e) {
+                        // revert on failure
+                        _applyLocalOptimisticUpdate(
+                          r.eq.id,
+                          quantity: oldQ,
+                          cabinet: oldC,
+                        );
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to save: $e')),
+                        );
+                      }
+                    },
                   );
                 },
               ),
@@ -560,6 +651,7 @@ class _InventoryCard extends StatelessWidget {
   final String cabinet;
   final bool isAdmin;
   final VoidCallback onTap;
+  final Future<void> Function(int? quantity, String? cabinet)? onSavePatch;
 
   const _InventoryCard({
     required this.id,
@@ -569,6 +661,7 @@ class _InventoryCard extends StatelessWidget {
     required this.cabinet,
     required this.isAdmin,
     required this.onTap,
+    this.onSavePatch,
   });
 
   @override
@@ -692,7 +785,7 @@ class _InventoryCard extends StatelessWidget {
                       initialQuantity: quantity,
                       initialCabinet: cabinet,
                     );
-                    if (!context.mounted) return; // guard after async gap
+                    if (!context.mounted) return; // async gap guard
 
                     if (res == null || !res.changed) return;
 
@@ -704,24 +797,9 @@ class _InventoryCard extends StatelessWidget {
                         : null;
                     if (newQty == null && newCab == null) return;
 
-                    try {
-                      await DataRepository().applyInventoryChanges(
-                        id,
-                        quantity: newQty,
-                        cabinet: newCab,
-                      );
-                      if (!context.mounted) return; // guard after async gap
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Saved changes for $title')),
-                      );
-                    } catch (e) {
-                      if (!context.mounted) return; // guard after async gap
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to save: $e')),
-                      );
-                    }
+                    // delegate to page so it can mutate _all and call repo
+                    await onSavePatch?.call(newQty, newCab);
                   },
-
                   child: const Icon(Icons.edit),
                 ),
               ),

@@ -37,6 +37,24 @@ class DataRepository {
   Timer? _overlayTimer; // periodic overlay refresher
   bool _fetchingOverlay = false; // prevents overlap
 
+  // ---- overlay change signal ----
+  final ValueNotifier<int> overlayEpoch = ValueNotifier<int>(
+    0,
+  ); // increments whenever overlay changes
+
+  // expose overlay entry for a given equipment id
+  Map<String, dynamic>? getOverlayFor(String id) => _overlay[id];
+
+  // restart periodic overlay polling from now (uses admin.pollSeconds)
+  void _resetOverlayPollingTimer() {
+    _overlayTimer?.cancel();
+    final seconds = (_admin?.pollSeconds ?? 5);
+    _overlayTimer = Timer.periodic(Duration(seconds: seconds), (_) {
+      // safe to call async without await in a timer
+      fetchOverlayOnce();
+    });
+  }
+
   // ========== init pipeline ==========
   Future<void> _init() async {
     await _loadAdminConfig(); // read /data/admin.yaml for gist config
@@ -139,7 +157,12 @@ class DataRepository {
       final map = await _overlayClient!
           .fetch(); // may return null if unavailable
       if (map == null) return false;
+
       _applyOverlay(map);
+
+      // 🔔 notify UI that overlay changed (InventoryListPage listens to this)
+      overlayEpoch.value++;
+
       return true;
     } catch (e, st) {
       debugPrint('overlay fetch error: $e\n$st');
@@ -151,7 +174,7 @@ class DataRepository {
 
   void _startOverlayPolling() {
     _overlayTimer?.cancel();
-    final secs = _admin?.pollSeconds ?? 5;
+    final secs = _admin?.pollSeconds ?? 2;
     if (secs <= 0 || _overlayClient == null) return;
 
     _overlayTimer = Timer.periodic(Duration(seconds: secs), (_) {
@@ -173,37 +196,56 @@ class DataRepository {
   }
 
   /// apply inventory changes for one equipment id
+  /// apply inventory changes for one equipment id (optimistic UI)
   Future<void> applyInventoryChanges(
     String equipmentId, {
     int? quantity,
     String? cabinet,
   }) async {
     final client = _overlayClient;
-    if (client == null) {
-      throw StateError('overlay client not ready');
-    }
-    final admin = _admin;
-    final token = admin?.accessToken ?? '';
+    if (client == null) throw StateError('overlay client not ready');
+
+    final token = _admin?.accessToken ?? '';
     if (token.isEmpty) {
       throw StateError('missing access token in admin_config.yaml');
     }
 
-    // write to gist
-    await client.updateEntry(
-      equipmentId,
-      quantity: quantity,
-      cabinet: cabinet,
-      token: token,
-    );
-
-    // optimistic local update
+    // snapshot for revert on failure
     final prev = Map<String, dynamic>.from(_overlay[equipmentId] ?? const {});
-    if (quantity != null) prev['quantity'] = quantity;
-    if (cabinet != null) prev['cabinet'] = cabinet;
-    _overlay[equipmentId] = prev;
 
-    // refresh overlay to confirm and pick up concurrent edits
-    await fetchOverlayOnce();
+    // cancel timer to avoid race where a poll grabs stale values mid-write
+    _overlayTimer?.cancel();
+
+    // optimistic local update immediately (cosmetic until next poll)
+    final next = Map<String, dynamic>.from(prev);
+    if (quantity != null) next['quantity'] = quantity;
+    if (cabinet != null) next['cabinet'] = cabinet;
+    _overlay[equipmentId] = next;
+    overlayEpoch.value++; // notify listeners (inventory page will re-render)
+
+    // write to gist
+    try {
+      await client.updateEntry(
+        equipmentId,
+        quantity: quantity,
+        cabinet: cabinet,
+        token: token,
+      );
+    } catch (e) {
+      // revert local optimistic change on failure
+      if (prev.isEmpty) {
+        _overlay.remove(equipmentId);
+      } else {
+        _overlay[equipmentId] = prev;
+      }
+      overlayEpoch.value++; // notify revert
+      // restart polling even on failure
+      _resetOverlayPollingTimer();
+      rethrow;
+    }
+
+    // success: do NOT fetch immediately; let polling pull the ground truth later
+    _resetOverlayPollingTimer();
   }
 
   // ========== public queries ==========
