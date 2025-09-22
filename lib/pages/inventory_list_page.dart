@@ -551,7 +551,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
                     quantity: r.quantity,
                     cabinet: r.cabinet,
                     isAdmin: _isAdmin,
-                    onTap: () => context.push('/learn/equip/${r.eq.id}'),
+                    onTap: () => context.push('/learn/equip-guides/${r.eq.id}'),
                     onSavePatch: (int? q, String? c) async {
                       // optimistic local UI first
                       final oldQ = r.quantity;
