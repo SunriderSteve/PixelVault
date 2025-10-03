@@ -4,6 +4,8 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_avif/flutter_avif.dart';
+import 'package:web/web.dart' as web;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../services/data_repository.dart';
 import '../models/equipment_model.dart'; // Equipment
@@ -35,6 +37,32 @@ class _InventoryListPageState extends State<InventoryListPage> {
   // admin
   bool _isAdmin = false;
 
+  // persist admin flag in session storage so it survives page refresh
+  void _persistAdmin(bool v) {
+    if (!kIsWeb) return;
+    try {
+      final store = web.window.sessionStorage; // non-null in package:web
+      if (v) {
+        store.setItem('pv_is_admin', '1');
+      } else {
+        store.removeItem('pv_is_admin');
+      }
+    } catch (_) {
+      // ignore storage errors (blocked/incognito)
+    }
+  }
+
+  // restore admin flag from session storage on startup
+  void _restoreAdminFromStorage() {
+    if (!kIsWeb) return;
+    try {
+      final store = web.window.sessionStorage; // non-null
+      _isAdmin = store.getItem('pv_is_admin') == '1';
+    } catch (_) {
+      _isAdmin = false;
+    }
+  }
+
   // data
   late final List<_Row> _all; // immutable base rows derived from repository
   late List<_Row> _display; // filtered + sorted rows
@@ -48,6 +76,9 @@ class _InventoryListPageState extends State<InventoryListPage> {
   @override
   void initState() {
     super.initState();
+
+    // restore admin flag persisted across refresh
+    _restoreAdminFromStorage();
 
     // build immutable rows once from repository
     final repo = DataRepository();
@@ -236,6 +267,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
 
     if (ok == true) {
       setState(() => _isAdmin = true);
+      _persistAdmin(true);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Admin mode enabled')));
@@ -272,9 +304,10 @@ class _InventoryListPageState extends State<InventoryListPage> {
 
     if (proceed == true) {
       setState(() => _isAdmin = false);
+      _persistAdmin(false);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Returned to user mode')));
+      ).showSnackBar(const SnackBar(content: Text('User mode enabled')));
     }
   }
 
@@ -297,7 +330,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/'),
         ),
         backgroundColor: _isAdmin ? Colors.red : const Color(0xFF0047BB),
         title: const Text('Inventory', style: TextStyle(color: Colors.white)),
