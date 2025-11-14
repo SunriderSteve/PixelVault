@@ -1,27 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'router.dart';
 import 'services/data_repository.dart';
+import 'router.dart'; // exports your GoRouter instance (e.g., `router`)
 
-void main() async {
+Future<void> main() async {
+  // Needed because we're doing async work before runApp()
   WidgetsFlutterBinding.ensureInitialized();
-  await DataRepository().init(); // load YAML before UI starts
 
-  GoRouter.optionURLReflectsImperativeAPIs = true;
-  runApp(MyApp());
+  // Load admin config, static YAMLs, then the overlay once; start polling after.
+  await DataRepository().ensureInitialized();
+
+  runApp(const PixelVaultApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class PixelVaultApp extends StatelessWidget {
+  const PixelVaultApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
+      debugShowCheckedModeBanner: false,
       title: 'PixelVault',
+      // If your router is named `appRouter`, use `routerConfig: appRouter`
       routerConfig: appRouter,
       theme: ThemeData(
-        primaryColor: const Color.fromARGB(255, 0, 71, 187),
-        fontFamily: 'Noto Sans',
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0047BB)),
+        useMaterial3: true,
       ),
     );
   }

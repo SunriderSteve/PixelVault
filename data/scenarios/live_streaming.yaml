@@ -1,6 +1,6 @@
 id: live_streaming
 name: Live Streaming
-covers:
+coverImages:
   - assets/images/scenarios/live_streaming.avif
 description: |
   A live workflow requires stable signal flow, reliable audio mixing, network resilience, and clear roles. Plan redundancy and test thoroughly before going live.

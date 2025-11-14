@@ -7,6 +7,7 @@ import 'pages/learn_equip_detail_page.dart';
 import 'pages/scenario_list_page.dart';
 import 'pages/scenario_detail_page.dart';
 import 'pages/homepage.dart';
+import 'pages/inventory_list_page.dart';
 
 final GoRouter appRouter = GoRouter(
   routes: [
@@ -34,6 +35,7 @@ final GoRouter appRouter = GoRouter(
           VideographyDetailPage(itemID: state.pathParameters['id']!),
     ),
 
+    // Scenarios
     GoRoute(
       path: '/scenarios',
       builder: (context, state) => const ScenarioListPage(),
@@ -42,6 +44,12 @@ final GoRouter appRouter = GoRouter(
       path: '/scenarios/:id',
       builder: (context, state) =>
           ScenarioDetailPage(id: state.pathParameters['id']!),
+    ),
+
+    // Inventory
+    GoRoute(
+      path: '/inventory',
+      builder: (context, state) => const InventoryListPage(),
     ),
   ],
 );

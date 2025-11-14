@@ -31,6 +31,9 @@ class Equipment {
   final List<EquipSection> sections; // collapsible sections
   final List<String> related; // list of related equipment ids
 
+  final String? cabinet;
+  final int? quantity;
+
   Equipment({
     required this.id,
     required this.name,
@@ -40,13 +43,12 @@ class Equipment {
     required this.description,
     required this.sections,
     required this.related,
+    this.cabinet,
+    this.quantity,
   });
 
   factory Equipment.fromYaml(YamlMap yaml) {
-    // Allow migration: treat legacy `images:` as `coverImages:` if `coverImages` is absent
-    final cov = List<String>.from(
-      yaml['coverImages'] ?? yaml['images'] ?? const [],
-    );
+    final cov = List<String>.from(yaml['coverImages'] ?? const []);
 
     final secsYaml = yaml['sections'] as YamlList?;
     final secs = secsYaml == null
@@ -64,6 +66,23 @@ class Equipment {
       description: (yaml['description'] as String?) ?? '',
       sections: secs,
       related: List<String>.from(yaml['related'] ?? const []),
+      cabinet: null,
+      quantity: null,
     );
   }
+
+  Equipment copyWith({String? cabinet, int? quantity}) => Equipment(
+    id: id,
+    name: name,
+    category: category,
+    brand: brand,
+    coverImages: coverImages,
+    description: description,
+    sections: sections,
+    related: related,
+    cabinet: cabinet ?? this.cabinet,
+    quantity: quantity ?? this.quantity,
+    //cabinet: '',
+    //quantity: 0,
+  );
 }

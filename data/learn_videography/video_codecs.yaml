@@ -1,6 +1,6 @@
 id: video_codecs
 name: Video Codecs
-covers: []
+coverImages: []
 description: |
   Codecs compress video for recording and delivery. Know the trade-offs between intra-frame (All-I) and inter-frame (Long-GOP), chroma subsampling, bit depth, and bitrate so you can choose the right format for capture and post.
 

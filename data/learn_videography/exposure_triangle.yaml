@@ -1,6 +1,6 @@
 id: exposure_triangle
 name: Exposure Triangle
-covers: []
+coverImages: []
 description: |
   Exposure is controlled by three linked settings: aperture, shutter speed, and ISO. Changing one often requires compensating with another to keep brightness constant—and each has creative side-effects.
 

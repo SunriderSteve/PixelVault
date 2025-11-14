@@ -1,6 +1,6 @@
 id: indoor_interview
 name: Indoor Interview
-covers:
+coverImages:
   - assets/images/scenarios/indoor_interview.avif
 description: |
   A controlled, sit-down interview emphasizes intelligible dialogue, flattering lighting, and stable exposure. This setup suits corporate, documentary, or educational pieces shot in offices, homes, or studios.
