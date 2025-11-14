@@ -1,8 +1,7 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart' show rootBundle, AssetManifest;
 import 'package:yaml/yaml.dart';
 
 import '../models/equipment_model.dart'; // Equipment
@@ -78,73 +77,47 @@ class DataRepository {
 
   // ========== static assets ==========
   Future<void> _loadAllStaticAssets() async {
-    // read asset manifest once, then filter by directory prefix
-    final manifest = await _loadAssetManifest();
+    final equipPaths = await _listAssetsIn('data/equipment/');
+    final videoPaths = await _listAssetsIn('data/learn_videography/');
+    final scenarioPaths = await _listAssetsIn('data/scenarios/');
 
-    final equipPaths = _filterYaml(manifest, 'data/equipment/');
-    final videoPaths = _filterYaml(manifest, 'data/learn_videography/');
-    final scenarioPaths = _filterYaml(manifest, 'data/scenarios/');
-
-    // load equipment yaml files
+    // load and parse equipment
     for (final path in equipPaths) {
-      try {
-        final ystr = await rootBundle.loadString(path);
-        final ymap = loadYaml(ystr) as YamlMap;
-        final e = Equipment.fromYaml(
-          ymap,
-        ); // cabinet/quantity intentionally null here
-        _equipment[e.id] = e;
-      } catch (e, st) {
-        debugPrint('equipment parse failed $path: $e\n$st');
-      }
+      final yamlStr = await rootBundle.loadString(path);
+      final y = loadYaml(yamlStr) as YamlMap;
+      final eq = Equipment.fromYaml(y); // keep your existing parsing
+      _equipment[eq.id] = eq;
     }
 
-    // load videography yaml files
+    // load and parse videography
     for (final path in videoPaths) {
-      try {
-        final ystr = await rootBundle.loadString(path);
-        final ymap = loadYaml(ystr) as YamlMap;
-        final g = VideographyGuide.fromYaml(ymap);
-        _videography[g.id] = g;
-      } catch (e, st) {
-        debugPrint('videography parse failed $path: $e\n$st');
-      }
+      final yamlStr = await rootBundle.loadString(path);
+      final y = loadYaml(yamlStr) as YamlMap;
+      final v = VideographyGuide.fromYaml(y);
+      _videography[v.id] = v;
     }
 
-    // load scenario yaml files
+    // load and parse scenarios
     for (final path in scenarioPaths) {
-      try {
-        final ystr = await rootBundle.loadString(path);
-        final ymap = loadYaml(ystr) as YamlMap;
-        final s = ScenarioGuide.fromYaml(ymap);
-        _scenarios[s.id] = s;
-      } catch (e, st) {
-        debugPrint('scenario parse failed $path: $e\n$st');
-      }
+      final yamlStr = await rootBundle.loadString(path);
+      final y = loadYaml(yamlStr) as YamlMap;
+      final s = ScenarioGuide.fromYaml(y);
+      _scenarios[s.id] = s;
     }
   }
 
-  Future<Map<String, dynamic>> _loadAssetManifest() async {
-    try {
-      final manifestJson = await rootBundle.loadString('AssetManifest.json');
-      final parsed = json.decode(manifestJson);
-      if (parsed is Map<String, dynamic>) return parsed;
-    } catch (e, st) {
-      debugPrint('AssetManifest read failed: $e\n$st');
-    }
-    return {};
-  }
-
-  List<String> _filterYaml(Map<String, dynamic> manifest, String prefix) {
-    final out = <String>[];
-    for (final entry in manifest.entries) {
-      final path = entry.key;
-      if (path.startsWith(prefix) && path.endsWith('.yaml')) {
-        out.add(path);
-      }
-    }
-    out.sort();
-    return out;
+  /// list asset paths using the new AssetManifest API
+  Future<List<String>> _listAssetsIn(
+    String prefix, {
+    String ext = '.yaml',
+  }) async {
+    // Loads AssetManifest.bin (or the appropriate format) via the bundle
+    final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+    // listAssets() returns all logical asset keys in the bundle
+    final all = manifest.listAssets(); // Iterable<String>
+    return all
+        .where((p) => p.startsWith(prefix) && p.endsWith(ext))
+        .toList(growable: false);
   }
 
   // ========== overlay: fetch + apply ==========
@@ -196,7 +169,6 @@ class DataRepository {
   }
 
   /// apply inventory changes for one equipment id
-  /// apply inventory changes for one equipment id (optimistic UI)
   Future<void> applyInventoryChanges(
     String equipmentId, {
     int? quantity,
@@ -206,6 +178,7 @@ class DataRepository {
     if (client == null) throw StateError('overlay client not ready');
 
     final token = _admin?.accessToken ?? '';
+
     if (token.isEmpty) {
       throw StateError('missing access token in admin_config.yaml');
     }
