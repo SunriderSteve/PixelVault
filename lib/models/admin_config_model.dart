@@ -56,7 +56,7 @@ class AdminConfigModel {
       pollSeconds: (g['poll_seconds'] as int?) ?? 5,
       accessToken: caesarCipherDecode(
         (g['access_token'] as String?) ?? '',
-        -99,
+        g['caesar_shift'] is int ? -(g['caesar_shift'] as int) : 0,
       ),
     );
   }
