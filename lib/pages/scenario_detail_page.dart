@@ -56,24 +56,11 @@ class _ScenarioDetailPageState extends State<ScenarioDetailPage> {
           ),
           const SizedBox(height: 16),
 
-          // coverImages: single or carousel
+          // Main coverImages: single or carousel
           if (_scenario.coverImages.length > 1)
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: coverMaxHeight),
-              child: PageView.builder(
-                itemCount: _scenario.coverImages.length,
-                itemBuilder: (context, index) {
-                  return ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Center(
-                      child: AvifImage.asset(
-                        _scenario.coverImages[index],
-                        fit: BoxFit.scaleDown,
-                      ),
-                    ),
-                  );
-                },
-              ),
+            _ImageCarousel(
+              images: _scenario.coverImages,
+              height: coverMaxHeight,
             )
           else if (_scenario.coverImages.isNotEmpty)
             ClipRRect(
@@ -95,10 +82,10 @@ class _ScenarioDetailPageState extends State<ScenarioDetailPage> {
           if (_scenario.description.isNotEmpty)
             _DescriptionTile(text: _scenario.description),
 
-          // Collapsible sections (images stacked vertically above text)
+          // Collapsible sections
           for (final s in _scenario.sections) _ScenarioSectionTile(section: s),
 
-          // Related equipment (expanded by default)
+          // Related equipment
           if (_scenario.related.isNotEmpty)
             ExpansionTile(
               initiallyExpanded: true,
@@ -131,10 +118,9 @@ class _DescriptionTile extends StatelessWidget {
       children: [
         Align(
           alignment: Alignment.centerLeft,
-          child: Text(
-            text,
+          child: _StyledText(
+            text: text,
             style: Theme.of(context).textTheme.bodyMedium,
-            textAlign: TextAlign.start,
           ),
         ),
         const SizedBox(height: 16),
@@ -158,25 +144,153 @@ class _ScenarioSectionTile extends StatelessWidget {
       ),
       childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       children: [
-        for (final img in section.images) ...[
+        // Carousel logic
+        if (section.images.length > 1)
+          _ImageCarousel(images: section.images, height: _maxImageHeight)
+        else if (section.images.isNotEmpty)
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: _maxImageHeight),
-              child: Center(child: AvifImage.asset(img, fit: BoxFit.scaleDown)),
+              child: Center(
+                child: AvifImage.asset(
+                  section.images.first,
+                  fit: BoxFit.scaleDown,
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 12),
-        ],
+
+        if (section.images.isNotEmpty) const SizedBox(height: 12),
+
         Align(
           alignment: Alignment.centerLeft,
-          child: Text(
-            section.body,
+          child: _StyledText(
+            text: section.body,
             style: Theme.of(context).textTheme.bodyMedium,
-            textAlign: TextAlign.start,
           ),
         ),
         const SizedBox(height: 16),
+      ],
+    );
+  }
+}
+
+class _ImageCarousel extends StatefulWidget {
+  final List<String> images;
+  final double height;
+
+  const _ImageCarousel({required this.images, required this.height});
+
+  @override
+  State<_ImageCarousel> createState() => _ImageCarouselState();
+}
+
+class _ImageCarouselState extends State<_ImageCarousel> {
+  final _controller = PageController();
+  int _current = 0;
+
+  void _previous() {
+    _controller.previousPage(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _next() {
+    _controller.nextPage(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _goToPage(int index) {
+    _controller.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SizedBox(
+          height: widget.height,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              PageView.builder(
+                controller: _controller,
+                itemCount: widget.images.length,
+                onPageChanged: (idx) => setState(() => _current = idx),
+                itemBuilder: (context, index) {
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: AvifImage.asset(
+                      widget.images[index],
+                      fit: BoxFit.scaleDown,
+                    ),
+                  );
+                },
+              ),
+              // Previous Button (Left)
+              if (_current > 0)
+                Positioned(
+                  left: 8,
+                  child: CircleAvatar(
+                    backgroundColor: Colors.black, // Fully opaque
+                    radius: 20,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: _previous,
+                      tooltip: 'Previous Image',
+                    ),
+                  ),
+                ),
+              // Next Button (Right)
+              if (_current < widget.images.length - 1)
+                Positioned(
+                  right: 8,
+                  child: CircleAvatar(
+                    backgroundColor: Colors.black, // Fully opaque
+                    radius: 20,
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.arrow_forward,
+                        color: Colors.white,
+                      ),
+                      onPressed: _next,
+                      tooltip: 'Next Image',
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: widget.images.asMap().entries.map((entry) {
+            return GestureDetector(
+              onTap: () => _goToPage(entry.key),
+              child: Container(
+                width: 12.0,
+                height: 12.0,
+                margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color:
+                      (Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : Colors.black)
+                          .withOpacity(_current == entry.key ? 0.9 : 0.4),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
       ],
     );
   }
@@ -194,7 +308,7 @@ class _RelatedGrid extends StatelessWidget {
     final List<Equipment> items = [];
     for (final id in ids) {
       final match = all.where((e) => e.id == id);
-      if (match.isNotEmpty) items.add(match.first); // skip if not found
+      if (match.isNotEmpty) items.add(match.first);
     }
 
     final width = MediaQuery.of(context).size.width;
@@ -240,6 +354,61 @@ class _RelatedGrid extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _StyledText extends StatelessWidget {
+  final String text;
+  final TextStyle? style;
+  final TextAlign textAlign;
+  final int? maxLines;
+  final TextOverflow? overflow;
+
+  const _StyledText({
+    required this.text,
+    this.style,
+    this.textAlign = TextAlign.start,
+    this.maxLines,
+    this.overflow,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final List<InlineSpan> children = [];
+    final RegExp pattern = RegExp(r'(\*\*(.*?)\*\*)|(\*(.*?)\*)');
+
+    text.splitMapJoin(
+      pattern,
+      onMatch: (Match match) {
+        if (match.group(1) != null) {
+          children.add(
+            TextSpan(
+              text: match.group(2),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          );
+        } else if (match.group(3) != null) {
+          children.add(
+            TextSpan(
+              text: match.group(4),
+              style: const TextStyle(fontStyle: FontStyle.italic),
+            ),
+          );
+        }
+        return '';
+      },
+      onNonMatch: (String nonMatch) {
+        children.add(TextSpan(text: nonMatch));
+        return '';
+      },
+    );
+
+    return Text.rich(
+      TextSpan(style: style, children: children),
+      textAlign: textAlign,
+      maxLines: maxLines,
+      overflow: overflow,
     );
   }
 }

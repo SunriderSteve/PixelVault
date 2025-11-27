@@ -2,56 +2,74 @@ id: cam_sony_fx3
 name: Sony FX3
 brand: Sony
 category: Camera
-cabinnet: A
-quantity: 0
+cabinet: B
+quantity: 1
 
 # cover images for the carousel
 coverImages:
-  - assets/images/equipment/cam_sony_fx3_1.avif
+  - assets/images/equipment/cam_sony_fx3_cover.avif
 
 # high‑level description shown in an "About" section
 description: |
-  Sony’s FX3 is a compact full-frame Cinema Line camera built around a 12 MP BSI sensor optimized for video. It offers excellent low-light performance, 10-bit 4:2:2 internal recording, robust autofocus, and pro-friendly ergonomics (top handle, tally lamps, multiple 1/4-20 mounts).
+  The Sony FX3 is a compact, full-frame Cinema Line camera designed for solo shooters. It features a 12MP sensor optimized for 4K video, excellent low-light performance, and pro-grade audio inputs.
 
-  Ideal for solo shooters and small crews.
+  This guide covers the essentials: inserting media/power, mastering the exposure triangle, reading the histogram, and setting up audio.
 
-# collapsible sections, each with images stacked vertically then body text
+# collapsible sections
 sections:
-  - title: Key Specs & What It Means
+  - title: Intalling the Battery
     images:
-      - assets/images/equipment/sony_fx3/setup1.avif
-      - assets/images/equipment/sony_fx3/setup2.avif
+      - assets/images/equipment/cam_sony_fx3_bottom.avif
+      - assets/images/equipment/cam_sony_fx3_battery.avif
     body: |
-      • 4K up to 120p (10-bit 4:2:2), S-Log3/S-Cinetone; great for grading or quick turnarounds.
-      • Fast Hybrid AF with Eye AF for video; sticky, reliable subject tracking.
-      • Dual card slots (CFexpress A/SDXC); active cooling for long record times.
-      • Full-size HDMI for external recorders/monitors.
+      **Battery (NP-FZ100):**
+      • The battery compartment is on the bottom of the grip. Slide the switch to open.
+      • Insert the battery with the contacts going in first. Push until the blue lever clicks it into place.
 
-  - title: Recommended Video Setup
+  - title: Intalling the Memory Cards
+    images:
+      - assets/images/equipment/cam_sony_fx3_memory.avif
+    body: |
+      **Memory Cards (Dual Slots):**
+      • The media door is on the right side of the camera. Slide the latch down to open.
+      • **Slot 1** is on the Top. **Slot 2** is on the Bottom.
+      • **Orientation:**
+        - **SD Cards:** Insert with the metal contacts facing the LCD screen.         
+        - **CFexpress Type A:** Insert with the label facing the LCD screen.
+      • **Formatting:** Before shooting, go to **MENU > Shooting > Media > Format** to clear the card.
+
+  - title: Checking Exposure Using the Histogram
     images: []
     body: |
-      • Picture profiles: S-Cinetone for straight-out-of-camera, S-Log3 for grading.
-      • White balance: Avoid Auto for interviews; set a custom WB or use presets.
-      • Audio: Use the top-handle XLR unit for clean preamps and locking connectors.
+      • **How to find it:** Press the **DISP** (Display) button on the rear control wheel repeatedly until a graph appears in the bottom right corner.
+      • **How to read it:**
+        - The left side represents **Shadows** (Blacks).         
+        - The right side represents **Highlights** (Whites).
+      • **The Rule:**
+        - If the graph is "climbing the wall" on the **Left**, your image is underexposed (crushed blacks).
+        - If the graph is "climbing the wall" on the **Right**, your image is overexposed (blown highlights).
+        - Aim to keep the data mountain in the middle range.
 
-  - title: Exposure & Shutter
+  - title: Audio Setup (Mics & Headphones)
     images: []
     body: |
-      • Use the 180° shutter guideline (e.g., 1/50 at 25 fps) for natural motion blur.
-      • Control exposure with ND filters rather than changing shutter speed.
-      • Base ISO (in Cine EI / Log workflows) helps maximize dynamic range.
+      **Connecting Microphones:**
+      • **3.5mm Jack:** Use the red microphone jack on the side of the body for on-camera mics like the RODE VideoMic.
+      • **XLR Handle:** For professional audio, slide the handle unit into the top Multi-Interface Shoe and tighten the two screws.
+        - Connect XLR cables to Input 1 or 2.
+        - Set the **HANDLE AUDIO** switch to **ON**.
+        - Set **+48V** switch to **ON** if using a condenser mic (Phantom Power).
 
-  - title: Autofocus & Stabilization
+      **Monitoring Audio:**
+      • Connect headphones to the **Black Headphone Jack** on the side of the camera body.
+      • Always listen to ensure there is no wind noise or distortion before recording.
+
+  - title: Important Buttons & Ports
     images: []
     body: |
-      • AF Transition Speed and Sensitivity let you tune rack-focus behavior.
-      • Use active stabilization for handheld; pair with a gimbal for moving shots.
-
-  - title: Media, Power & Thermal
-    images: []
-    body: |
-      • CFexpress Type A for high-bitrate slow-motion; V90 SD works for many modes.
-      • External USB-PD power extends runtime; active cooling reduces overheating risk.
+      • **MODE Button:** Press the 'MODE' button on the back to switch between Movie, S&Q (Slow & Quick), and Photo modes.
+      • **REC Buttons:** There are record buttons on the top, front, and on the XLR handle. The Tally Lamps (red lights) will glow when recording.
+      • **HDMI:** Uses a full-size HDMI Type-A port for connecting to external monitors.
 
 # related equipment cards (by id)
 related:

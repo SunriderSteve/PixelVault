@@ -2,43 +2,72 @@ id: audio_zoom_f8
 name: Zoom F8
 brand: Zoom
 category: Audio
+cabinet: A
+quantity: 1
+
 coverImages: []
 description: |
-  An 8-input/10-track field recorder with high-quality preamps, timecode,
-  dual-record safeguards, and flexible power—suited for narrative, doc, and events.
+  The Zoom F8 is a professional multi-track field recorder with 8 inputs and dual SD card slots. It offers high-quality preamps and timecode support, making it ideal for film and documentary sound.
 
+  This guide covers the essentials: powering up, connecting mics, setting levels, and managing recording.
+
+# collapsible sections
 sections:
-  - title: Core Features
+  - title: 1. Getting Started (Power & Media)
     images: []
     body: |
-      • 8 XLR/TRS combo inputs with low-noise preamps and up to 192 kHz/24-bit PCM.
-      • Record up to 10 tracks (8 iso + stereo mix); dual SD card recording available.
-      • Timecode I/O for camera sync; limiters and safety tracks.
+      **Batteries (8x AA):**
+      • The battery compartment is on the rear. Loosen the screw to open the door.
+      • Remove the battery sled, insert 8 AA batteries (pay attention to polarity), reinsert the sled, and lock the door.
+      • *Alternative:* Use the provided 12V AC Adapter or an external DC battery via the 4-pin Hirose connector.
 
-  - title: Input & Gain Staging
+      **SD Cards (Dual Slots):**
+      • Open the door on the left side of the unit.
+      • Insert SD cards into Slot 1 and/or Slot 2 (contacts facing down).
+      • **Formatting:** Press **MENU > SD CARD > Format** to prepare cards before use.
+
+  - title: 2. Connecting Inputs
     images: []
     body: |
-      • Set input type (mic/line); enable phantom power per channel if using condensers.
-      • Aim for peaks around −12 dBFS on iso tracks; leave headroom on the mix bus.
+      **XLR/TRS Inputs:**
+      • Connect microphones or line-level devices to Inputs 1-8 on the sides using XLR or 1/4" cables. 
+      **Phantom Power (+48V):**
+      • Required for shotgun mics and condensers.
+      • Go to **MENU > INPUT > Phantom > On/Off**. Select the specific tracks requiring power (e.g., Input 1, Input 2).
+      • *Warning:* Do not send Phantom Power to ribbon mics or line-level wireless receivers.
 
-  - title: Routing, Mix & Safety
+  - title: 3. Levels & Monitoring
     images: []
     body: |
-      • Route lavs/boom to iso tracks; build a conservative stereo mix for camera scratch.
-      • Consider dual-record at a lower level for insurance against sudden peaks.
+      **Adjusting Input Gain (Trim):**
+      • Use the numbered **Track Knobs (1-8)** on the front panel to adjust the gain for each microphone.
+      • **Target:** Aim for levels to peak between **-12dB and -6dB** on the LCD screen.
 
-  - title: Power & Media
+      **Headphone Monitoring:**
+      • Connect headphones to the 1/4" jack on the right side.
+      • **Volume:** Use the small recessed knob next to the headphone jack to adjust monitoring volume.
+      • **PFL (Pre-Fade Listen):** Press the **PFL button** above any track knob to "Solo" that channel and hear it clearly, ignoring others.
+
+  - title: 4. Recording Controls
     images: []
     body: |
-      • Use external DC or battery sleds for long days; keep spare AAs.
-      • Mirror to two SD cards for redundancy; slate at head for sync.
+      **Arming Tracks:**
+      • Press the numbered buttons **[1] - [8]** to arm tracks.
+      • **Red LED:** Track is armed and will be recorded.
+      • **No Light:** Track is muted/disarmed.
 
-  - title: Field Tips
+      **Transport:**
+      • **REC (Red Circle):** Press to start recording. The LED ring glows red.
+      • **STOP (Square):** Press to stop recording and save the file.
+      • **PLAY:** Press to review the last take.
+
+  - title: 5. Essential Field Features
     images: []
     body: |
-      • Monitor with closed-back headphones; engage HPF to tame rumble.
-      • Label channels, talent, and mics clearly to speed post.
+      • **Slate Mic:** Push the toggle switch (above the Menu button) to the **Left** to activate the built-in mic. Use this to speak slate info (e.g., "Scene 1, Take 2") directly onto the tracks.
+      • **Hold Switch:** Slide the Power switch to the **HOLD** position during recording to prevent accidental button presses.
 
+# related equipment cards (by id)
 related:
   - mic_sennheiser_g4
   - cam_sony_fx3

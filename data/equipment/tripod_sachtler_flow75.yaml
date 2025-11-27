@@ -1,0 +1,63 @@
+id: tripod_sachtler_flow75
+name: Sachtler Flowtech 75
+brand: Sachtler
+category: Tripod
+cabinet: Tripod Shelf
+quantity: 4
+
+coverImages: []
+description: |
+  The Sachtler Flowtech 75 is a revolutionary carbon-fiber tripod system. Unlike traditional tripods with multiple knobs per leg, it uses a single quick-release brake at the top of each leg for instant height adjustment.
+
+  This guide covers setting up the legs, levelling the bowl, and basic fluid head operation (Aktiv/FSB series).
+
+sections:
+  - title: 1. Setup & Height Adjustment (The Legs)
+    images: []
+    body: |
+      **Deploying the Legs:**
+      • The legs are held together by magnetic clasps. Simply pull them apart to separate.
+      • **To Adjust Height:**
+        1. Locate the **Quick Release Brake Levers** at the very top of each leg.
+        2. Lift the lever UP to unlock the entire leg (do for all 3 legs).
+        3. Raise or lower the tripod to your desired height.
+        4. Push the lever DOWN firmly to lock the leg.
+
+  - title: 2. Levelling the Bubble
+    images: []
+    body: |
+      • Reach under the bowl and loosen the tie-down knob (the handle hanging below the head).
+      • Adjust the head until the bubble is centered.
+      • Tighten the knob firmly.
+
+  - title: 3. Mounting the Camera
+    images: []
+    body: |
+      1. Slide the camea in from the rear of the mount.
+      4. It will click into place. Slide the camera forward/backward to find the center of gravity.
+      5. Tighten the side lock knob to secure the plate.
+
+  - title: 4. Balancing & Movement
+    images: []
+    body: |
+      **Counterbalance (The Rebound):**
+      • Unlock the tilt brake. Tilt the camera forward/backward.
+      • If it falls, adjust the **Counterbalance Knob/Dial** (usually numbered) until the camera stays stationary at any tilt angle.
+      • *Tip:* Set the camera's center of gravity *before* adjusting counterbalance.
+
+      **Pan & Tilt Drag:**
+      • **Pan (Left/Right):** Locate the drag ring or knob at the base of the head. Increase for more resistance (slower pans), decrease for looser movement.
+      • **Tilt (Up/Down):** Locate the drag knob on the side. Adjust similarly.
+      • **Brakes:** Always unlock the Pan and Tilt brakes (usually black levers) before moving the camera.
+
+  - title: 5. Packing Up
+    images: []
+    body: |
+      1. Collapse the legs by lifting the top brake levers and push the legs down.
+      2. Bring the legs together. The magnetic clasps will snap them shut automatically.
+      3. Ensure the head is level and the pan/tilt brakes are loosely locked to prevent swinging during transport.
+
+# related equipment cards (by id)
+related:
+  - cam_sony_fx3
+  - cam_sony_a73
