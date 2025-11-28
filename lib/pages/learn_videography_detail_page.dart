@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_avif/flutter_avif.dart';
@@ -28,44 +29,151 @@ class _VideographyDetailPageState extends State<VideographyDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        backgroundColor: const Color(0xFF0047BB),
-        title: Text(_guide.name, style: const TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
-        automaticallyImplyLeading: false,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Title
-          Text(
-            _guide.name,
-            style: Theme.of(context).textTheme.headlineSmall,
-            textAlign: TextAlign.start,
-          ),
-          const SizedBox(height: 16),
+    const brandBlue = Color(0xFF0047BB);
 
-          // Main Cover images: carousel or single
-          if (_guide.coverImages.length > 1)
-            _ImageCarousel(images: _guide.coverImages, height: 500)
-          else if (_guide.coverImages.isNotEmpty)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: AvifImage.asset(
-                _guide.coverImages.first,
-                fit: BoxFit.scaleDown,
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // 1. Background
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF001F54),
+                  Color(0xFF0047BB),
+                  Color(0xFFFF8200),
+                  Color(0xFFE80029),
+                ],
+                stops: [0.0, 0.3, 0.7, 1.0],
               ),
             ),
-          const SizedBox(height: 24),
+          ),
+          // 2. Blobs
+          Positioned(
+            top: -150,
+            left: -100,
+            child: Container(
+              width: 400,
+              height: 400,
+              decoration: BoxDecoration(
+                color: brandBlue.withValues(alpha: 0.3),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    blurRadius: 150,
+                    color: brandBlue.withValues(alpha: 0.3),
+                  ),
+                ],
+              ),
+            ),
+          ),
 
-          // Sections
-          for (var section in _guide.sections) _SectionTile(section: section),
+          // 3. Content
+          CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => context.pop(),
+                ),
+                backgroundColor: Colors.transparent,
+                pinned: true,
+                flexibleSpace: ClipRRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                    child: FlexibleSpaceBar(
+                      title: Text(
+                        _guide.name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      background: Container(
+                        color: Colors.black.withValues(alpha: 0.2),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              SliverList(
+                delegate: SliverChildListDelegate([
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Title
+                        Text(
+                          _guide.name,
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                          textAlign: TextAlign.start,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Main Cover images
+                        if (_guide.coverImages.length > 1)
+                          _ImageCarousel(
+                            images: _guide.coverImages,
+                            height: 500,
+                          )
+                        else if (_guide.coverImages.isNotEmpty)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: AvifImage.asset(
+                              _guide.coverImages.first,
+                              fit: BoxFit.scaleDown,
+                            ),
+                          ),
+                        const SizedBox(height: 24),
+
+                        // Sections
+                        for (var section in _guide.sections) ...[
+                          _GlassContainer(
+                            child: _SectionTile(section: section),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      ],
+                    ),
+                  ),
+                ]),
+              ),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _GlassContainer extends StatelessWidget {
+  final Widget child;
+  const _GlassContainer({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(
+              alpha: 0.6,
+            ), // More opaque background (black based for contrast)
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+          ),
+          child: child,
+        ),
       ),
     );
   }
@@ -82,11 +190,16 @@ class _SectionTile extends StatelessWidget {
     return ExpansionTile(
       title: Text(
         section.title,
-        style: Theme.of(context).textTheme.titleMedium,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
+        ), // Increased font size
       ),
+      iconColor: Colors.white,
+      collapsedIconColor: Colors.white70,
       childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       children: [
-        // Section images: carousel if multiple
         if (section.images.length > 1)
           _ImageCarousel(images: section.images, height: _maxImageHeight)
         else if (section.images.isNotEmpty)
@@ -105,12 +218,15 @@ class _SectionTile extends StatelessWidget {
 
         if (section.images.isNotEmpty) const SizedBox(height: 12),
 
-        // Section body text
         Align(
           alignment: Alignment.centerLeft,
           child: _StyledText(
             text: section.body,
-            style: Theme.of(context).textTheme.bodyMedium,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              height: 1.5,
+            ), // Increased font size and contrast
           ),
         ),
         const SizedBox(height: 16),
@@ -132,20 +248,6 @@ class _ImageCarousel extends StatefulWidget {
 class _ImageCarouselState extends State<_ImageCarousel> {
   final _controller = PageController();
   int _current = 0;
-
-  void _previous() {
-    _controller.previousPage(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
-  }
-
-  void _next() {
-    _controller.nextPage(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
-  }
 
   void _goToPage(int index) {
     _controller.animateToPage(
@@ -178,57 +280,60 @@ class _ImageCarouselState extends State<_ImageCarousel> {
                   );
                 },
               ),
-              // Previous Button (Left)
+              // Navigation Buttons
               if (_current > 0)
                 Positioned(
                   left: 8,
                   child: CircleAvatar(
-                    backgroundColor: Colors.black, // Fully opaque
-                    radius: 20,
+                    backgroundColor: Colors.white, // White background
                     child: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: _previous,
-                      tooltip: 'Previous Image',
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: Colors.black,
+                      ), // Black arrow
+                      onPressed: () => _controller.previousPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      ),
                     ),
                   ),
                 ),
-              // Next Button (Right)
               if (_current < widget.images.length - 1)
                 Positioned(
                   right: 8,
                   child: CircleAvatar(
-                    backgroundColor: Colors.black, // Fully opaque
-                    radius: 20,
+                    backgroundColor: Colors.white, // White background
                     child: IconButton(
                       icon: const Icon(
                         Icons.arrow_forward,
-                        color: Colors.white,
+                        color: Colors.black,
+                      ), // Black arrow
+                      onPressed: () => _controller.nextPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
                       ),
-                      onPressed: _next,
-                      tooltip: 'Next Image',
                     ),
                   ),
                 ),
             ],
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
+        // Interactive Dots
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: widget.images.asMap().entries.map((entry) {
             return GestureDetector(
               onTap: () => _goToPage(entry.key),
               child: Container(
-                width: 12.0,
-                height: 12.0,
+                width: 10.0,
+                height: 10.0,
                 margin: const EdgeInsets.symmetric(horizontal: 4.0),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color:
-                      (Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white
-                              : Colors.black)
-                          .withOpacity(_current == entry.key ? 0.9 : 0.4),
+                  color: Colors
+                      .white // White dots
+                      .withOpacity(_current == entry.key ? 0.9 : 0.3),
                 ),
               ),
             );
@@ -259,6 +364,27 @@ class _StyledText extends StatelessWidget {
     final List<InlineSpan> children = [];
     final RegExp pattern = RegExp(r'(\*\*(.*?)\*\*)|(\*(.*?)\*)');
 
+    // Text outline style for better readability
+    final outlineStyle =
+        style?.copyWith(
+          shadows: [
+            Shadow(
+              offset: const Offset(1.0, 1.0),
+              blurRadius: 2.0,
+              color: Colors.black.withOpacity(0.8),
+            ),
+          ],
+        ) ??
+        const TextStyle(
+          shadows: [
+            Shadow(
+              offset: Offset(1.0, 1.0),
+              blurRadius: 2.0,
+              color: Colors.black,
+            ),
+          ],
+        );
+
     text.splitMapJoin(
       pattern,
       onMatch: (Match match) {
@@ -286,7 +412,7 @@ class _StyledText extends StatelessWidget {
     );
 
     return Text.rich(
-      TextSpan(style: style, children: children),
+      TextSpan(style: outlineStyle, children: children),
       textAlign: textAlign,
       maxLines: maxLines,
       overflow: overflow,
