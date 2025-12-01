@@ -120,21 +120,25 @@ class _ScenarioDetailPageState extends State<ScenarioDetailPage> {
                         const SizedBox(height: 16),
 
                         if (_scenario.coverImages.length > 1)
-                          _ImageCarousel(
-                            images: _scenario.coverImages,
-                            height: coverMaxHeight,
+                          Center(
+                            child: _ImageCarousel(
+                              images: _scenario.coverImages,
+                              height: coverMaxHeight,
+                            ),
                           )
                         else if (_scenario.coverImages.isNotEmpty)
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(
-                                maxHeight: coverMaxHeight,
-                              ),
-                              child: Center(
-                                child: AvifImage.asset(
-                                  _scenario.coverImages.first,
-                                  fit: BoxFit.scaleDown,
+                          Center(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxHeight: coverMaxHeight,
+                                ),
+                                child: Center(
+                                  child: AvifImage.asset(
+                                    _scenario.coverImages.first,
+                                    fit: BoxFit.scaleDown,
+                                  ),
                                 ),
                               ),
                             ),
@@ -204,9 +208,7 @@ class _GlassContainer extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.black.withValues(
-              alpha: 0.6,
-            ), // More opaque background (black based for contrast)
+            color: Colors.white.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
           ),
@@ -242,10 +244,10 @@ class _DescriptionTile extends StatelessWidget {
           child: _StyledText(
             text: text,
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              height: 1.5,
-            ), // Increased font size and contrast
+              color: Colors.white70,
+              fontSize: 15,
+              height: 1.4,
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -276,16 +278,23 @@ class _ScenarioSectionTile extends StatelessWidget {
       childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       children: [
         if (section.images.length > 1)
-          _ImageCarousel(images: section.images, height: _maxImageHeight)
+          Center(
+            child: _ImageCarousel(
+              images: section.images,
+              height: _maxImageHeight,
+            ),
+          )
         else if (section.images.isNotEmpty)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: _maxImageHeight),
-              child: Center(
-                child: AvifImage.asset(
-                  section.images.first,
-                  fit: BoxFit.scaleDown,
+          Center(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: _maxImageHeight),
+                child: Center(
+                  child: AvifImage.asset(
+                    section.images.first,
+                    fit: BoxFit.scaleDown,
+                  ),
                 ),
               ),
             ),
@@ -296,10 +305,10 @@ class _ScenarioSectionTile extends StatelessWidget {
           child: _StyledText(
             text: section.body,
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              height: 1.5,
-            ), // Increased font size and contrast
+              color: Colors.white70,
+              fontSize: 15,
+              height: 1.4,
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -321,6 +330,20 @@ class _ImageCarousel extends StatefulWidget {
 class _ImageCarouselState extends State<_ImageCarousel> {
   final _controller = PageController();
   int _current = 0;
+
+  void _previous() {
+    _controller.previousPage(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _next() {
+    _controller.nextPage(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
 
   void _goToPage(int index) {
     _controller.animateToPage(
@@ -344,30 +367,26 @@ class _ImageCarouselState extends State<_ImageCarousel> {
                 itemCount: widget.images.length,
                 onPageChanged: (idx) => setState(() => _current = idx),
                 itemBuilder: (context, index) {
-                  return ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: AvifImage.asset(
-                      widget.images[index],
-                      fit: BoxFit.scaleDown,
+                  return Center(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: AvifImage.asset(
+                        widget.images[index],
+                        fit: BoxFit.scaleDown,
+                      ),
                     ),
                   );
                 },
               ),
-              // Navigation Buttons
               if (_current > 0)
                 Positioned(
                   left: 8,
                   child: CircleAvatar(
-                    backgroundColor: Colors.white, // White background
+                    backgroundColor: Colors.white,
                     child: IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        color: Colors.black,
-                      ), // Black arrow
-                      onPressed: () => _controller.previousPage(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                      ),
+                      icon: const Icon(Icons.arrow_back, color: Colors.black),
+                      onPressed: _previous,
+                      tooltip: 'Previous Image',
                     ),
                   ),
                 ),
@@ -375,16 +394,14 @@ class _ImageCarouselState extends State<_ImageCarousel> {
                 Positioned(
                   right: 8,
                   child: CircleAvatar(
-                    backgroundColor: Colors.white, // White background
+                    backgroundColor: Colors.white,
                     child: IconButton(
                       icon: const Icon(
                         Icons.arrow_forward,
                         color: Colors.black,
-                      ), // Black arrow
-                      onPressed: () => _controller.nextPage(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
                       ),
+                      onPressed: _next,
+                      tooltip: 'Next Image',
                     ),
                   ),
                 ),
@@ -392,7 +409,6 @@ class _ImageCarouselState extends State<_ImageCarousel> {
           ),
         ),
         const SizedBox(height: 12),
-        // Interactive Dots
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: widget.images.asMap().entries.map((entry) {
@@ -404,9 +420,9 @@ class _ImageCarouselState extends State<_ImageCarousel> {
                 margin: const EdgeInsets.symmetric(horizontal: 4.0),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors
-                      .white // White dots
-                      .withOpacity(_current == entry.key ? 0.9 : 0.3),
+                  color: Colors.white.withOpacity(
+                    _current == entry.key ? 0.9 : 0.3,
+                  ),
                 ),
               ),
             );

@@ -18,7 +18,6 @@ class ScenarioListPage extends StatelessWidget {
       2,
       (MediaQuery.of(context).size.width / maxTileWidth).floor(),
     );
-    const brandBlue = Color(0xFF0047BB);
 
     return Hero(
       tag: 'scenarios_card',
