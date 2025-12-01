@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui'; // For ImageFilter
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_avif/flutter_avif.dart';
@@ -67,6 +68,10 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Brand Blue
+    const brandBlue = Color(0xFF0047BB);
+
+    // Responsive Grid
     const double maxTileWidth = 420;
     final cols = math.max(
       2,
@@ -74,216 +79,337 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
     );
     final totalFilters = _selectedCategories.length + _selectedBrands.length;
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        backgroundColor: const Color(0xFF0047BB),
-        title: const Text(
-          'Equipment Guides',
-          style: TextStyle(color: Colors.white),
-        ),
-        iconTheme: const IconThemeData(color: Colors.white),
-        automaticallyImplyLeading: false,
-      ),
-      body: Column(
-        children: [
-          // Sticky search & filter bar
-          Container(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search Equipment',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: _searchController.text.isEmpty
-                          ? null
-                          : IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                _searchController.clear();
-                                _updateFilters();
-                              },
-                            ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
+    // Hero wrapping the entire scaffold for smooth transition
+    return Hero(
+      tag: 'equip_guides_card',
+      child: Scaffold(
+        backgroundColor: Colors.black, // Base background
+        body: Stack(
+          children: [
+            // 1. Vibrant Background Gradient
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF001F54), // Dark Blue
+                    Color(0xFF0047BB), // NLB Blue
+                    Color(0xFFFF8200), // NLB Orange
+                    Color(0xFFE80029), // NLB Red
+                  ],
+                  stops: [0.0, 0.3, 0.7, 1.0],
+                ),
+              ),
+            ),
+
+            // 2. Background Blobs for Depth
+            Positioned(
+              top: -150,
+              left: -100,
+              child: Container(
+                width: 400,
+                height: 400,
+                decoration: BoxDecoration(
+                  color: brandBlue.withValues(alpha: 0.3),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      blurRadius: 150,
+                      color: brandBlue.withValues(alpha: 0.3),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: -100,
+              right: -100,
+              child: Container(
+                width: 350,
+                height: 350,
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      blurRadius: 150,
+                      color: Colors.orange.withValues(alpha: 0.2),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // 3. Content with Glassmorphism
+            CustomScrollView(
+              slivers: [
+                // Glass App Bar
+                SliverAppBar(
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => context.pop(),
+                  ),
+                  backgroundColor: Colors.transparent,
+                  pinned: true,
+                  flexibleSpace: ClipRRect(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                      child: FlexibleSpaceBar(
+                        title: const Text(
+                          'Equipment Guides',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        background: Container(
+                          color: Colors.black.withValues(alpha: 0.2),
+                        ),
                       ),
                     ),
                   ),
                 ),
-                GestureDetector(
-                  onTap: () => setState(() => _showFilters = !_showFilters),
-                  child: Stack(
-                    children: [
-                      const Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: Icon(Icons.filter_alt, size: 28),
-                      ),
-                      if (totalFilters > 0)
-                        Positioned(
-                          right: 4,
-                          top: 4,
-                          child: CircleAvatar(
-                            radius: 8,
-                            backgroundColor: Colors.red,
-                            child: Text(
-                              '$totalFilters',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                              ),
+
+                // Search & Filter Bar (Glassmorphism)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              width: 1,
                             ),
                           ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Filter panel
-          if (_showFilters)
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    height: 200,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Tabs with notification
-                        SizedBox(
-                          width: 150,
-                          child: ListView(
+                          child: Row(
                             children: [
-                              _TabButton(
-                                label:
-                                    'Category (${_selectedCategories.length})',
-                                selected: _activeTab == 0,
-                                onTap: () => setState(() => _activeTab = 0),
+                              Expanded(
+                                child: TextField(
+                                  controller: _searchController,
+                                  style: const TextStyle(color: Colors.white),
+                                  decoration: InputDecoration(
+                                    hintText: 'Search Equipment',
+                                    hintStyle: TextStyle(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.6,
+                                      ),
+                                    ),
+                                    prefixIcon: const Icon(
+                                      Icons.search,
+                                      color: Colors.white,
+                                    ),
+                                    suffixIcon: _searchController.text.isEmpty
+                                        ? null
+                                        : IconButton(
+                                            icon: const Icon(
+                                              Icons.clear,
+                                              color: Colors.white,
+                                            ),
+                                            onPressed: () {
+                                              _searchController.clear();
+                                              _updateFilters();
+                                            },
+                                          ),
+                                    border: InputBorder.none,
+                                  ),
+                                ),
                               ),
-                              _TabButton(
-                                label: 'Brand (${_selectedBrands.length})',
-                                selected: _activeTab == 1,
-                                onTap: () => setState(() => _activeTab = 1),
+                              GestureDetector(
+                                onTap: () => setState(
+                                  () => _showFilters = !_showFilters,
+                                ),
+                                child: Stack(
+                                  children: [
+                                    const Padding(
+                                      padding: EdgeInsets.all(8.0),
+                                      child: Icon(
+                                        Icons.filter_alt,
+                                        color: Colors.white,
+                                        size: 28,
+                                      ),
+                                    ),
+                                    if (totalFilters > 0)
+                                      Positioned(
+                                        right: 4,
+                                        top: 4,
+                                        child: CircleAvatar(
+                                          radius: 8,
+                                          backgroundColor: Colors.red,
+                                          child: Text(
+                                            '$totalFilters',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: SingleChildScrollView(
-                            child: Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Filter Panel (Conditional)
+                if (_showFilters)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                          child: Container(
+                            color: Colors.black.withValues(alpha: 0.6),
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                if (_activeTab == 0)
-                                  for (var c in _allCategories)
-                                    FilterChip(
-                                      label: Text(
-                                        '$c (${_allItems.where((i) => i.category == c).length})',
-                                      ),
-                                      selected: _selectedCategories.contains(c),
-                                      onSelected: (sel) => setState(() {
-                                        (sel)
-                                            ? _selectedCategories.add(c)
-                                            : _selectedCategories.remove(c);
-
-                                        _updateFilters();
-                                      }),
+                                Row(
+                                  children: [
+                                    _GlassTabButton(
+                                      label: 'Category',
+                                      selected: _activeTab == 0,
+                                      onTap: () =>
+                                          setState(() => _activeTab = 0),
                                     ),
-                                if (_activeTab == 1)
-                                  for (var b in _allBrands)
-                                    FilterChip(
-                                      label: Text(
-                                        '$b (${_allItems.where((i) => i.brand == b).length})',
-                                      ),
-                                      selected: _selectedBrands.contains(b),
-                                      onSelected: (sel) => setState(() {
-                                        (sel)
-                                            ? _selectedBrands.add(b)
-                                            : _selectedBrands.remove(b);
-
-                                        _updateFilters();
-                                      }),
+                                    const SizedBox(width: 16),
+                                    _GlassTabButton(
+                                      label: 'Brand',
+                                      selected: _activeTab == 1,
+                                      onTap: () =>
+                                          setState(() => _activeTab = 1),
                                     ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: _activeTab == 0
+                                      ? _allCategories.map((c) {
+                                          final isSelected = _selectedCategories
+                                              .contains(c);
+                                          return _GlassFilterChip(
+                                            label: c,
+                                            selected: isSelected,
+                                            onSelected: (sel) => setState(() {
+                                              sel
+                                                  ? _selectedCategories.add(c)
+                                                  : _selectedCategories.remove(
+                                                      c,
+                                                    );
+                                              _updateFilters();
+                                            }),
+                                          );
+                                        }).toList()
+                                      : _allBrands.map((b) {
+                                          final isSelected = _selectedBrands
+                                              .contains(b);
+                                          return _GlassFilterChip(
+                                            label: b,
+                                            selected: isSelected,
+                                            onSelected: (sel) => setState(() {
+                                              sel
+                                                  ? _selectedBrands.add(b)
+                                                  : _selectedBrands.remove(b);
+                                              _updateFilters();
+                                            }),
+                                          );
+                                        }).toList(),
+                                ),
+                                const Divider(
+                                  color: Colors.white24,
+                                  height: 32,
+                                ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    TextButton(
+                                      onPressed: _clearFilters,
+                                      child: const Text(
+                                        'Clear All',
+                                        style: TextStyle(color: Colors.white),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    ElevatedButton(
+                                      onPressed: () =>
+                                          setState(() => _showFilters = false),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: brandBlue,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      child: const Text('Done'),
+                                    ),
+                                  ],
+                                ),
                               ],
                             ),
                           ),
                         ),
-                      ],
+                      ),
                     ),
                   ),
-                  const Divider(),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+
+                // Grid Content
+                SliverPadding(
+                  padding: const EdgeInsets.all(16),
+                  sliver: SliverGrid(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: cols,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                      childAspectRatio: 3 / 2,
                     ),
-                    child: Row(
-                      children: [
-                        TextButton(
-                          onPressed: _clearFilters,
-                          child: const Text('Clear Filters'),
-                        ),
-                        const Spacer(),
-                        ElevatedButton(
-                          onPressed: () => setState(() => _showFilters = false),
-                          child: const Text('Show Results'),
-                        ),
-                      ],
-                    ),
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final eq = _filteredItems[index];
+                      final imagePath = eq.coverImages.isNotEmpty
+                          ? eq.coverImages.first
+                          : '';
+                      return _GlassEquipmentCard(
+                        title: eq.name,
+                        imagePath: imagePath,
+                        onTap: () =>
+                            context.push('/learn/equip-guides/${eq.id}'),
+                      );
+                    }, childCount: _filteredItems.length),
                   ),
-                ],
-              ),
-            ),
-          // Content grid
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: GridView.builder(
-                itemCount: _filteredItems.length,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: cols,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 8,
-                  childAspectRatio: 3 / 2,
                 ),
-                itemBuilder: (context, index) {
-                  final eq = _filteredItems[index];
-                  final imagePath = eq.coverImages.isNotEmpty
-                      ? eq.coverImages.first
-                      : '';
-                  return _EquipmentCard(
-                    title: eq.name,
-                    imagePath: imagePath,
-                    onTap: () => context.push('/learn/equip-guides/${eq.id}'),
-                  );
-                },
-              ),
+              ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-class _TabButton extends StatelessWidget {
+class _GlassTabButton extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
 
-  const _TabButton({
+  const _GlassTabButton({
     required this.label,
     required this.selected,
     required this.onTap,
@@ -291,22 +417,75 @@ class _TabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: onTap,
-      child: Text(
-        label,
-        style: TextStyle(color: selected ? Colors.blue : Colors.black),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected
+              ? Colors.white.withValues(alpha: 0.2)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? Colors.white : Colors.white54, // Brighter border
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : Colors.white, // Always white text
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }
 }
 
-class _EquipmentCard extends StatelessWidget {
+class _GlassFilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final ValueChanged<bool> onSelected;
+
+  const _GlassFilterChip({
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FilterChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: onSelected,
+      backgroundColor: Colors.black.withValues(
+        alpha: 0.3,
+      ), // Darker background for unselected
+      selectedColor: const Color(0xFF0047BB),
+      checkmarkColor: Colors.white,
+      labelStyle: const TextStyle(
+        color: Colors.white, // Always white text
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: selected
+              ? Colors.transparent
+              : Colors.white38, // Visible border
+        ),
+      ),
+    );
+  }
+}
+
+class _GlassEquipmentCard extends StatelessWidget {
   final String title;
   final String imagePath;
   final VoidCallback onTap;
 
-  const _EquipmentCard({
+  const _GlassEquipmentCard({
     required this.title,
     required this.imagePath,
     required this.onTap,
@@ -314,24 +493,71 @@ class _EquipmentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: imagePath.isNotEmpty
-                  ? AvifImage.asset(imagePath, fit: BoxFit.cover)
-                  : const SizedBox.shrink(),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Stack(
+        children: [
+          // Background Image
+          Positioned.fill(
+            child: imagePath.isNotEmpty
+                ? AvifImage.asset(imagePath, fit: BoxFit.cover)
+                : Container(color: Colors.white.withValues(alpha: 0.1)),
+          ),
+          // Gradient Overlay
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.8),
+                  ],
+                  stops: const [0.6, 1.0],
+                ),
+              ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Text(title, textAlign: TextAlign.center),
+          ),
+          // Text Content
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  shadows: [
+                    Shadow(
+                      blurRadius: 4,
+                      color: Colors.black,
+                      offset: Offset(0, 1),
+                    ),
+                  ],
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ],
-        ),
+          ),
+          // Tap handler
+          Positioned.fill(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onTap,
+                highlightColor: Colors.white.withValues(alpha: 0.1),
+                splashColor: Colors.white.withValues(alpha: 0.2),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'dart:ui'; // For ImageFilter
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_avif/flutter_avif.dart';
@@ -19,7 +20,6 @@ class _LearnEquipDetailPageState extends State<EquipDetailPage> {
   @override
   void initState() {
     super.initState();
-    // Avoid assuming a repository method name; find by id from the cache.
     final all = DataRepository().getAllEquipment();
     _equip = all.firstWhere(
       (e) => e.id == widget.itemID,
@@ -29,78 +29,211 @@ class _LearnEquipDetailPageState extends State<EquipDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    const brandBlue = Color(0xFF0047BB);
+
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        backgroundColor: const Color(0xFF0047BB),
-        title: Text(_equip.name, style: const TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
-        automaticallyImplyLeading: false,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      backgroundColor: Colors.black,
+      body: Stack(
         children: [
-          // Name
-          Text(
-            _equip.name,
-            style: Theme.of(context).textTheme.headlineSmall,
-            textAlign: TextAlign.left,
+          // 1. Background Gradient
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF001F54), // Dark Blue
+                  Color(0xFF0047BB), // NLB Blue
+                  Color(0xFFFF8200), // NLB Orange
+                  Color(0xFFE80029), // NLB Red
+                ],
+                stops: [0.0, 0.3, 0.7, 1.0],
+              ),
+            ),
           ),
-          const SizedBox(height: 16),
 
-          // Covers: single or carousel
-          if (_equip.coverImages.length > 1)
-            SizedBox(
-              height: 500,
-              child: PageView.builder(
-                itemCount: _equip.coverImages.length,
-                itemBuilder: (context, index) {
-                  return ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: AvifImage.asset(
-                      _equip.coverImages[index],
-                      fit: BoxFit.scaleDown,
+          // 2. Background Blobs
+          Positioned(
+            top: -150,
+            left: -100,
+            child: Container(
+              width: 400,
+              height: 400,
+              decoration: BoxDecoration(
+                color: brandBlue.withValues(alpha: 0.3),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    blurRadius: 150,
+                    color: brandBlue.withValues(alpha: 0.3),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -100,
+            right: -100,
+            child: Container(
+              width: 350,
+              height: 350,
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    blurRadius: 150,
+                    color: Colors.orange.withValues(alpha: 0.2),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // 3. Content
+          CustomScrollView(
+            slivers: [
+              // Glass AppBar
+              SliverAppBar(
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => context.pop(),
+                ),
+                backgroundColor: Colors.transparent,
+                pinned: true,
+                flexibleSpace: ClipRRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                    child: FlexibleSpaceBar(
+                      title: Text(
+                        _equip.name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      background: Container(
+                        color: Colors.black.withValues(alpha: 0.2),
+                      ),
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
-            )
-          else if (_equip.coverImages.isNotEmpty)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: AvifImage.asset(
-                _equip.coverImages.first,
-                fit: BoxFit.scaleDown,
+
+              SliverList(
+                delegate: SliverChildListDelegate([
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Title
+                        Text(
+                          _equip.name,
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Cover Image / Carousel (Centered)
+                        if (_equip.coverImages.length > 1)
+                          Center(
+                            child: _ImageCarousel(
+                              images: _equip.coverImages,
+                              height: 500,
+                            ),
+                          )
+                        else if (_equip.coverImages.isNotEmpty)
+                          Center(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxHeight: 500,
+                                ),
+                                child: AvifImage.asset(
+                                  _equip.coverImages.first,
+                                  fit: BoxFit.scaleDown,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                        const SizedBox(height: 24),
+
+                        // Description
+                        if (_equip.description.isNotEmpty)
+                          _GlassContainer(
+                            child: _DescriptionTile(text: _equip.description),
+                          ),
+
+                        const SizedBox(height: 16),
+
+                        // Sections
+                        for (final s in _equip.sections) ...[
+                          _GlassContainer(child: _EquipSectionTile(section: s)),
+                          const SizedBox(height: 16),
+                        ],
+
+                        // Related
+                        if (_equip.related.isNotEmpty)
+                          _GlassContainer(
+                            child: ExpansionTile(
+                              initiallyExpanded: true,
+                              title: const Text(
+                                'Related equipment',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+                              iconColor: Colors.white,
+                              collapsedIconColor: Colors.white70,
+                              childrenPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              children: [_RelatedGrid(ids: _equip.related)],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ]),
               ),
-            ),
-
-          const SizedBox(height: 24),
-
-          // Description (as its own expandable section for parity with Videography layout)
-          if (_equip.description.isNotEmpty)
-            _DescriptionTile(text: _equip.description),
-
-          // Collapsible sections (images stacked vertically above text)
-          for (final s in _equip.sections) _EquipSectionTile(section: s),
-
-          // Related equipment grid
-          if (_equip.related.isNotEmpty)
-            ExpansionTile(
-              initiallyExpanded: true,
-              title: Text(
-                'Related equipment',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              childrenPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 8,
-              ),
-              children: [_RelatedGrid(ids: _equip.related)],
-            ),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _GlassContainer extends StatelessWidget {
+  final Widget child;
+  const _GlassContainer({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.15),
+              width: 1,
+            ),
+          ),
+          child: child,
+        ),
       ),
     );
   }
@@ -114,15 +247,27 @@ class _DescriptionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ExpansionTile(
       initiallyExpanded: true,
-      title: Text('About', style: Theme.of(context).textTheme.titleMedium),
+      title: const Text(
+        'About',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
+        ),
+      ),
+      iconColor: Colors.white,
+      collapsedIconColor: Colors.white70,
       childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       children: [
         Align(
           alignment: Alignment.centerLeft,
-          child: Text(
-            text,
-            style: Theme.of(context).textTheme.bodyMedium,
-            textAlign: TextAlign.start,
+          child: _StyledText(
+            text: text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              height: 1.5,
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -142,29 +287,158 @@ class _EquipSectionTile extends StatelessWidget {
     return ExpansionTile(
       title: Text(
         section.title,
-        style: Theme.of(context).textTheme.titleMedium,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
+        ),
       ),
+      iconColor: Colors.white,
+      collapsedIconColor: Colors.white70,
       childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       children: [
-        for (final img in section.images) ...[
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: _maxImageHeight),
-              child: Center(child: AvifImage.asset(img, fit: BoxFit.scaleDown)),
+        if (section.images.length > 1)
+          Center(
+            child: _ImageCarousel(
+              images: section.images,
+              height: _maxImageHeight,
+            ),
+          )
+        else if (section.images.isNotEmpty)
+          Center(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: _maxImageHeight),
+                child: AvifImage.asset(
+                  section.images.first,
+                  fit: BoxFit.scaleDown,
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 12),
-        ],
+        if (section.images.isNotEmpty) const SizedBox(height: 12),
         Align(
           alignment: Alignment.centerLeft,
-          child: Text(
-            section.body,
-            style: Theme.of(context).textTheme.bodyMedium,
-            textAlign: TextAlign.start,
+          child: _StyledText(
+            text: section.body,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              height: 1.5,
+            ),
           ),
         ),
         const SizedBox(height: 16),
+      ],
+    );
+  }
+}
+
+class _ImageCarousel extends StatefulWidget {
+  final List<String> images;
+  final double height;
+
+  const _ImageCarousel({required this.images, required this.height});
+
+  @override
+  State<_ImageCarousel> createState() => _ImageCarouselState();
+}
+
+class _ImageCarouselState extends State<_ImageCarousel> {
+  final _controller = PageController();
+  int _current = 0;
+
+  void _goToPage(int index) {
+    _controller.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SizedBox(
+          height: widget.height,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              PageView.builder(
+                controller: _controller,
+                itemCount: widget.images.length,
+                onPageChanged: (idx) => setState(() => _current = idx),
+                itemBuilder: (context, index) {
+                  return Center(
+                    // Center image within page view
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: AvifImage.asset(
+                        widget.images[index],
+                        fit: BoxFit.scaleDown,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              // Navigation Buttons
+              if (_current > 0)
+                Positioned(
+                  left: 8,
+                  child: CircleAvatar(
+                    backgroundColor: Colors.white,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.black),
+                      onPressed: () => _controller.previousPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      ),
+                    ),
+                  ),
+                ),
+              if (_current < widget.images.length - 1)
+                Positioned(
+                  right: 8,
+                  child: CircleAvatar(
+                    backgroundColor: Colors.white,
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.arrow_forward,
+                        color: Colors.black,
+                      ),
+                      onPressed: () => _controller.nextPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Interactive Dots
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: widget.images.asMap().entries.map((entry) {
+            return GestureDetector(
+              onTap: () => _goToPage(entry.key),
+              child: Container(
+                width: 10.0,
+                height: 10.0,
+                margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(
+                    _current == entry.key ? 0.9 : 0.3,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
       ],
     );
   }
@@ -182,10 +456,9 @@ class _RelatedGrid extends StatelessWidget {
     final List<Equipment> items = [];
     for (final id in ids) {
       final match = all.where((e) => e.id == id);
-      if (match.isNotEmpty) items.add(match.first); // skip if not found
+      if (match.isNotEmpty) items.add(match.first);
     }
 
-    // responsive columns similar to list pages
     final width = MediaQuery.of(context).size.width;
     final cols = (width / 180).clamp(2, 5).toInt();
 
@@ -212,7 +485,7 @@ class _RelatedGrid extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                   child: cover.isNotEmpty
                       ? AvifImage.asset(cover, fit: BoxFit.cover)
-                      : const ColoredBox(color: Color(0xFFE0E0E0)),
+                      : Container(color: Colors.white10),
                 ),
               ),
               const SizedBox(height: 6),
@@ -220,15 +493,92 @@ class _RelatedGrid extends StatelessWidget {
                 e.name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.start,
+                textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontVariations: [FontVariation('wght', 500)],
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+class _StyledText extends StatelessWidget {
+  final String text;
+  final TextStyle? style;
+  final TextAlign textAlign;
+  final int? maxLines;
+  final TextOverflow? overflow;
+
+  const _StyledText({
+    required this.text,
+    this.style,
+    this.textAlign = TextAlign.start,
+    this.maxLines,
+    this.overflow,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final List<InlineSpan> children = [];
+    final RegExp pattern = RegExp(r'(\*\*(.*?)\*\*)|(\*(.*?)\*)');
+
+    // Text outline style for better readability
+    final outlineStyle =
+        style?.copyWith(
+          shadows: [
+            Shadow(
+              offset: const Offset(1.0, 1.0),
+              blurRadius: 2.0,
+              color: Colors.black.withOpacity(0.8),
+            ),
+          ],
+        ) ??
+        const TextStyle(
+          shadows: [
+            Shadow(
+              offset: Offset(1.0, 1.0),
+              blurRadius: 2.0,
+              color: Colors.black,
+            ),
+          ],
+        );
+
+    text.splitMapJoin(
+      pattern,
+      onMatch: (Match match) {
+        if (match.group(1) != null) {
+          children.add(
+            TextSpan(
+              text: match.group(2),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          );
+        } else if (match.group(3) != null) {
+          children.add(
+            TextSpan(
+              text: match.group(4),
+              style: const TextStyle(fontStyle: FontStyle.italic),
+            ),
+          );
+        }
+        return '';
+      },
+      onNonMatch: (String nonMatch) {
+        children.add(TextSpan(text: nonMatch));
+        return '';
+      },
+    );
+
+    return Text.rich(
+      TextSpan(style: outlineStyle, children: children),
+      textAlign: textAlign,
+      maxLines: maxLines,
+      overflow: overflow,
     );
   }
 }
