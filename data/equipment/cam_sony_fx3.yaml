@@ -13,8 +13,6 @@ coverImages:
 description: |
   The Sony FX3 is a compact, full-frame Cinema Line camera designed for solo shooters. It features a 12MP sensor optimized for 4K video, excellent low-light performance, and pro-grade audio inputs.
 
-  This guide covers the essentials: inserting media/power, mastering the exposure triangle, reading the histogram, and setting up audio.
-
 # collapsible sections
 sections:
   - title: Intalling the Battery
@@ -41,14 +39,7 @@ sections:
   - title: Checking Exposure Using the Histogram
     images: []
     body: |
-      • **How to find it:** Press the **DISP** (Display) button on the rear control wheel repeatedly until a graph appears in the bottom right corner.
-      • **How to read it:**
-        - The left side represents **Shadows** (Blacks).         
-        - The right side represents **Highlights** (Whites).
-      • **The Rule:**
-        - If the graph is "climbing the wall" on the **Left**, your image is underexposed (crushed blacks).
-        - If the graph is "climbing the wall" on the **Right**, your image is overexposed (blown highlights).
-        - Aim to keep the data mountain in the middle range.
+      • Press the **DISP** (Display) button on the rear control wheel repeatedly until a graph appears in the bottom right corner.
 
   - title: Audio Setup (Mics & Headphones)
     images: []
@@ -74,5 +65,3 @@ sections:
 # related equipment cards (by id)
 related:
   - cam_sony_a73
-  - rec_zoom_f8
-  - mic_sennheiser_g4
