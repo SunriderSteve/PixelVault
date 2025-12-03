@@ -1,81 +1,87 @@
 id: cam_sony_a73
-name: Sony A73 (A7 III)
+name: Sony A7 III
 brand: Sony
 category: Camera
-cabinet: A
-quantity: 2
 
 # cover images for the carousel
 coverImages:
-  - assets/images/equipment/cam_sony_a73_1.avif
+  - assets/images/equipment/cam_sony_a73_cover.avif
 
-# high‑level description
+# high‑level description shown in an "About" section
 description: |
-  The Sony A7 III is a versatile full-frame hybrid camera. While excellent for photography, it is also a powerhouse for 4K video.
-
-  This guide covers the essentials: handling power/media, mastering the exposure triangle for video, using the histogram, and connecting audio.
+  The Sony A7 III is a versatile full-frame hybrid camera suitable for both photography and 4K video recording. It features a 24.2MP sensor and is widely used for interviews, events, and documentary filmmaking.
 
 # collapsible sections
 sections:
-  - title: 1. Getting Started (Battery & Media)
+  - title: Intalling the Battery
     images:
-      - assets/images/equipment/sony_a73/setup1.avif
+      - assets/images/equipment/cam_sony_a73_battery1.avif
+      - assets/images/equipment/cam_sony_a73_battery2.avif
     body: |
-      **Battery (NP-FZ100):**
-      • The battery door is on the bottom of the grip. Slide the switch to open.
-      • Insert the battery with the contacts going in first.
+      **Battery (NP-FZ100)**
+      • The battery compartment is on the bottom left of the grip. Twist the lock handle and pull to open the compartment.
+      • Insert the battery with the contacts going in first. Push the compartment back in and twist the lock handle to secure it.
 
-      **Memory Cards (CRITICAL INFO):**
-      • The media door is on the right side. Slide the cover back to open.
-      • **Slot 1 (Bottom):** This is the **FAST** slot (UHS-II). Always put your main card here for 4K recording.
-      • **Slot 2 (Top):** This is the **SLOW** slot (UHS-I). Use this for backups or photos.
-      • **Formatting:** Go to **MENU > Setup (Yellow Toolbox) > Page 5 > Format**.
-
-  - title: 2. The Exposure Triangle (Video Settings)
-    images: []
-    body: |
-      To get a cinematic look, switch the **Mode Dial** on top to the **Film Strip** icon, then set the following:
-
-      1. **Shutter Speed:**
-         - Follow the "180° Rule" (Double your frame rate).
-         - **24/25 fps:** Set shutter to **1/50**.
-         - **50/60 fps:** Set shutter to **1/100** or **1/125**.
-         - *Note:* Never change shutter speed to adjust brightness. Use ISO or Aperture.
-
-      2. **Aperture (Iris):**
-         - **Low f-number (e.g., f/2.8):** Blurry background (bokeh), lets in more light.
-         - **High f-number (e.g., f/11):** Everything in focus, lets in less light.
-
-      3. **ISO (Sensitivity):**
-         - **Standard:** Keep as low as possible (100-640) for clean footage.
-         - **S-Log3:** If shooting Log, your **Native ISO is 800**. Sticking to 800 gives the best dynamic range.
-
-  - title: 3. Checking Exposure (The Histogram)
-    images: []
-    body: |
-      The LCD screen brightness can be misleading. Always check the Histogram.
-
-      • **How to find it:** Press the **DISP** (Display) button on the top of the rear control wheel repeatedly until the graph appears.
-      • **The Rule:**
-        - **Left Side:** Shadows/Blacks. If the graph hits the left wall, your blacks are "crushed" (too dark).
-        - **Right Side:** Highlights/Whites. If the graph hits the right wall, your whites are "clipped" (too bright).
-        - **Goal:** Keep the "mountain" of data near the center, or slightly to the right.
-
-  - title: 4. Audio Setup
+  - title: Intalling the Memory Cards
     images:
-      - assets/images/equipment/sony_a73/setup2.avif
+      - assets/images/equipment/cam_sony_a73_memory.avif
     body: |
-      • **Microphone Input (Red):** Located behind the top flap on the left side. Connect your shotgun mic or wireless receiver here.
-      • **Headphone Jack (Black):** Located directly below the mic jack. **ALWAYS** use headphones to check if audio is distorting or if there is wind noise.
-      • **Levels:** You should see audio bars on the screen. Ideally, your audio should peak around **-12dB to -6dB**.
+      **Memory Cards (Dual Slots)**
+      • The media door is on the right side of the camera. Slide the cover back to open.
+      • **Slot 1 (Bottom):** Supports UHS-II cards (faster). Use this for 4K video recording.
+      • **Slot 2 (Top):** Supports UHS-I cards. 
+      • **Orientation:** Insert SD cards with the metal contacts facing towards the lens (front of camera).
+      • **Formatting:** Go to **MENU > Setup (Toolbox icon) > [Format]**. Select the slot to format.
 
-  - title: 5. Important Buttons
+  - title: Exposure Settings
     images: []
     body: |
-      • **REC Button:** Small red button near the viewfinder on the back right.
-      • **C1 / C2 Buttons:** Located near the shutter. Usually customized for White Balance or Focus Area.
-      • **AF-ON:** Back button, often used for engaging autofocus without taking a picture.
+      **Mode Dial**
+      • Set the Mode Dial on top of the camera to the **Movie** icon (film strip) for video recording.
+
+      **Shutter Speed**
+      • Located on the rear dial (top right, back). Turn left/right to adjust.
+
+      **Aperture (Iris)**
+      • Located on the front dial (below the shutter button). Turn to adjust.
+
+      **ISO**
+      • Press the **ISO** side of the control wheel (right side).
+      • Use the wheel to scroll to the desired value.
+
+  - title: Exposure Tools
+    images:
+      - assets/images/equipment/cam_sony_a73_settings.avif
+    body: |
+      **Histogram**
+      • Press the **DISP** (Display Setting) button on the control wheel repeatedly until the histogram graph appears on the screen.
+
+      **Zebra Stripes**
+      • Go to **MENU > Camera Settings 2 (Camera icon) > [Zebra Setting]**.
+      • Set **Zebra Display** to **On**.
+      • Adjust the threshold in **Zebra Level**.
+
+  - title: Audio Setup
+    images: []
+    body: |
+      **Connecting Microphones**
+      • **3.5mm Jack:** Open the microphone jack cover (red) on the left side of the camera. Connect your external microphone here.
+      • **XLR Adapter (Optional):** If using an XLR adapter (like the XLR-K3M), slide it into the Multi Interface Shoe on top and tighten the lock.
+
+      **Monitoring Audio**
+      • Connect headphones to the **Headphone Jack** (black) located below the microphone jack on the left side.
+      • To adjust recording volume: **MENU > Camera Settings 2 (Purple Camera icon) > [Audio Rec Level]**.
+
+  - title: Important Buttons & Ports
+    images: []
+    body: |
+      • **REC Button:** Small red button located near the viewfinder on the back right side.
+      • **C1 / C2 Buttons:** Custom buttons near the shutter release, often customizable for quick access to specific settings like White Balance or Focus Area.
+      • **AF-ON Button:** Located on the back, useful for back-button autofocus.
+      • **HDMI:** Micro HDMI (Type-D) port on the left side for external monitors.
 
 # related equipment cards (by id)
 related:
   - cam_sony_fx3
+  - tripod_sachtler_flow75
+  - tripod_manfrotto_befree

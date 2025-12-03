@@ -2,36 +2,70 @@ id: cam_osmo_pocket_3
 name: DJI Osmo Pocket 3
 brand: DJI
 category: Camera
-coverImages: []
+
+# cover images for the carousel
+coverImages:
+  - assets/images/equipment/cam_osmo_pocket_3_cover.avif
+
+# high‑level description
 description: |
-  A pocket-sized 3-axis gimbal camera with a 1-inch sensor, 4K/120 capability,
-  and a rotatable touchscreen—ideal for travel, BTS, vlogging, and quick social content.
+  The DJI Osmo Pocket 3 is a handheld gimbal camera featuring a 1-inch CMOS sensor. It records up to 4K/120fps video and features a 2-inch rotatable touchscreen for quick switching between horizontal and vertical shooting.
 
+# collapsible sections
 sections:
-  - title: What It’s Good At
+  - title: Powering On/Off
     images: []
     body: |
-      • Ultra-portable stabilized video with mechanical gimbal.
-      • Fast autofocus and face tracking for solo shooting.
-      • 10-bit profiles (D-Log M/HLG) for flexible color.
+      **Power On:**
+      • Rotate the touchscreen clockwise to power on.
+      • Alternatively, press the **Shutter/Record** button.
 
-  - title: Shooting Modes & Frame Rates
+      **Power Off:**
+      • Rotate the touchscreen counter-clockwise.
+      • Or, press and hold the **Shutter/Record** button.
+
+  - title: Touchscreen Controls
     images: []
     body: |
-      • 24/25/30p for standard footage; 50/60p for smooth motion; 100/120p for slow-mo.
-      • Keep shutter near 180° rule; use ND filters outdoors to hold aperture/ISO.
+      **Main View:**
+      • **Swipe Down:** Access Control Menu (Settings, rotate screen, brightness).
+      • **Swipe Up:** Access resolution and frame rate settings.
+      • **Swipe Left:** Switch shooting modes (Photo, Video, Low Light, Slow Motion).
+      • **Swipe Right:** View playback album.
 
-  - title: Sound & Accessories
+      **Gimbal Control:**
+      • Double-tap a subject on screen to activate **ActiveTrack**.
+      • Tap the **Gimbal Mode** icon on the right to switch modes (Follow, Tilt Locked, FPV).
+
+  - title: Recording & Storage
     images: []
     body: |
-      • Use the built-in mics for scratch; consider external wireless mics for critical audio.
-      • Add wider lenses or handle accessories for ergonomics when needed.
+      **Recording:**
+      • Press the red **Shutter/Record** button to start/stop video or take a photo.
 
-  - title: Workflow Tips
-    images: []
+      **Storage (MicroSD):**
+      • The slot is located on the left side of the handle.
+      • Insert the card with the logo facing the touchscreen.
+      • **Formatting:** Swipe down > Settings (Gear icon) > Format.
+
+  - title: Charging & Handles
+    images:
+      - assets/images/equipment/cam_osmo_pocket_3_battery.avif
+      - assets/images/equipment/cam_osmo_pocket_3_tripod.avif
     body: |
-      • Shoot 10-bit when grading; otherwise use Normal/HLG for speed.
-      • Back up microSD cards frequently; mind file splits on long takes.
+      **Charging:**
+      • Connect a USB-C cable to the port at the bottom of the handle. 
 
+      **Battery Handle (Optional):**
+      • To extend runtime, attach the Battery Handle to the USB-C port on the bottom.
+      • Ensure the release button clicks to lock it in place. Press the button to release.
+
+      **Tripod Handle (Optional):**
+      • To extend the camera's height, screw the Tripod Handle to the bottom of the Battery Handle.
+      • The handle can be unfurled into tripod legs allowing the camera to stand on its own.
+
+# related equipment cards (by id)
 related:
+  - cam_sony_fx3
+  - cam_sony_a73
   - mic_sennheiser_g4

@@ -1,48 +1,69 @@
 id: audio_sennheiser_g4
-name: Sennheiser EW G4 Wireless (Lavalier/Handheld)
+name: Sennheiser EW 500 G4 Wireless
 brand: Sennheiser
 category: Audio
-cabinet: "hello world"
-quantity: -1
+
+# cover images for the carousel
 coverImages:
-  - assets/images/equipment/audio_sennheiser_g4_1.avif
+  - assets/images/equipment/audio_sennheiser_g4_cover.avif
+
+# high‑level description
 description: |
-  A robust UHF wireless system widely used for ENG, interviews, and events.
-  Reliable RF, easy syncing, and interchangeable capsules make it a staple kit mic.
+  The Sennheiser EW 500 G4 is a professional wireless microphone system used for broadcast and film. It features a bodypack transmitter (SK 500 G4), a portable diversity receiver (EK 500 G4), and typically a lavalier microphone (MKE 2).
 
+# collapsible sections
 sections:
-  - title: System Overview
+  - title: Installing Batteries
+    images:
+      - assets/images/equipment/audio_sennheiser_g4_front.avif
+    body: |
+      • Press the two catches on the sides of the receiver/transmitter to open the battery compartment cover.
+      • Insert 2 AA batteries.
+      • Close the compartment until it clicks shut.
+
+  - title: Connecting to Camera/Recorder
+    images:
+      - assets/images/equipment/audio_sennheiser_g4_top.avif
+    body: |
+      **Receiver Output:**
+      • Connect the **AF Out** jack (3.5mm) on top of the receiver to your camera or recorder.
+      • Use the **CL 1** cable (3.5mm to 3.5mm) for DSLRs.
+      • Use the **CL 500** cable (3.5mm to XLR) for professional cameras or recorders like the Zoom F8.
+      • Screw the locking connector into the receiver to secure it.
+
+  - title: Frequency Scan & Sync
+    images:
+      - assets/images/equipment/audio_sennheiser_g4_front.avif
+    body: |
+      1. **Scan on Receiver:**
+         • Press **SET** to enter the menu.
+         • Go to **Easy Setup** > **Scan New List**.
+         • Wait for the scan to finish, then select a bank with free channels and press **SET**.
+
+      2. **Sync Transmitter:**
+         • Turn on the transmitter.
+         • On the receiver, select **Sync**.
+         • Hold the transmitter's infrared (IR) interface (hidden under the battery door or on the front panel) facing the receiver's IR interface.
+         • A "Check" mark appears when sync is successful.
+
+  - title: Setting Levels (Sensitivity & Output)
+    images:
+      - assets/images/equipment/audio_sennheiser_g4_front.avif
+    body: |
+      **Transmitter Sensitivity:**
+      • Go to **Sensitivity** in the transmitter menu.
+      • Adjust so the audio level meter on the receiver peaks around 70-80% (yellow range) during normal speech. Avoid hitting the red "Peak" indicator.
+
+      **Receiver Output Level:**
+      • Go to **AF Out** in the receiver menu.
+      • Adjust the output level to match your camera/recorder input (e.g., roughly -12dB to -30dB depending on the device's line/mic level setting).
+
+  - title: Mounting
     images: []
     body: |
-      • Typical kit: bodypack (SK 100 G4) + lav, handheld (SKM 100 G4), and receiver (EM 100 G4/EK 100 G4).
-      • Wide frequency ranges (region dependent) with user-selectable banks and channels.
+      • **Camera Mount:** Use the **CA 2** camera adapter to slide the receiver into a camera's hot/cold shoe.
+      • **Belt Clip:** The wire belt clips allow you to attach the transmitter to talent or the receiver to a sound bag.
 
-  - title: Quick Setup
-    images: []
-    body: |
-      • Scan for free frequencies on the receiver; sync to the transmitter via IR.
-      • Set transmitter input sensitivity to prevent clipping; aim for healthy RF and AF levels.
-
-  - title: Gain, Squelch & RF Hygiene
-    images: []
-    body: |
-      • Adjust AF Out on the receiver to match your recorder/camera input.
-      • Use correct squelch settings to avoid RF noise; keep TX-RX line-of-sight when possible.
-
-  - title: Mic Technique (Lavaliers)
-    images: []
-    body: |
-      • Place 6–8 inches below the mouth; avoid fabric rub and necklaces.
-      • In windy conditions, use furry windshields; tape/rig carefully for hidden mounts.
-
-  - title: Troubleshooting
-    images: []
-    body: |
-      • If you hear dropouts, rescan and re-sync; check antennas and cable strain.
-      • For distortion, reduce TX sensitivity first, then adjust receiver/output gain.
-
+# related equipment cards (by id)
 related:
-  - rec_zoom_f8
-  - cam_sony_fx3
-  - cam_sony_a73
-  - cam_osmo_pocket_3
+  - audio_zoom_f8
