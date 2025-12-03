@@ -2,8 +2,6 @@ id: cam_sony_fx3
 name: Sony FX3
 brand: Sony
 category: Camera
-cabinet: B
-quantity: 1
 
 # cover images for the carousel
 coverImages:
@@ -20,7 +18,7 @@ sections:
       - assets/images/equipment/cam_sony_fx3_bottom.avif
       - assets/images/equipment/cam_sony_fx3_battery.avif
     body: |
-      **Battery (NP-FZ100):**
+      **Battery (NP-FZ100)**
       • The battery compartment is on the bottom of the grip. Slide the switch to open.
       • Insert the battery with the contacts going in first. Push until the blue lever clicks it into place.
 
@@ -28,7 +26,7 @@ sections:
     images:
       - assets/images/equipment/cam_sony_fx3_memory.avif
     body: |
-      **Memory Cards (Dual Slots):**
+      **Memory Cards (Dual Slots)**
       • The media door is on the right side of the camera. Slide the latch down to open.
       • **Slot 1** is on the Top. **Slot 2** is on the Bottom.
       • **Orientation:**
@@ -44,7 +42,7 @@ sections:
   - title: Audio Setup (Mics & Headphones)
     images: []
     body: |
-      **Connecting Microphones:**
+      **Connecting Microphones**
       • **3.5mm Jack:** Use the red microphone jack on the side of the body for on-camera mics like the RODE VideoMic.
       • **XLR Handle:** For professional audio, slide the handle unit into the top Multi-Interface Shoe and tighten the two screws.
         - Connect XLR cables to Input 1 or 2.

@@ -2,72 +2,80 @@ id: audio_zoom_f8
 name: Zoom F8
 brand: Zoom
 category: Audio
-cabinet: A
-quantity: 1
 
-coverImages: []
+# cover images for the carousel
+coverImages:
+  - assets/images/equipment/audio_zoom_f8_cover.avif
+
+# high‑level description
 description: |
-  The Zoom F8 is a professional multi-track field recorder with 8 inputs and dual SD card slots. It offers high-quality preamps and timecode support, making it ideal for film and documentary sound.
-
-  This guide covers the essentials: powering up, connecting mics, setting levels, and managing recording.
+  The Zoom F8 is a professional multi-track field recorder with 8 XLR/TRS combo inputs. It supports high-resolution audio recording, timecode, and dual SD card slots for backup.
 
 # collapsible sections
 sections:
-  - title: 1. Getting Started (Power & Media)
-    images: []
-    body: |
-      **Batteries (8x AA):**
-      • The battery compartment is on the rear. Loosen the screw to open the door.
-      • Remove the battery sled, insert 8 AA batteries (pay attention to polarity), reinsert the sled, and lock the door.
-      • *Alternative:* Use the provided 12V AC Adapter or an external DC battery via the 4-pin Hirose connector.
+  - title: Installing Batteries
+    images:
+      - assets/images/equipment/audio_zoom_f8_battery1.avif
+      - assets/images/equipment/audio_zoom_f8_battery2.avif
+      - assets/images/equipment/audio_zoom_f8_battery3.avif
 
+    body: |
+      **Batteries (8x AA)**
+      • Locate the battery compartment on the rear panel. Loosen the thumb screw to open the door.
+      • Pull out the battery sled and insert 8 AA batteries. Ensure correct polarity.
+      • Reinsert the sled and tighten the screw to lock the door.
+
+      **Power Cord**
+      • Alternatively, you can also power the unit via the 12V AC adapter.
+
+  - title: Installing SD Cards
+    images:
+      - assets/images/equipment/audio_zoom_f8_memory.avif
+    body: |
       **SD Cards (Dual Slots):**
-      • Open the door on the left side of the unit.
-      • Insert SD cards into Slot 1 and/or Slot 2 (contacts facing down).
-      • **Formatting:** Press **MENU > SD CARD > Format** to prepare cards before use.
+      • Open the media door on the left side of the unit.
+      • Insert SD cards into **Slot 1** and/or **Slot 2** with the label facing up.
+      • **Formatting:** Press **MENU** > **SD CARD** > **Format**. Select the card slot to format.
 
-  - title: 2. Connecting Inputs
-    images: []
+  - title: Connecting Inputs
+    images:
+      - assets/images/equipment/audio_zoom_f8_input.avif
     body: |
-      **XLR/TRS Inputs:**
-      • Connect microphones or line-level devices to Inputs 1-8 on the sides using XLR or 1/4" cables. 
-      **Phantom Power (+48V):**
-      • Required for shotgun mics and condensers.
-      • Go to **MENU > INPUT > Phantom > On/Off**. Select the specific tracks requiring power (e.g., Input 1, Input 2).
-      • *Warning:* Do not send Phantom Power to ribbon mics or line-level wireless receivers.
+      **XLR/TRS Inputs**
+      • Connect microphones or line-level sources to Inputs 1-8 on the side panels.
 
-  - title: 3. Levels & Monitoring
-    images: []
+      **Headphones**
+      • Connect headphones into the headphone jack port located on the right side panel.
+
+      **Phantom Power (+48V)**
+      • If using a condenser mic, go to **MENU** > **INPUT** > **Phantom**.
+      • Set **On/Off** to **On** for the specific track you are using.
+
+  - title: Adjusting Levels
+    images:
+      - assets/images/equipment/audio_zoom_f8_settings.avif
     body: |
-      **Adjusting Input Gain (Trim):**
-      • Use the numbered **Track Knobs (1-8)** on the front panel to adjust the gain for each microphone.
-      • **Target:** Aim for levels to peak between **-12dB and -6dB** on the LCD screen.
+      **Arming Tracks**
+      • Press the track number buttons (1-8) corresponding to the connected inputs on the front panel.
+      • **Red LED:** Track is armed for recording.
+      • **Off:** Track is disarmed.
 
-      **Headphone Monitoring:**
-      • Connect headphones to the 1/4" jack on the right side.
-      • **Volume:** Use the small recessed knob next to the headphone jack to adjust monitoring volume.
-      • **PFL (Pre-Fade Listen):** Press the **PFL button** above any track knob to "Solo" that channel and hear it clearly, ignoring others.
+      **Adjusting Gain (Trim)**
+      • Turn the corresponding **Gain Knob** for the armed track.
+      • Adjust until the level meter on the LCD screen peaks between -12dB and -6dB.
 
-  - title: 4. Recording Controls
-    images: []
+      **Headphone Volume**
+      • Use the small volume knob next to the bottom right of the screen.
+
+  - title: Recording Controls
+    images:
+      - assets/images/equipment/audio_zoom_f8_settings.avif
     body: |
-      **Arming Tracks:**
-      • Press the numbered buttons **[1] - [8]** to arm tracks.
-      • **Red LED:** Track is armed and will be recorded.
-      • **No Light:** Track is muted/disarmed.
-
-      **Transport:**
-      • **REC (Red Circle):** Press to start recording. The LED ring glows red.
-      • **STOP (Square):** Press to stop recording and save the file.
-      • **PLAY:** Press to review the last take.
-
-  - title: 5. Essential Field Features
-    images: []
-    body: |
-      • **Slate Mic:** Push the toggle switch (above the Menu button) to the **Left** to activate the built-in mic. Use this to speak slate info (e.g., "Scene 1, Take 2") directly onto the tracks.
-      • **Hold Switch:** Slide the Power switch to the **HOLD** position during recording to prevent accidental button presses.
+      • **Start Recording:** Press the **REC** button (with red circle). The LED ring will glow red.
+      • **Stop Recording:** Press the **STOP** button (square icon).
+      • **Play/Pause:** Press the **PLAY/PAUSE** button to review the last take.
+      • **Slate Mic:** Push the switch above the MENU button to the left to activate the built-in slate mic for voice notes.
 
 # related equipment cards (by id)
 related:
-  - mic_sennheiser_g4
-  - cam_sony_fx3
+  - audio_sennheiser_g4

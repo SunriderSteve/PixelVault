@@ -2,8 +2,6 @@ id: cam_sony_a73
 name: Sony A7 III
 brand: Sony
 category: Camera
-cabinet: A
-quantity: 2
 
 # cover images for the carousel
 coverImages:
@@ -20,7 +18,7 @@ sections:
       - assets/images/equipment/cam_sony_a73_battery1.avif
       - assets/images/equipment/cam_sony_a73_battery2.avif
     body: |
-      **Battery (NP-FZ100):**
+      **Battery (NP-FZ100)**
       • The battery compartment is on the bottom left of the grip. Twist the lock handle and pull to open the compartment.
       • Insert the battery with the contacts going in first. Push the compartment back in and twist the lock handle to secure it.
 
@@ -28,7 +26,7 @@ sections:
     images:
       - assets/images/equipment/cam_sony_a73_memory.avif
     body: |
-      **Memory Cards (Dual Slots):**
+      **Memory Cards (Dual Slots)**
       • The media door is on the right side of the camera. Slide the cover back to open.
       • **Slot 1 (Bottom):** Supports UHS-II cards (faster). Use this for 4K video recording.
       • **Slot 2 (Top):** Supports UHS-I cards. 
@@ -38,16 +36,16 @@ sections:
   - title: Exposure Settings
     images: []
     body: |
-      **Mode Dial:**
+      **Mode Dial**
       • Set the Mode Dial on top of the camera to the **Movie** icon (film strip) for video recording.
 
-      **Shutter Speed:**
+      **Shutter Speed**
       • Located on the rear dial (top right, back). Turn left/right to adjust.
 
-      **Aperture (Iris):**
+      **Aperture (Iris)**
       • Located on the front dial (below the shutter button). Turn to adjust.
 
-      **ISO:**
+      **ISO**
       • Press the **ISO** side of the control wheel (right side).
       • Use the wheel to scroll to the desired value.
 
@@ -55,10 +53,10 @@ sections:
     images:
       - assets/images/equipment/cam_sony_a73_settings.avif
     body: |
-      **Histogram:**
+      **Histogram**
       • Press the **DISP** (Display Setting) button on the control wheel repeatedly until the histogram graph appears on the screen.
 
-      **Zebra Stripes:**
+      **Zebra Stripes**
       • Go to **MENU > Camera Settings 2 (Camera icon) > [Zebra Setting]**.
       • Set **Zebra Display** to **On**.
       • Adjust the threshold in **Zebra Level**.
@@ -66,11 +64,11 @@ sections:
   - title: Audio Setup
     images: []
     body: |
-      **Connecting Microphones:**
+      **Connecting Microphones**
       • **3.5mm Jack:** Open the microphone jack cover (red) on the left side of the camera. Connect your external microphone here.
       • **XLR Adapter (Optional):** If using an XLR adapter (like the XLR-K3M), slide it into the Multi Interface Shoe on top and tighten the lock.
 
-      **Monitoring Audio:**
+      **Monitoring Audio**
       • Connect headphones to the **Headphone Jack** (black) located below the microphone jack on the left side.
       • To adjust recording volume: **MENU > Camera Settings 2 (Purple Camera icon) > [Audio Rec Level]**.
 

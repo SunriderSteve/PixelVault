@@ -2,8 +2,6 @@ id: tripod_sachtler_flow75
 name: Sachtler Flowtech 75
 brand: Sachtler
 category: Tripod
-cabinet: Tripod Shelf
-quantity: 4
 
 coverImages:
   - assets/images/equipment/tripod_sachtler_flow75_cover.avif

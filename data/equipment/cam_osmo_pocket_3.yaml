@@ -2,6 +2,7 @@ id: cam_osmo_pocket_3
 name: DJI Osmo Pocket 3
 brand: DJI
 category: Camera
+
 coverImages: []
 description: |
   A pocket-sized 3-axis gimbal camera with a 1-inch sensor, 4K/120 capability,
