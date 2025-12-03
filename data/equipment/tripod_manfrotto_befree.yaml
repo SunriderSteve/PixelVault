@@ -1,73 +1,66 @@
-id: acc_tripod_manfrotto_befree
+id: tripod_manfrotto_befree
 name: Manfrotto Befree
 brand: Manfrotto
 category: Tripod
 
-coverImages: []
+# cover images for the carousel
+coverImages:
+  - assets/images/equipment/tripod_manfrotto_befree_cover.avif
+
+# high‑level description
 description: |
-  The Manfrotto Befree is a compact tripod designed for macro and low-angle work. It features "M-lock" twist legs and a unique center column that can swing 90° horizontally.
+  The Manfrotto Befree Live is a compact travel video tripod. It features the M-lock twist leg system for quick setup and a unique leveling column that allows you to level the head without adjusting the legs.
 
-  This guide covers leg deployment, the 90° column mechanism, and operating the ball head.
-
+# collapsible sections
 sections:
-  - title: 1. Leg Setup (M-Lock System)
+  - title: Leg Setup
+    images:
+      - assets/images/equipment/tripod_manfrotto_befree_legs.avif
+    body: |
+      **Extending Legs**
+      • Twist the rubber grip **counter-clockwise** to unlock a leg section.
+      • Extend the leg to the desired height.
+      • Twist the grip **clockwise** firmly to lock it in place.
+
+      **Leg Angles**
+      • Locate the silver side selector at the top of each leg.
+      • Close the leg slightly to release pressure, then slide the selector upwards and bend the leg to your desired angle.
+
+  - title: Adjusting Height & Head
     images: []
     body: |
-      **Extending Legs:**
-      • The legs use **Twist Locks (M-Lock)**.
-      • Twist the rubber grips a quarter-turn **counter-clockwise** to unlock.
-      • Extend leg sections to desired height.
-      • Twist **clockwise** firmly to lock. *Check stability before mounting gear.*
+      **Height Knob**
+      • Turn the **Height Knob** (located between the head & legs) counter-clockwise to adjust the height.
 
-      **Leg Angles:**
-      • Locate the **silver side selectors** at the top of each leg (on the "spider").
-      • Slide the selector to choose between three angles (normal, wide, or low).
-      • *Tip:* You must close the leg slightly to release pressure on the selector before sliding it.
-
-  - title: 2. Levelling the Column
-    images: []
-    body: |
-      Unlike photo tripods, this video version has a **Leveling Column**.
-
-      **How to Level:**
-      • You do *not* need to adjust leg lengths perfectly.
+      **Leveling Column**
       • Loosen the **Leveling Knob** (located just above the leg spider, below the head).
-      • Wiggle the entire center column/head assembly until the **Bubble Level** on the head is centered.
-      • Tighten the Leveling Knob firmly.
+      • Wiggle the head until the **Bubble Level** is centered.
+      • Tighten the Leveling Knob to lock the horizon.
 
-  - title: 3. Mounting the Camera (501PL)
+  - title: Mounting the Camera
     images: []
     body: |
-      1. Loosen the **Plate Locking Knob** on the side of the head.
-      2. Slide the camera in from the back of the head.
-      3. Find the balance point (center of gravity) so the camera doesn't tip forward/back.
-      4. Tighten the Plate Locking Knob firmly.
+      **Attaching to Head**
+      • Loosen the **Plate Locking Knob** on the right side of the head.
+      • Slide the camera plate in from the back of the head until it clicks.
+      • Balance the camera by sliding it forward/backward, then tighten the knob firmly.
 
-  - title: 4. Pan & Tilt (Fluid Head)
+  - title: Pan & Tilt Controls
     images: []
     body: |
-      **Tilt (Up/Down):**
-      • Unlock the **Tilt Lock Knob** (on the left side).
-      • Use the pan bar to tilt up or down.
-      • Tighten to lock the position. *Note: Drag is fixed; you cannot adjust the resistance.*
+      **Tilt (Up/Down)**
+      • Unlock the **Tilt Lock Knob** on the left side of the head.
+      • Use the pan bar to tilt. Tighten to lock. *Note: Drag is fixed and cannot be adjusted.*
 
-      **Pan (Left/Right):**
-      • Unlock the **Pan Lock Knob** (small knob at the base of the head).
-      • Rotate the head smoothly.
-      • Tighten to lock.
+      **Pan (Left/Right)**
+      • Unlock the small **Pan Lock Knob** at the base of the head.
+      • Rotate the head smoothly. Tighten to lock.
 
       **Pan Bar:**
-      • You can adjust the angle of the handle by loosening the knob near where it attaches to the head.
-
-  - title: 5. Packing Up
-    images: []
-    body: |
-      1. Remove the camera.
-      2. Ensure the Pan and Tilt locks are loose enough to move but tight enough not to flop.
-      3. Unlock the Leg Angle Selectors and flip the legs **upwards 180°** so they fold around the head.
-      4. Ensure legs are collapsed and twist locks are tight.
+      • Loosen the knob near the handle attachment to adjust the angle of the pan bar.
 
 # related equipment cards (by id)
 related:
   - cam_sony_a73
   - cam_sony_fx3
+  - tripod_sachtler_flow75

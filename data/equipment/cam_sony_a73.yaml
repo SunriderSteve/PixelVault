@@ -83,4 +83,5 @@ sections:
 # related equipment cards (by id)
 related:
   - cam_sony_fx3
-  - acc_tripod_manfrotto
+  - tripod_sachtler_flow75
+  - tripod_manfrotto_befree
