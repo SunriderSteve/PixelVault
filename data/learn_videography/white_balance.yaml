@@ -1,0 +1,144 @@
+id: white_balance
+name: White Balance
+coverImages: []
+description: |
+  **White balance** controls how “warm” (more orange/yellow) or “cool” (more blue) your image looks.
+  Different types of light have different colors, even if they look “white” to your eyes. White balance
+  tells the camera what should be truly neutral, so whites look white and other colors look natural.
+
+  If white balance is wrong, skin tones can look sickly, rooms can look too blue or too orange,
+  and your shots from different locations may not match. Learning to set and adjust white balance
+  helps you keep a consistent, natural look in your videos.
+
+sections:
+  - title: Why white balance matters
+    images: []
+    body: |
+      Our eyes and brain are very good at adapting to different lighting conditions. A white sheet of
+      paper looks white whether you are indoors under yellow light or outdoors in blue daylight.
+
+      Cameras are not as smart by default. Without the right **white balance**, the camera may:
+
+      • Make indoor scenes look **too orange or yellow**.  
+      • Make outdoor scenes look **too blue**.  
+      • Make skin tones look unnatural (too red, too green, or washed out).
+
+      Proper white balance helps to:
+      • Keep skin tones natural.  
+      • Make different shots look like they belong in the same world.  
+      • Reduce the amount of color correction needed in editing.
+
+  - title: Color temperature and Kelvin (simple explanation)
+    images: []
+    body: |
+      Many cameras describe white balance using **Kelvin (K)**, a scale of color temperature.
+
+      *You do not need to memorize numbers, but these ranges are helpful:*
+
+      • Around **2700K-3200K** - **Warm indoor light**  
+        - Typical of household bulbs and some indoor lamps.  
+        - Light looks more orange/yellow.
+
+      • Around **5000K-6500K** - **Daylight and cloudy daylight**  
+        - Typical of outdoor scenes in the shade or under the sun.  
+        - Light looks more neutral to slightly blue.
+
+      As the Kelvin number **goes up**, the light **looks cooler (bluer)**.  
+      As the Kelvin number **goes down**, the light **looks warmer (more orange)**.
+
+      When you set white balance, you are telling the camera:
+      • “The light in this scene is roughly this color temperature; please correct it so whites
+        look neutral.”
+
+  - title: Common white balance modes on cameras
+    images: []
+    body: |
+      Most cameras offer several **white balance presets**. These are quick choices based on
+      typical lighting conditions:
+
+      • **Auto White Balance (AWB)**  
+        - The camera guesses the right balance for you.  
+        - Convenient and often good enough, but it can change from shot to shot.  
+        - This can cause color shifts between clips.
+
+      • **Daylight / Sun**  
+        - For shooting outside in direct sunlight.  
+        - Keeps outdoor scenes looking natural without going too blue or too warm.
+
+      • **Cloudy / Shade**  
+        - For shooting outside on overcast days or in the shade.  
+        - Adds a bit of warmth to counter the naturally cooler, bluer light.
+
+      • **Tungsten / Incandescent**  
+        - For warm indoor lights (yellow/orange bulbs).  
+        - Pulls the orange tone back towards neutral.
+
+      • **Fluorescent**  
+        - For older fluorescent lights, which can be greenish.  
+        - Adds correction to make colors look more natural.
+
+      • **Custom / Kelvin / Manual**  
+        - Lets you pick a specific Kelvin value or measure the light using a white or gray card.  
+        - Most precise option when you want consistent, repeatable results.
+
+  - title: Setting white balance in simple steps
+    images: []
+    body: |
+      *Method 1 - Use presets (fast and easy):*
+      • Look at your main light source (sun, indoor lamps, mixed light).  
+      • Pick the preset that most closely matches: **Daylight**, **Cloudy**, **Tungsten**, etc.  
+      • Check your monitor:  
+        - If the image looks too blue, try a warmer preset.  
+        - If it looks too orange, try a cooler preset.
+
+      *Method 2 - Use Auto White Balance (AWB) with care:*
+      • Turn on **AWB** when you move quickly between different lighting conditions.  
+      • Watch out for changes during a single shot (for example, if someone walks past a bright object,
+        the camera might suddenly shift the colors).  
+      • If you notice AWB changing too much, switch to a fixed preset or manual mode.
+
+      *Method 3 - Set a custom Kelvin value:*
+      • If your camera has a Kelvin option, start with:  
+        - Around **3200K** for warm indoor lights.  
+        - Around **5600K** for daylight.  
+      • Adjust slightly warmer or cooler while looking at a white object or skin tone until it
+        looks natural.
+
+  - title: Using a white or gray reference (basic idea)
+    images: []
+    body: |
+      For more accurate white balance, you can use a **white card** or **neutral gray card**:
+
+      • Place the card where your subject will be, facing the main light source.  
+      • Fill the frame with the card, or follow your camera’s instructions for a custom WB reading.  
+      • Tell the camera to set white balance based on that reference.
+
+      This works well when:
+      • You have time to set up (interviews, planned shots).  
+      • You need multiple cameras to match each other.  
+      • You want consistent color across a whole project.
+
+      Even if you do not use a card on every shoot, understanding this method helps you see
+      white balance as something you can **control**, not just something that “happens.”
+
+  - title: Matching shots and avoiding color shifts
+    images: []
+    body: |
+      *Keep white balance consistent within a scene:*
+      • If you are recording a conversation or an interview, avoid changing white balance in the middle.  
+      • Lock in a preset or Kelvin value that works and stick with it for that setup.
+
+      *Watch out for mixed lighting:*
+      • Mixed lighting happens when different light sources with different colors hit your subject
+        at the same time (for example, daylight from a window and warm indoor lamps).  
+      • This can cause one side of the face to look warm and the other side cool.  
+      • Try to simplify the lighting by turning off one source or adding gels/filters if possible.
+
+      *Think about your final look:*
+      • You can intentionally warm up or cool down your white balance to create a mood, as long as
+        skin tones remain believable.  
+      • A slightly **warmer** balance can make scenes feel cozy or friendly.  
+      • A slightly **cooler** balance can make scenes feel distant, clinical, or tense.
+
+      The main goal is to make white balance a **deliberate choice** instead of something
+      left entirely to chance.

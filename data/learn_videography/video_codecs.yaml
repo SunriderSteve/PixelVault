@@ -2,36 +2,173 @@ id: video_codecs
 name: Video Codecs
 coverImages: []
 description: |
-  Codecs compress video for recording and delivery. Know the trade-offs between intra-frame (All-I) and inter-frame (Long-GOP), chroma subsampling, bit depth, and bitrate so you can choose the right format for capture and post.
+  A **video codec** is a method your camera, phone, or computer uses to shrink video files
+  and later play them back. Without codecs, video files would be so large that they
+  would be difficult to store, send, or edit.
+
+  Different codecs have different strengths: some are good for recording and online
+  sharing because they make files small, while others are better for editing because
+  they keep more detail and are easier for computers to handle.
+
+  This guide explains what a codec is in simple terms, how it differs from a *file type*,
+  and how to choose a codec depending on whether you are recording, editing, or exporting.
 
 sections:
-  - title: Containers vs. Codecs
+  - title: What is a video codec?
     images: []
     body: |
-      • Container (e.g., MOV, MP4) is a wrapper; the codec defines compression.
-      • Audio, timecode, and metadata can live alongside the video stream.
+      When you record or export a video, you are not just saving raw frames. The video
+      is **compressed** to make the file smaller. A *video codec* is the set of rules used to:
 
-  - title: Intra vs. Inter (All-I vs. Long-GOP)
-    images: []
-    body: |
-      • Intra (All-I): each frame compressed independently → easier to edit, larger files.
-      • Inter (Long-GOP): uses temporal prediction across frames → smaller files, more CPU.
+      • Squeeze the video into a smaller file by removing repeated or less important data.  
+      • Unpack the video later so it can be played back on a screen.
 
-  - title: Chroma Subsampling & Bit Depth
-    images: []
-    body: |
-      • 4:2:0 reduces color resolution the most; 4:2:2 is better for grading/keying; 4:4:4 is best.
-      • 10-bit captures finer gradations than 8-bit; helpful for log/HDR workflows.
+      You can think of a codec as a **language** that both the recorder and the player
+      must understand. If your computer, phone, or video platform does not support
+      a codec, it cannot play or edit the video properly.
 
-  - title: Common Families
-    images: []
-    body: |
-      • H.264/AVC & H.265/HEVC: efficient inter-frame codecs widely supported.
-      • Apple ProRes: intra-frame family (Proxy/LT/422/422HQ/4444/4444XQ) tuned for editing.
+      Common examples of video codecs are **H.264**, **H.265**, and **ProRes**.
 
-  - title: Choosing for the Job
+  - title: Codec vs. file format (container)
     images: []
     body: |
-      • Acquisition: pick what your camera supports with enough color/bit depth for the grade.
-      • Editing: intra-frame or use proxies if Long-GOP is sluggish.
-      • Delivery: H.264/HEVC balance quality and size; follow platform specs.
+      Many people confuse codecs with file types like **.mp4** or **.mov**.
+
+      • A **codec** is *how* the video is compressed and stored inside the file.  
+      • The **file format** (often called the *container*) is the “box” that holds the video,
+        audio, and other data such as subtitles and timecode.
+
+      For example:
+      • An **.mp4** file might contain video compressed with **H.264**.  
+      • A **.mov** file might contain **ProRes** or **H.264**, depending on your settings.
+
+      This means:
+      • Two .mp4 files can behave very differently if they use different codecs or settings.  
+      • When choosing settings, you should pay attention to both the **container**
+        (*mp4, mov*) and the **codec** (*H.264, ProRes*, etc.).
+
+  - title: Lossy vs. less-compressed codecs (basic idea)
+    images: []
+    body: |
+      Most practical codecs for everyday video use are **lossy**. This means they throw away
+      some information that the viewer is unlikely to notice, in order to make the file smaller.
+
+      *Lossy codecs:*
+      • Make files smaller.  
+      • Are great for delivery and streaming (for example, online videos).  
+      • Can lose quality if you export again and again using the same lossy codec.
+
+      *Less-compressed or editing-friendly codecs:*
+      • Keep more of the original information.  
+      • Make larger files, but are easier for editing software to handle.  
+      • Are good for color grading and heavy post-production work.
+
+      You can think of **lossy codecs** as *“final delivery”* and **editing-friendly codecs**
+      as *“working copies”* that are easier to cut and adjust.
+
+  - title: Common codecs - simple overview
+    images: []
+    body: |
+      *1) H.264 (also called AVC)*
+      • Very common and widely supported.  
+      • Produces relatively small file sizes with good quality.  
+      • Great for:  
+        - Recording on many cameras and phones.  
+        - Uploading to online platforms such as video sharing sites.  
+      • Not ideal for heavy color correction or repeated re-encoding, because it is more
+        compressed and harder for computers to decode during editing.
+
+      *2) H.265 (also called HEVC)*
+      • Newer than H.264.  
+      • Can give similar quality to H.264 with smaller file sizes, or better quality at the same size.  
+      • Good for high-resolution formats (like **4K**) where storage space is a concern.  
+      • Not all devices and editing programs handle it smoothly; some older systems may struggle.
+
+      *3) ProRes (Apple ProRes)*
+      • A family of codecs designed for **editing**.  
+      • Uses less compression, so files are bigger than H.264 or H.265.  
+      • Easier for editing software to play back smoothly.  
+      • Good for projects that need color grading, visual effects, or multiple re-exports.  
+      • Commonly stored inside **.mov** files.
+
+      *4) Other editing codecs (for example DNxHD, DNxHR)*
+      • Similar idea to ProRes, but from other developers.  
+      • Designed to be editing-friendly with larger files and smoother playback.  
+      • Often used in professional workflows and supported by major editing software.
+
+  - title: Bitrate, resolution, and frame rate
+    images: []
+    body: |
+      Besides the codec itself, three other settings affect quality and file size:
+
+      • **Resolution**  
+        - The size of the video in pixels (for example, 1920x1080, 3840x2160).  
+        - Higher resolution means more detail but larger files.  
+        - For many projects, *Full HD* (1920x1080) is enough; *4K* gives more detail and
+          flexibility for cropping.
+
+      • **Frame rate**  
+        - How many frames are shown per second (for example, 24, 25, 30, 50, 60).  
+        - Higher frame rates can make motion look smoother but create more data.  
+        - Choose based on the look you want and the standard in your region/project.
+
+      • **Bitrate**  
+        - How much data is used per second of video.  
+        - Higher bitrate usually means better quality but bigger file sizes.  
+        - If bitrate is too low, you may see blocky areas, smearing, or loss of detail,
+          especially in fast motion or complex textures.
+
+      The codec decides how **efficiently** this data is used. Two videos with the same
+      resolution, frame rate, and bitrate can still look different depending on the codec.
+
+  - title: Choosing a codec for different stages of a project
+    images: []
+    body: |
+      You can use different codecs at different stages of your workflow:
+
+      *1) Recording on camera*
+      • Many cameras record in **H.264** or **H.265** by default because:  
+        - It keeps files small.  
+        - It is widely supported.  
+      • Some higher-end cameras can record in **ProRes** or other editing codecs.  
+        - This creates bigger files but can be better for demanding post-production.
+
+      *2) Editing*
+      • If your computer struggles with your camera files (for example, H.265 4K):  
+        - You can convert (*transcode*) them into an editing-friendly codec such as **ProRes**.  
+        - This makes editing smoother but uses more storage space.  
+      • If your system handles your camera codec well, you can often edit directly.
+
+      *3) Exporting for delivery*
+      • For uploading online or sharing with clients:  
+        - **H.264** in an **.mp4** container is a common and safe choice.  
+        - Choose a suitable bitrate (higher for 4K, medium for 1080p).  
+      • For further editing by someone else:  
+        - Export using an editing-friendly codec (such as **ProRes** or similar),
+          so they have more room to adjust color and effects.
+
+  - title: Simple recommendations for beginners
+    images: []
+    body: |
+      If you are not sure what to choose, here are simple starting points:
+
+      *When recording*
+      • Use your camera’s default high-quality setting, often **H.264** in **.mp4**.  
+      • If your camera offers “high quality” or “all-intra” modes and storage is not
+        an issue, choose those for easier editing and slightly better quality.
+
+      *When editing and your computer is slow*
+      • Consider converting your footage to an editing codec such as **ProRes** or another
+        editing-friendly format supported by your software.  
+      • Delete the converted files only after you have finished the project and checked
+        your final exports.
+
+      *When exporting for online use*
+      • Use **H.264** in an **.mp4** file.  
+      • Use the same resolution and frame rate you edited in (for example, 1920x1080 at 25 fps).  
+      • Start with a medium-to-high bitrate (for example, around *10-20 Mbps* for 1080p)
+        and adjust if files are too big or quality is too low.
+
+      Remember: the **“best” codec** depends on what you are doing:  
+      • Recording and quick sharing: smaller files, **H.264** or **H.265**.  
+      • Serious editing and color work: larger files, editing-friendly codecs like **ProRes**.
