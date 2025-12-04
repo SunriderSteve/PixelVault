@@ -1,0 +1,59 @@
+id: audio_rode_wireless_go
+name: Rode Wireless GO
+brand: Rode
+category: Audio
+
+# cover images for the carousel
+coverImages:
+  - assets/images/equipment/audio_rode_wireless_go_cover.avif
+
+# high‑level description
+description: |
+  The Rode Wireless GO is an ultra-compact digital wireless microphone system. It features a transmitter (TX) with a built-in microphone and a receiver (RX) that connects directly to your camera/recorder.
+
+# collapsible sections
+sections:
+  - title: Powering On & Pairing
+    images: []
+    body: |
+      **Power On**
+      • Press and hold the **Power Button** on both the Transmitter (TX) and Receiver (RX) for 3 seconds.
+      • **Pairing:** The units come pre-paired. If the link LED (chain icon) flashes, press the **Pair Button** (chain icon) on the RX once to re-pair.
+
+  - title: Transmitter (TX) Setup
+    images:
+      - assets/images/equipment/audio_rode_wireless_go_setup.avif
+
+    body: |
+      **Internal Mic**
+      • Clip the TX to the talent's clothing. The built-in mic is located at the top.
+
+      **External Mic**
+      • Plug a lavalier microphone into the **3.5mm TRS Input** on the side of the TX.
+
+  - title: Receiver (RX) Setup
+    images:
+      - assets/images/equipment/audio_rode_wireless_go_setup.avif
+    body: |
+      **Connecting to Camera/Recorder**
+      • Use the **CL 500** cable (3.5mm to XLR) for professional cameras or recorders like the Zoom F8.
+
+  - title: Adjusting Gain (dB)
+    images: []
+    body: |
+      **Output Level**
+      • Press the **dB Button** on the Receiver (RX) to cycle through output levels:
+        - **0dB (High):** Best for cameras with low-quality preamps.
+        - **-12dB (Medium):** Standard setting.
+        - **-24dB (Low):** Use if the camera audio is distorting (clipping).
+
+  - title: Charging
+    images: []
+    body: |
+      • Connect the included USB-C cables to the USB-C ports on the side of both units.
+
+# related equipment cards (by id)
+related:
+  - audio_zoom_podtrak_p4
+  - audio_zoom_f8
+  - audio_sennheiser_g4
