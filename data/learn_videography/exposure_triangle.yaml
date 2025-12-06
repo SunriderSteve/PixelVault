@@ -2,23 +2,11 @@ id: exposure_triangle
 name: Exposure Triangle
 coverImages:
   - assets/images/videography/exposure_triangle_cover.avif
-description: |
-  The **exposure triangle** is a simple way to understand how your camera controls brightness.
-  It says that three main settings work together to decide how bright or dark your image is:
-  **aperture**, **shutter speed**, and **ISO**.
-
-  If you change one of these settings, you usually need to adjust one of the others to keep
-  the image at the same brightness. Each setting also changes the *look* of your video in a
-  different way, such as how blurry the background is, how smooth the motion looks, or how
-  clean or grainy the image appears.
-
-  Once you learn what each side of the triangle does, you will be able to make clear, bright
-  shots on purpose instead of by luck. The goal of this guide is to explain each setting in
-  simple language and give you practical starting points you can try on your own camera.
 
 sections:
   - title: What the exposure triangle controls
-    images: []
+    images:
+      - assets/images/videography/exposure_triangle_1.avif
     body: |
       The **exposure triangle** is made of three settings:
 
@@ -35,36 +23,30 @@ sections:
       • **Shutter speed** changes how motion looks (smooth and blurry vs. sharp and stiff).  
       • **ISO** changes how clean or noisy the image looks in darker areas.
 
-      Learning the exposure triangle is about *balancing brightness and style*. You use these
-      three settings together to get both the correct exposure and the look you want.
+      Learning the exposure triangle is about *balancing brightness and style*. You use these three settings together to get both the correct exposure and the look you want.
 
   - title: Aperture (lens opening)
     images: []
     body: |
-      **Aperture** is a small opening inside the lens that can open up or close down. Your camera
-      shows aperture as an *f-number*, such as **f/1.8**, **f/2.8**, **f/4**, **f/8**, and so on.
+      **Aperture** is a small opening inside the lens that can open up or close down. Your camera shows aperture as an *f-number*, such as **f/1.8**, **f/2.8**, **f/4**, **f/8**, and so on.
 
       *How it affects brightness:*
       • A **low f-number** (for example, f/1.8 or f/2.8) means a wide opening that lets in **more light**.  
       • A **high f-number** (for example, f/8 or f/11) means a narrow opening that lets in **less light**.
 
       *How it affects the look of your image:*
-      • **Wide aperture (low f-number)** - the subject is sharp but the background becomes soft and blurry.  
-        This is useful for interviews or close-ups where you want the viewer to focus on a person.  
-      • **Narrow aperture (high f-number)** - more of the scene from front to back looks sharp.  
-        This is useful for landscapes, group shots, or when you want everything in focus.
+      • **Wide aperture (low f-number)** - the subject is sharp but the background becomes soft and blurry. This is useful for interviews or close-ups where you want the viewer to focus on a person.  
+      • **Narrow aperture (high f-number)** - more of the scene from front to back looks sharp. This is useful for landscapes, group shots, or when you want everything in focus.
 
       *Things to keep in mind:*
       • Indoors or in dim light, you often use a **lower f-number** to let in more light.  
       • Outdoors on a bright day, you may need a **higher f-number** so the image is not too bright.  
-      • Changing the aperture will change brightness, so you may need to adjust *shutter speed* or *ISO*
-        after changing it.
+      • Changing the aperture will change brightness, so you may need to adjust *shutter speed* or *ISO* after changing it.
 
   - title: Shutter speed (how long light hits the sensor)
     images: []
     body: |
-      **Shutter speed** is how long the camera records light for each frame. It is usually shown as a
-      fraction, such as **1/50**, **1/100**, or **1/250** of a second.
+      **Shutter speed** is how long the camera records light for each frame. It is usually shown as a fraction, such as **1/50**, **1/100**, or **1/250** of a second.
 
       *How it affects brightness:*
       • A **slower shutter** (for example, 1/25) lets light in for a longer time and makes the image **brighter**.  
@@ -80,14 +62,12 @@ sections:
         - If you shoot at *25 fps*, try **1/50**.  
         - If you shoot at *30 fps*, try **1/60**.
 
-      This gives movement a natural, smooth look that feels comfortable to watch. You can go faster
-      to make movement look sharper, but if you go too fast the motion can start to look *choppy or harsh*.
+      This gives movement a natural, smooth look that feels comfortable to watch. You can go faster to make movement look sharper, but if you go too fast the motion can start to look *choppy or harsh*.
 
   - title: ISO (camera brightness boost)
     images: []
     body: |
-      **ISO** controls how strongly the camera boosts the light it has already received. It does not
-      add new light to the scene; it simply *amplifies* what is there.
+      **ISO** controls how strongly the camera boosts the light it has already received. It does not add new light to the scene; it simply *amplifies* what is there.
 
       *How it affects brightness:*
       • A **low ISO value** (for example, 100 or 200) makes the image darker but **cleaner**.  
@@ -95,16 +75,15 @@ sections:
 
       *How it affects image quality:*
       • At **low ISO**, the image usually looks smooth and clean.  
-      • At **higher ISO**, you will start to see grain or specks, especially in darker areas of the image.
-        This is often called *noise*.
+      • At **higher ISO**, you will start to see grain or specks, especially in darker areas of the image. This is often called *noise*.
 
       *A simple rule:*
       • Keep ISO as **low as you reasonably can** for a clean image.  
-      • Raise ISO only when you have already opened your aperture and slowed your shutter speed as
-        much as you are comfortable with, but the image is still too dark.
+      • Raise ISO only when you have already opened your aperture and slowed your shutter speed as much as you are comfortable with, but the image is still too dark.
 
   - title: How the three work together
-    images: []
+    images:
+      - assets/images/videography/exposure_triangle_2.avif
     body: |
       Because **aperture**, **shutter speed**, and **ISO** all affect brightness, you can *trade one for another*.
 
@@ -123,13 +102,11 @@ sections:
       *Example 3 - The room is very dark:*
       • You first open your aperture as wide as you are comfortable.  
       • You choose the slowest shutter speed that still keeps motion acceptable.  
-      • If the image is still too dark, you then raise the ISO until it looks bright enough, even if it
-        adds some noise.
+      • If the image is still too dark, you then raise the ISO until it looks bright enough, even if it adds some noise.
 
       The key idea:  
       • You rarely change just *one* side of the triangle.  
-      • You pick the **look** you want (blur, motion, cleanliness), then move the other settings to keep
-        the exposure correct.
+      • You pick the **look** you want (blur, motion, cleanliness), then move the other settings to keep the exposure correct.
 
   - title: Simple starting settings for common situations
     images: []
@@ -145,22 +122,19 @@ sections:
       *2) Person walking outdoors in daylight*
       • Aperture: start around **f/4-f/5.6** so the person and some background are both reasonably sharp.  
       • Shutter speed: **1/50-1/100** at 25 fps, or **1/60-1/120** at 30 fps.  
-      • ISO: begin at your lowest ISO (often **100**). If the image is still too bright, use a higher
-        f-number (like f/8) or a faster shutter speed.
+      • ISO: begin at your lowest ISO (often **100**). If the image is still too bright, use a higher f-number (like f/8) or a faster shutter speed.
 
       *3) Fast movement (sports or kids running)*
       • Aperture: as wide as you can manage (low f-number) to let in more light.  
       • Shutter speed: faster, such as **1/200** or **1/250**, to keep movement sharp.  
-      • ISO: raise ISO as needed to keep the image bright enough, since the fast shutter lets in
-        less light.
+      • ISO: raise ISO as needed to keep the image bright enough, since the fast shutter lets in less light.
 
   - title: Common problems and how to fix them
     images: []
     body: |
       *Problem 1 - Image is too dark*
       • Open the aperture (use a lower f-number).  
-      • Slow down the shutter speed slightly (for example, from 1/100 to 1/50), as long as motion
-        does not become too blurry.  
+      • Slow down the shutter speed slightly (for example, from 1/100 to 1/50), as long as motion does not become too blurry.  
       • Raise ISO until the image reaches a good brightness, accepting a bit more noise if needed.
 
       *Problem 2 - Image is too bright*
@@ -174,6 +148,5 @@ sections:
 
       *Problem 4 - Image looks grainy or noisy*
       • Lower the ISO if possible.  
-      • Add more light to the scene if you can (for example, by moving closer to a window or switching
-        on a lamp).  
+      • Add more light to the scene if you can (for example, by moving closer to a window or switching on a lamp).  
       • If you must raise ISO, try not to push it higher than needed for a usable brightness.
