@@ -1,0 +1,81 @@
+id: audio_zoom_podtrak_p4
+name: Zoom PodTrak P4
+brand: Zoom
+category: Audio
+
+# cover images for the carousel
+coverImages:
+  - assets/images/equipment/audio_zoom_podtrak_p4_cover.avif
+
+# high‑level description
+description: |
+  The Zoom PodTrak P4 is a portable multitrack recorder designed specifically for podcasting. It features 4 XLR microphone inputs, 4 independent headphone outputs, and customizable Sound Pads for jingles and sound effects.
+
+# collapsible sections
+sections:
+  - title: Powering On
+    images: []
+    body: |
+      **Batteries (2x AA):**
+      • Open the battery compartment cover on the back.
+      • Insert 2 AA batteries.
+      • Close the cover.
+
+      **USB Power:**
+      • Connect a USB-C cable to the **DC 5V** port (lower USB-C port on the side).
+      • Connect the other end to a USB power adapter or portable battery.
+
+      **Power Switch:**
+      • Slide the power switch on the side to **ON**. To turn off, slide and hold it until the screen says "Goodbye".
+
+  - title: Installing SD Cards
+    images:
+      - assets/images/equipment/audio_zoom_podtrak_p4_memory.avif
+    body: |
+      • Locate the SD card slot on the left side of the unit.
+      • Insert the SD card with the label facing up until it clicks into place.
+
+      **Formatting:**
+      • Press **MENU** > **Settings** > **SD Card** > **Format** > **Execute**.
+
+  - title: Connecting Microphones
+    images:
+      - assets/images/equipment/audio_zoom_podtrak_p4_top.avif
+    body: |
+      **XLR Inputs:**
+      • Connect microphones to Inputs 1-4 on the top using XLR cables.
+
+  - title: Connecting Headphones
+    images: []
+    body: |
+      **Headphone Outputs:**
+      • Connect headphones to the four 3.5mm jacks at the bottom. 
+      • **Volume:** Use the individual **Headphone Volume Knobs** (1-4) to adjust the volume for the respective headphones.
+
+  - title: Setting Levels
+    images:
+      - assets/images/equipment/audio_zoom_podtrak_p4_front.avif
+    body: |
+      **Input Gain (Trim):**
+      • Turn the **Input Gain Knobs** (1-4) at the top for each connected microphone.
+      • Adjust so the audio meters on the screen peak around -12dB to -6dB during normal speech.
+      • **Mute:** Press the **Mute Button** (lit red when active) to silence a channel.
+
+  - title: Recording & Sound Pads
+    images:
+      - assets/images/equipment/audio_zoom_podtrak_p4_setup.avif
+    body: |
+      **Recording:**
+      • Press the **REC** button (red circle) to start recording. The button will light up red.
+      • Press **STOP** (square) to stop and save.
+      • Press **PLAY/PAUSE** to review.
+
+      **Sound Pads:**
+      • Press pads A-D to play assigned sounds (jingles, applause, etc.).
+      • Use the **Sound Pad Volume Knob** to adjust their level in the mix.
+
+# related equipment cards (by id)
+related:
+  - audio_sennheiser_g4
+  - audio_rode_wireless_go
+  - audio_zoom_f8

@@ -1,0 +1,202 @@
+id: audio_ports
+name: Audio Port Types
+coverImages:
+  - assets/images/videography/audio_ports_cover.avif
+
+sections:
+  - title: How to think about audio ports
+    images: []
+    body: |
+      When you look at an audio port, ask these simple questions:
+
+      • **What is it for?**  
+        - Microphones, headphones, line-level devices (like mixers, music players), or speakers.
+
+      • **Is it mono or stereo?**  
+        - Mono: one audio channel (often for a single mic).  
+        - Stereo: two audio channels (left and right) in one connector.
+
+      • **Is it balanced or unbalanced?**  
+        - Balanced connections (often XLR or certain 1/4 inch cables) are better at rejecting noise over long cable runs.  
+        - Unbalanced connections (like most 3.5mm and RCA) are more sensitive to interference over long distances.
+
+      You do not need to memorize every technical detail, but having a rough idea of what each port is *meant* to do will help you plug things in correctly and avoid problems on set.
+
+  - title: 3.5mm jack (headphone-style ports)
+    images:
+      - assets/images/videography/audio_ports_3.5mm.avif
+    body: |
+      The **3.5mm jack** is the small, round connector you see on phones, laptops, and many consumer cameras and recorders. It is often called a *headphone jack* or *aux jack*.
+
+      *Common uses:*
+      • **Headphone output** - to monitor audio while recording or editing.  
+      • **Mic input** - on smaller cameras and recorders for simple microphones.  
+      • **Line input/output** - for connecting to phones, laptops, or small audio players.
+
+      There are a few important variations:
+
+      • **TRS (Tip-Ring-Sleeve)**  
+        - 3 metal sections on the plug.  
+        - Usually used for **stereo headphones** (left/right) or **balanced mono** in pro gear.
+
+      • **TRRS (Tip-Ring-Ring-Sleeve)**  
+        - 4 metal sections on the plug.  
+        - Common on phones and laptops for **headset+mic combo** jacks.
+
+      *What to watch out for:*
+      • A **TRRS phone microphone** will not always work correctly when plugged straight into a camera's **TRS mic input** without an adapter, and vice versa.  
+      • 3.5mm connections are **unbalanced** in most consumer setups, so long cables can pick up noise.  
+      • The jack on many cameras can be fragile; avoid yanking or bending the cable at sharp angles.
+
+  - title: XLR ports (professional microphone connectors)
+    images:
+      - assets/images/videography/audio_ports_cover.avif
+    body: |
+      **XLR** ports are larger, circular connectors with 3 pins (for microphones) and a locking mechanism. They are very common on professional cameras, audio recorders, and mixing desks.
+
+      *Key features:*
+      • Designed for **balanced audio**, which helps reduce noise and interference.  
+      • Can carry **phantom power** (often +48V) to power certain types of microphones (like many studio and shotgun mics).  
+      • Robust and secure, with a latch that prevents the cable from easily falling out.
+
+      *Common uses:*
+      • **Professional microphones**, especially on booms, stands, or long cable runs.  
+      • **Audio from mixers or interfaces** going into cameras or recorders.  
+      • **Stage and event setups**, where sound must travel long distances without noise.
+
+      *What to watch out for:*
+      • Do not turn phantom power on for devices that should not receive it (like some wireless receivers or certain line-level outputs) unless the manufacturer says it is safe.  
+      • XLR cables and ports are physically strong, but still avoid stepping on connectors or
+        forcing them at an angle.
+
+  - title: 1/4 inch (6.35mm) jacks
+    images:
+      - assets/images/videography/audio_ports_6.35mm.avif
+    body: |
+      The **1/4 inch** (6.35mm) jack is a larger version of the headphone-style connector. You see it often on **musical instruments**, **mixers**, **audio interfaces**, and **studio headphones**.
+
+      *Common types:*
+      • **1/4 inch TS (Tip-Sleeve)**  
+        - 2 metal sections on the plug.  
+        - Often used for **electric guitars** and some unbalanced line-level connections.
+
+      • **1/4 inch TRS (Tip-Ring-Sleeve)**  
+        - 3 metal sections.  
+        - Can be used for **stereo headphones** or **balanced mono** connections in professional gear.
+
+      *Common uses:*
+      • **Headphone outputs** on audio interfaces, mixers, and some recorders.  
+      • **Line-level inputs/outputs** on mixers and audio devices.  
+      • Connecting instruments (guitars, keyboards) to amps or interfaces.
+
+      *What to watch out for:*
+      • Not all 1/4 inch connectors are the same. A TRS headphone plug is not automatically the same as a TRS balanced line cable in how it is wired.  
+      • Many 1/4 inch connections are line-level, not mic-level; plugging a microphone directly into a line-only input may not work or will be very quiet.
+
+  - title: RCA ports (red/white/yellow connectors)
+    images:
+      - assets/images/videography/audio_ports_rca.avif
+    body: |
+      **RCA** connectors are the small round ports often colored **red**, **white**, and **yellow** on older home audio and video gear.
+
+      • **Red and white** - usually **right and left audio** channels.  
+      • **Yellow** - usually **composite video** (low-quality video signal, not audio).
+
+      *Common uses:*
+      • Connecting **DVD players**, **older game consoles**, or **hi-fi systems** to TVs or amplifiers.  
+      • Some older mixers and recorders have RCA in/out for **consumer line-level** signals.
+
+      *Characteristics:*
+      • RCA is almost always **unbalanced**, so it is more prone to noise and is best for short cables.  
+      • Audio is usually **line-level**, not mic-level.
+
+      *What to watch out for:*
+      • Do not expect RCA outputs to drive microphones or headphones directly.  
+      • When connecting RCA to cameras or recorders with 3.5mm or XLR, you may need the proper adapters and to set levels correctly (line vs mic).
+
+  - title: Optical (TOSLINK) and digital audio ports
+    images:
+      - assets/images/videography/audio_ports_optical.avif
+    body: |
+      Some devices use **digital audio connections**, where sound is sent as data rather than as an analog electrical signal.
+
+      *Optical (TOSLINK):*
+      • Uses a **square-shaped port** with a small light inside when active.  
+      • Carries digital audio through a **fiber optic cable**.  
+      • Often found on home theater systems, TVs, and some audio interfaces.
+
+      *Coaxial digital audio (RCA-style):*
+      • Looks like a single RCA jack but is used for **digital audio** instead of analog.  
+      • Often labeled as *Digital Out* or *S/PDIF*.
+
+      *What to know:*
+      • Digital ports do **not** carry analog mic signals, so you cannot plug a microphone directly into them.  
+      • They are mainly used for sending finished audio between devices (for example, from a player
+        to a sound system).
+
+      For most small video shoots, you will deal more with **analog ports** (XLR, 3.5mm, 1/4 inch) than with optical or coaxial digital connections.
+
+  - title: USB and USB-C audio
+    images:
+      - assets/images/videography/audio_ports_usbc.avif
+    body: |
+      Many modern devices use **USB** or **USB-C** for audio, especially computers, tablets, and some cameras and microphones.
+
+      *Common examples:*
+      • **USB microphones** that plug straight into a computer or tablet.  
+      • **Audio interfaces** that send and receive multi-channel audio over USB.  
+      • **Phones and laptops** that no longer have a classic headphone jack and instead use
+        **USB-C audio adapters**.
+
+      *Key points:*
+      • USB carries **digital audio data**, not a simple analog signal.  
+      • You cannot plug a USB mic directly into an XLR port without a special device in between; they are different systems.  
+      • USB audio is great for **recording into computers**, but may not plug directly into traditional video cameras without extra hardware.
+
+      In a mixed setup (camera + laptop), you might:
+      • Record high-quality audio via a USB interface into a computer.  
+      • Send a simpler **line-level feed** from the interface to the camera's analog input, so both devices capture usable sound.
+
+  - title: Combo ports and labeling on cameras/recorders
+    images: []
+    body: |
+      Many cameras and recorders combine multiple functions into a single port or set of ports.
+
+      *Combo ports:*
+      • **XLR / 1/4 inch combo jacks** - These accept either an XLR plug or a 1/4 inch plug in the same hole.  
+        - XLR side is usually for **microphones** (often with phantom power).  
+        - 1/4 inch side is often for **line-level** or **instrument-level** signals.
+
+      • **Mic/Line switches** - Some ports can be switched between **mic level** and **line level**.  
+        - *Mic level* is for microphones, which are very quiet and need a lot of amplification.  
+        - *Line level* is for louder signals from mixers, audio players, or wireless receivers.
+
+      *Reading labels carefully:*
+      • Look for labels like **MIC IN**, **LINE IN**, **PHONES**, **HEADPHONES**, or **AUX**.  
+      • Check whether a port is an **input** (audio going *into* the device) or an **output** (audio going *out* to another device).  
+      • On many cameras, the 3.5mm **headphone output** and the 3.5mm **mic input** look similar, so double-check the icons and text.
+
+      Getting into the habit of quickly reading the labels and understanding each port's purpose will save you from common mistakes such as plugging headphones into a mic input or sending a loud line-level signal into a sensitive mic-only input.
+
+  - title: Choosing the right port in real-world setups
+    images: []
+    body: |
+      When setting up audio for a shoot, you can follow a simple checklist:
+
+      • **For microphones close to camera (simple shoots):**  
+        - Use the camera's **3.5mm mic input** with a suitable mic and the correct TRS/TRRS adapter if needed.  
+        - Monitor using the **headphone output** (3.5mm or 1/4 inch) if available.
+
+      • **For professional mics and longer cable runs:**  
+        - Use **XLR inputs** on a camera, recorder, or audio interface.  
+        - Turn on **phantom power** only if the microphone requires it.  
+        - Keep using XLR as far as possible to avoid noise.
+
+      • **For audio from mixers or wireless receivers:**  
+        - Check if the output is **line-level** or **mic-level**.  
+        - Match it with a **line-level input** on your camera/recorder, or reduce it as needed.  
+        - Use XLR or 1/4 inch where possible; use 3.5mm with the right adapters.
+
+      • **For monitoring and playback:**  
+        - Use **headphone outputs** (3.5mm or 1/4 inch) for headphones.  
+        - Use **line outputs** (RCA, 1/4 inch, XLR) for speakers or other recording devices.

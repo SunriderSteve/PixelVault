@@ -1,0 +1,55 @@
+id: zebra_stripes
+name: Zebra Patterning (Zebra Stripes)
+coverImages:
+  - assets/images/videography/zebra_pattern_cover.avif
+sections:
+  - title: What zebra stripes show you
+    images: []
+    body: |
+      Zebra stripes are **warning markings** overlaid on your image. They appear on areas that are at or above a brightness level you set (for example, a certain percentage or code value, depending on the camera) and help you see at a glance which parts of the image might be **too bright** and in danger of losing detail.
+
+      You can think of zebras as a **highlighter for bright areas**. No stripes means the area is below the warning level. Some stripes means the area is at or near the level you are watching. Heavy stripes across important areas are a sign you may need to adjust exposure.
+
+  - title: Typical zebra settings and uses
+    images: []
+    body: |
+      Exact numbers and options vary by camera, but many systems let you select a **zebra level**, and there are two common ways to use it.
+
+      **Highlight protection:** Set zebras to trigger near the point where your camera's highlights start to clip (for example, around 95-100% on some scales). When you see stripes over important bright areas, such as clouds or white clothing, you know you are close to losing detail.
+
+      **Skin tone monitoring:** Some operators set zebras to a level that roughly matches healthy skin brightness for their camera profile. They then adjust exposure until zebras *just begin* to appear on the brightest parts of the face, such as the forehead or cheek highlights, and back off slightly if they look too strong. This helps keep faces well exposed even in changing light.
+
+      Check your camera manual to see exactly what zebra levels mean on your specific model, as different brands and picture profiles can behave slightly differently.
+
+  - title: Using zebras with faces and highlights
+    images: []
+    body: |
+      *For faces (interviews and talking heads):* Turn on zebras and set them to a level recommended for skin in your camera's documentation or by experienced users of that system. Light your subject as you normally would. Adjust exposure until **zebra stripes just start to appear** on the brightest parts of the face, then back off slightly if they look too strong. This helps prevent faces from being too dark or blown out, especially in bright locations.
+
+      *For bright highlights (windows, sky, white objects):* Set zebras to trigger near the highlight clipping point for your camera. Watch the screen. If the sky or a window is fully covered in stripes, those areas are likely overexposed. Decide whether that is acceptable for the shot. A blown-out window might be fine, but a blown-out white shirt usually is not. If you want to save detail, reduce exposure until the stripes mostly disappear from the important highlight areas.
+
+      Zebras give you a **more objective guide** than your eyes alone, especially in bright environments where your screen may be hard to see.
+
+  - title: Combining zebras with histogram and monitoring
+    images: []
+    body: |
+      Zebras are most powerful when used together with other tools.
+
+      The **histogram** shows the overall spread of brightness in the image and helps you see if shadows or highlights are being crushed at the extremes. 
+
+      **Zebra stripes** focus on the **brightest parts** and warn you when they get close to clipping, which is useful for protecting key areas like faces, white clothing, and important highlights. 
+
+      Your **monitor or viewfinder** shows you the *visual feel* of the image, including contrast, mood, and color, so you can confirm that the technical exposure also looks good creatively.
+
+      Together, these tools help you make **confident exposure decisions**, even when conditions are changing or your screen is hard to see, such as in bright daylight.
+
+  - title: Practical habits when using zebra stripes
+    images: []
+    body: |
+      *Set zebras before you start a shoot:* Decide whether you are mainly using them for **skin** or for **highlight protection**. Choose a zebra level that matches that goal and stick with it during the shoot unless you have a clear reason to change.
+
+      *Avoid relying on zebras alone:* Zebras only show you areas at or above a chosen brightness level. They do not tell you if the rest of the image is too dark or if your contrast is too high, so always check the **overall image** and, if possible, the **histogram** as well.
+
+      *Remember that zebras do not record:* Stripes are only a **visual guide** on your display; they never appear in the final video file. You can safely use them as much as you like without affecting your footage.
+
+      By building the habit of glancing at your zebra stripes while adjusting exposure, you reduce the chances of coming back from a shoot with faces or key details accidentally overexposed.

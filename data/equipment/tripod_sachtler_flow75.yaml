@@ -40,8 +40,7 @@ sections:
     body: |
       1. Loosen the side lock knob.
       2. Slide the camera in from the rear of the mount until a click is heard.
-      3. Move the camera forward/backward to find the center of gravity.
-      4. Tighten the side lock knob to secure the camera in place.
+      3. Tighten the side lock knob to secure the camera in place.
 
   - title: Balancing & Movement
     images:
@@ -51,7 +50,6 @@ sections:
       **Counterbalance**
       • Unlock the tilt brake. Tilt the camera forward/backward.
       • If it falls, adjust the **Counterbalance Knob** until the camera stays stationary at any tilt angle.
-      • *Tip:* Set the camera's center of gravity *before* adjusting counterbalance.
 
       **Pan & Tilt Drag**
       • **Pan (Left/Right):** Locate the drag ring at the base of the head. Increase for more resistance (slower pans), decrease for looser movement.
