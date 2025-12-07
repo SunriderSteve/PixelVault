@@ -616,6 +616,8 @@ class _AdminPasswordDialogState extends State<_AdminPasswordDialog> {
   final _controller = TextEditingController();
   String? _errorText;
 
+  final String _adminPassword = 'admin123';
+
   @override
   void dispose() {
     _controller.dispose();
@@ -623,7 +625,7 @@ class _AdminPasswordDialogState extends State<_AdminPasswordDialog> {
   }
 
   void _submit() {
-    if (_controller.text == 'admin123') {
+    if (_controller.text == _adminPassword) {
       Navigator.of(context).pop(true);
     } else {
       setState(() {
