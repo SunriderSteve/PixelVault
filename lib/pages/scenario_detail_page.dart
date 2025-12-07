@@ -208,7 +208,9 @@ class _GlassContainer extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.1),
+            color: Colors.black.withValues(
+              alpha: 0.6,
+            ), // Updated to match inventory
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
           ),
@@ -244,10 +246,10 @@ class _DescriptionTile extends StatelessWidget {
           child: _StyledText(
             text: text,
             style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 15,
-              height: 1.4,
-            ),
+              color: Colors.white,
+              fontSize: 16,
+              height: 1.5,
+            ), // Increased font size and contrast
           ),
         ),
         const SizedBox(height: 16),
@@ -305,10 +307,10 @@ class _ScenarioSectionTile extends StatelessWidget {
           child: _StyledText(
             text: section.body,
             style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 15,
-              height: 1.4,
-            ),
+              color: Colors.white,
+              fontSize: 16,
+              height: 1.5,
+            ), // Increased font size and contrast
           ),
         ),
         const SizedBox(height: 16),
@@ -378,6 +380,7 @@ class _ImageCarouselState extends State<_ImageCarousel> {
                   );
                 },
               ),
+              // Navigation Buttons - White Background, Black Icon
               if (_current > 0)
                 Positioned(
                   left: 8,
@@ -409,6 +412,7 @@ class _ImageCarouselState extends State<_ImageCarousel> {
           ),
         ),
         const SizedBox(height: 12),
+        // Interactive Dots - White
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: widget.images.asMap().entries.map((entry) {
@@ -421,7 +425,7 @@ class _ImageCarouselState extends State<_ImageCarousel> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: Colors.white.withOpacity(
-                    _current == entry.key ? 0.9 : 0.3,
+                    _current == entry.key ? 1.0 : 0.4,
                   ),
                 ),
               ),

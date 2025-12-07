@@ -1,4 +1,6 @@
+import 'dart:ui'; // For ImageFilter
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // For FilteringTextInputFormatter
 
 /// result returned after final Save
 class InventoryEditResult {
@@ -22,6 +24,7 @@ Future<InventoryEditResult?> showInventoryEditDialog(
 }) {
   return showDialog<InventoryEditResult>(
     context: context,
+    barrierColor: Colors.black54, // Darken background slightly
     barrierDismissible: false,
     builder: (context) => _InventoryEditDialog(
       equipmentName: equipmentName,
@@ -49,212 +52,357 @@ class _InventoryEditDialog extends StatefulWidget {
 }
 
 class _InventoryEditDialogState extends State<_InventoryEditDialog> {
-  late int _draftQuantity; // user editable quantity
-  late String _draftCabinet; // user editable cabinet
-  _StepMode _mode = _StepMode.edit; // current dialog state
+  // Use controllers for both fields to manage text input
+  late TextEditingController _qtyCtrl;
+  late TextEditingController _cabinetCtrl;
 
-  final TextEditingController _qtyCtl = TextEditingController();
-  final TextEditingController _cabCtl = TextEditingController();
+  _StepMode _mode = _StepMode.edit;
 
   @override
   void initState() {
     super.initState();
-    _draftQuantity = widget.initialQuantity;
-    _draftCabinet = widget.initialCabinet;
-    _qtyCtl.text = _draftQuantity.toString();
-    _cabCtl.text = _draftCabinet;
+    _qtyCtrl = TextEditingController(text: '${widget.initialQuantity}');
+    _cabinetCtrl = TextEditingController(text: widget.initialCabinet);
   }
 
   @override
   void dispose() {
-    _qtyCtl.dispose();
-    _cabCtl.dispose();
+    _qtyCtrl.dispose();
+    _cabinetCtrl.dispose();
     super.dispose();
   }
 
-  bool get _hasChanges =>
-      _draftQuantity != widget.initialQuantity ||
-      _draftCabinet != widget.initialCabinet;
+  void _onSavePressed() {
+    // Validate quantity on save: if empty or invalid, revert to initial
+    if (_qtyCtrl.text.isEmpty) {
+      _qtyCtrl.text = '${widget.initialQuantity}';
+    }
 
-  void _applyQty(int delta) {
-    final next = (_draftQuantity + delta).clamp(0, 1 << 31);
     setState(() {
-      _draftQuantity = next;
-      _qtyCtl.text = _draftQuantity.toString();
+      _mode = _StepMode.confirm;
     });
   }
 
-  void _onQtyTextChanged(String v) {
-    final parsed = int.tryParse(v);
-    setState(() {
-      _draftQuantity = (parsed == null || parsed < 0) ? 0 : parsed;
-      if (_draftQuantity.toString() != v) {
-        _qtyCtl.text = _draftQuantity.toString();
-        _qtyCtl.selection = TextSelection.fromPosition(
-          TextPosition(offset: _qtyCtl.text.length),
-        );
-      }
-    });
+  void _onConfirmPressed() {
+    final int currentQty =
+        int.tryParse(_qtyCtrl.text) ?? widget.initialQuantity;
+    final String currentCab = _cabinetCtrl.text.trim();
+
+    final bool changed =
+        (currentQty != widget.initialQuantity) ||
+        (currentCab != widget.initialCabinet);
+
+    Navigator.of(context).pop(
+      InventoryEditResult(
+        quantity: currentQty,
+        cabinet: currentCab,
+        changed: changed,
+      ),
+    );
   }
 
-  void _onCabinetChanged(String v) {
-    setState(() => _draftCabinet = v);
-  }
-
-  void _onReset() {
+  void _onBackToEdit() {
     setState(() {
-      _draftQuantity = widget.initialQuantity;
-      _draftCabinet = widget.initialCabinet;
-      _qtyCtl.text = _draftQuantity.toString();
-      _cabCtl.text = _draftCabinet;
       _mode = _StepMode.edit;
     });
   }
 
-  void _onCancel() {
-    Navigator.of(context).pop(null);
+  // Helper to safely increment/decrement
+  void _adjustQuantity(int delta) {
+    int current = int.tryParse(_qtyCtrl.text) ?? widget.initialQuantity;
+    int newVal = current + delta;
+    if (newVal < 0) newVal = 0;
+    _qtyCtrl.text = '$newVal';
   }
 
-  void _onPrimarySave() {
-    if (!_hasChanges) {
-      Navigator.of(context).pop(null); // treat as cancel when no changes
-      return;
-    }
-    setState(() => _mode = _StepMode.confirm);
+  void _resetQuantity() {
+    _qtyCtrl.text = '${widget.initialQuantity}';
   }
 
-  void _onFinalSave() {
-    // writing to Gist not implemented yet
-    // close dialog and return result to caller
-    final res = InventoryEditResult(
-      quantity: _draftQuantity,
-      cabinet: _draftCabinet,
-      changed: _hasChanges,
-    );
-    Navigator.of(context).pop(res);
+  void _resetCabinet() {
+    _cabinetCtrl.text = widget.initialCabinet;
   }
 
   @override
   Widget build(BuildContext context) {
-    final isConfirm = _mode == _StepMode.confirm;
-    final theme = Theme.of(context);
+    // Glassmorphism Container
+    return Dialog(
+      backgroundColor: Colors.transparent, // Important for glass effect
+      elevation: 0,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade900.withOpacity(0.85), // Dark glass base
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.1),
+                width: 1,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Header
+                Text(
+                  _mode == _StepMode.edit
+                      ? 'Edit Inventory'
+                      : 'Confirm Changes',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  widget.equipmentName,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white.withOpacity(0.7),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
 
-    return AlertDialog(
-      title: Text(isConfirm ? 'Confirm changes' : 'Edit inventory'),
-      contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-      content: isConfirm
-          ? _buildConfirmContent(theme)
-          : _buildEditContent(theme),
-      actionsAlignment: MainAxisAlignment.spaceBetween,
-      actions: [
+                // Body Content
+                if (_mode == _StepMode.edit)
+                  _buildEditForm()
+                else
+                  _buildConfirmView(),
+
+                const SizedBox(height: 24),
+
+                // Action Buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(), // Cancel
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.white.withOpacity(0.6)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    if (_mode == _StepMode.edit)
+                      ElevatedButton(
+                        onPressed: _onSavePressed,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(
+                            0xFF0047BB,
+                          ), // Brand Blue
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Review'),
+                      )
+                    else
+                      Row(
+                        children: [
+                          TextButton(
+                            onPressed: _onBackToEdit,
+                            child: const Text(
+                              'Back',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: _onConfirmPressed,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text('Save'),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEditForm() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Quantity Controls
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            TextButton(onPressed: _onReset, child: const Text('Reset')),
-            const SizedBox(width: 8),
-            TextButton(
-              onPressed: () {
-                if (isConfirm) {
-                  setState(() => _mode = _StepMode.edit); // back to edit
-                } else {
-                  _onCancel();
-                }
-              },
-              child: const Text('Cancel'),
+            const Text(
+              'Quantity',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            // Reset Button
+            IconButton(
+              icon: const Icon(Icons.refresh, size: 18, color: Colors.white70),
+              onPressed: _resetQuantity,
+              tooltip: 'Reset Quantity',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
             ),
           ],
         ),
-        FilledButton(
-          onPressed: isConfirm ? _onFinalSave : _onPrimarySave,
-          child: const Text('Save'),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _CircleIconButton(
+                icon: Icons.remove,
+                onTap: () => _adjustQuantity(-1),
+              ),
+              // Editable Input Field
+              SizedBox(
+                width: 80,
+                child: TextField(
+                  controller: _qtyCtrl,
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  onChanged: (val) {
+                    // Logic handled on save or button press; text field is free form until then
+                  },
+                ),
+              ),
+              _CircleIconButton(
+                icon: Icons.add,
+                onTap: () => _adjustQuantity(1),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Cabinet Input
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Cabinet Location',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            // Reset Button
+            IconButton(
+              icon: const Icon(Icons.refresh, size: 18, color: Colors.white70),
+              onPressed: _resetCabinet,
+              tooltip: 'Reset Cabinet',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _cabinetCtrl,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'e.g. A1, Shelf B...',
+            hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
+            filled: true,
+            fillColor: Colors.white.withOpacity(0.05),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildEditContent(ThemeData theme) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 480),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(widget.equipmentName, style: theme.textTheme.titleMedium),
-          const SizedBox(height: 16),
-          Text('Quantity', style: theme.textTheme.labelLarge),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              _NudgeButton(label: '-10', onTap: () => _applyQty(-10)),
-              const SizedBox(width: 8),
-              _NudgeButton(label: '-1', onTap: () => _applyQty(-1)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: _qtyCtl,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    signed: false,
-                    decimal: false,
-                  ),
-                  decoration: const InputDecoration(
-                    hintText: 'Enter quantity',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  onChanged: _onQtyTextChanged,
-                ),
-              ),
-              const SizedBox(width: 12),
-              _NudgeButton(label: '+1', onTap: () => _applyQty(1)),
-              const SizedBox(width: 8),
-              _NudgeButton(label: '+10', onTap: () => _applyQty(10)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text('Cabinet', style: theme.textTheme.labelLarge),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _cabCtl,
-            decoration: const InputDecoration(
-              hintText: 'e.g. A1, B3',
-              border: OutlineInputBorder(),
-              isDense: true,
-            ),
-            onChanged: _onCabinetChanged,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildConfirmContent(ThemeData theme) {
+  Widget _buildConfirmView() {
     final changes = <Widget>[];
+    final int currentQty =
+        int.tryParse(_qtyCtrl.text) ?? widget.initialQuantity;
+    final String currentCab = _cabinetCtrl.text.trim();
 
-    if (_draftQuantity != widget.initialQuantity) {
+    if (currentQty != widget.initialQuantity) {
       changes.add(
         _DiffRow(
           label: 'Quantity',
-          oldValue: widget.initialQuantity.toString(),
-          newValue: _draftQuantity.toString(),
-        ),
-      );
-    }
-    if (_draftCabinet != widget.initialCabinet) {
-      changes.add(
-        _DiffRow(
-          label: 'Cabinet',
-          oldValue: widget.initialCabinet,
-          newValue: _draftCabinet,
+          oldValue: '${widget.initialQuantity}',
+          newValue: '$currentQty',
         ),
       );
     }
 
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 480),
+    if (currentCab != widget.initialCabinet) {
+      changes.add(
+        _DiffRow(
+          label: 'Cabinet',
+          oldValue: widget.initialCabinet.isEmpty
+              ? '(none)'
+              : widget.initialCabinet,
+          newValue: currentCab.isEmpty ? '(none)' : currentCab,
+        ),
+      );
+    }
+
+    if (changes.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Text(
+          'No changes made.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white70, fontStyle: FontStyle.italic),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Are you sure you want to make the following change(s)?'),
+          const Text(
+            'Confirm changes:',
+            style: TextStyle(color: Colors.white70),
+          ),
           const SizedBox(height: 12),
           ...changes,
         ],
@@ -263,17 +411,28 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
   }
 }
 
-class _NudgeButton extends StatelessWidget {
-  final String label;
+class _CircleIconButton extends StatelessWidget {
+  final IconData icon;
   final VoidCallback onTap;
 
-  const _NudgeButton({required this.label, required this.onTap});
+  const _CircleIconButton({required this.icon, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 40,
-      child: OutlinedButton(onPressed: onTap, child: Text(label)),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white.withOpacity(0.3)),
+          ),
+          child: Icon(icon, color: Colors.white),
+        ),
+      ),
     );
   }
 }
@@ -291,26 +450,39 @@ class _DiffRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: RichText(
-        text: TextSpan(
-          style: theme.textTheme.bodyMedium,
-          children: [
-            TextSpan(text: '$label: '),
-            TextSpan(text: oldValue),
-            const TextSpan(text: '  >>  '),
-            const TextSpan(text: ''), // spacer to avoid formatting confusion
-            TextSpan(
-              text: newValue,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
+      child: Row(
+        children: [
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: const TextStyle(color: Colors.white),
+                children: [
+                  TextSpan(
+                    text: '$label: ',
+                    style: TextStyle(color: Colors.white.withOpacity(0.6)),
+                  ),
+                  TextSpan(
+                    text: oldValue,
+                    style: const TextStyle(
+                      decoration: TextDecoration.lineThrough,
+                      color: Colors.redAccent,
+                    ),
+                  ),
+                  const TextSpan(text: '  →  '),
+                  TextSpan(
+                    text: newValue,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.greenAccent,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

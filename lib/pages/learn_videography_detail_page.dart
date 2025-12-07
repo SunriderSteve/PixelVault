@@ -170,7 +170,9 @@ class _GlassContainer extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.1),
+            color: Colors.black.withValues(
+              alpha: 0.6,
+            ), // Updated to match inventory
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
           ),
@@ -195,8 +197,8 @@ class _SectionTile extends StatelessWidget {
         style: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
-          fontSize: 16,
-        ),
+          fontSize: 18,
+        ), // Updated style
       ),
       iconColor: Colors.white,
       collapsedIconColor: Colors.white70,
@@ -234,10 +236,10 @@ class _SectionTile extends StatelessWidget {
           child: _StyledText(
             text: section.body,
             style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 15,
-              height: 1.4,
-            ),
+              color: Colors.white,
+              fontSize: 16,
+              height: 1.5,
+            ), // Updated style
           ),
         ),
         const SizedBox(height: 16),
@@ -297,7 +299,6 @@ class _ImageCarouselState extends State<_ImageCarousel> {
                 onPageChanged: (idx) => setState(() => _current = idx),
                 itemBuilder: (context, index) {
                   return Center(
-                    // Center image within page view
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: AvifImage.asset(
@@ -308,6 +309,7 @@ class _ImageCarouselState extends State<_ImageCarousel> {
                   );
                 },
               ),
+              // Navigation Buttons - White Background, Black Icons
               if (_current > 0)
                 Positioned(
                   left: 8,
@@ -339,7 +341,7 @@ class _ImageCarouselState extends State<_ImageCarousel> {
           ),
         ),
         const SizedBox(height: 12),
-        // Interactive Dots
+        // Interactive Dots - White
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: widget.images.asMap().entries.map((entry) {
@@ -352,7 +354,7 @@ class _ImageCarouselState extends State<_ImageCarousel> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: Colors.white.withOpacity(
-                    _current == entry.key ? 0.9 : 0.3,
+                    _current == entry.key ? 1.0 : 0.4,
                   ),
                 ),
               ),

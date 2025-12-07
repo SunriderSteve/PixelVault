@@ -8,8 +8,6 @@ import '../services/data_repository.dart';
 import '../models/equipment_model.dart'; // Equipment
 import 'inventory_edit_dialog.dart';
 
-/// inventory list with search, tri-state availability, category/brand filters, A↔Z sort
-/// admin mode toggles cabinet visibility and shows edit affordance
 class InventoryListPage extends StatefulWidget {
   const InventoryListPage({super.key});
 
@@ -33,8 +31,6 @@ class _InventoryListPageState extends State<InventoryListPage> {
 
   // admin mode
   bool _isAdmin = false;
-  int _tapCount = 0;
-  DateTime _lastTap = DateTime.now();
 
   // data
   late final List<Equipment> _all; // All items from repo
@@ -46,7 +42,6 @@ class _InventoryListPageState extends State<InventoryListPage> {
   void initState() {
     super.initState();
     final repo = DataRepository();
-    // Initialize _all as a growable list so we can modify it later
     _all = List.from(repo.getAllEquipment());
     _filtered = List.from(_all);
 
@@ -54,8 +49,6 @@ class _InventoryListPageState extends State<InventoryListPage> {
     _allBrands = _all.map((e) => e.brand).toSet().toList()..sort();
 
     _search.addListener(_applyFilters);
-
-    // listen to overlay changes from repository (polling)
     repo.overlayEpoch.addListener(_onOverlayChanged);
   }
 
@@ -66,7 +59,6 @@ class _InventoryListPageState extends State<InventoryListPage> {
     super.dispose();
   }
 
-  // If repo says data changed (poll or manual write), re-read and re-filter
   void _onOverlayChanged() {
     final fresh = DataRepository().getAllEquipment();
     setState(() {
@@ -87,8 +79,8 @@ class _InventoryListPageState extends State<InventoryListPage> {
         // 2. Availability
         final qty = e.quantity ?? 0;
         bool matchesAvail = true;
-        if (_availability == 1) matchesAvail = qty > 0; // Available only
-        if (_availability == 2) matchesAvail = qty <= 0; // Unavailable only
+        if (_availability == 1) matchesAvail = qty > 0;
+        if (_availability == 2) matchesAvail = qty <= 0;
 
         // 3. Category
         final matchesCat =
@@ -110,41 +102,69 @@ class _InventoryListPageState extends State<InventoryListPage> {
     });
   }
 
-  void _toggleAdmin() {
-    final now = DateTime.now();
-    if (now.difference(_lastTap) < const Duration(milliseconds: 500)) {
-      _tapCount++;
-    } else {
-      _tapCount = 1;
-    }
-    _lastTap = now;
-
-    if (_tapCount >= 5) {
-      setState(() {
-        _isAdmin = !_isAdmin;
-        _tapCount = 0;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _isAdmin ? 'Admin Mode Enabled' : 'Admin Mode Disabled',
-            ),
-            duration: const Duration(seconds: 1),
+  Future<void> _handleAdminToggle() async {
+    if (_isAdmin) {
+      // Prompt to exit admin mode
+      final shouldExit = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: Colors.grey.shade900,
+          title: const Text(
+            'Exit Admin Mode?',
+            style: TextStyle(color: Colors.white),
           ),
-        );
-      });
+          content: const Text(
+            'Are you sure you want to return to user mode?',
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white54),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text(
+                'Exit',
+                style: TextStyle(color: Colors.redAccent),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldExit == true) {
+        setState(() => _isAdmin = false);
+      }
+      return;
     }
+
+    // Show password dialog
+    await showDialog(
+      context: context,
+      builder: (context) => const _AdminPasswordDialog(),
+    ).then((success) {
+      if (success == true) {
+        setState(() => _isAdmin = true);
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Admin Mode Enabled')));
+        }
+      }
+    });
   }
 
   Future<void> _onSavePatch(String id, int? newQty, String? newCab) async {
-    // Call repo to write to gist
     try {
       await DataRepository().applyInventoryChanges(
         id,
         quantity: newQty,
         cabinet: newCab,
       );
-      // The repo will notify listeners (including this page) via overlayEpoch
-      // So UI updates automatically.
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -161,214 +181,373 @@ class _InventoryListPageState extends State<InventoryListPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Brand Blue
     const brandBlue = Color(0xFF0047BB);
 
-    // Responsive Grid
+    // Responsive Grid logic
     const double maxTileWidth = 420;
     final width = MediaQuery.of(context).size.width;
-    final cols = math.max(1, (width / maxTileWidth).floor());
+    final cols = math.max(
+      2, // Changed to 2 to match other pages logic (unless very small screen)
+      (width / maxTileWidth).floor(),
+    );
 
     final totalFilters =
         _selectedCategories.length +
         _selectedBrands.length +
         (_availability != 0 ? 1 : 0);
 
-    // Hero added here
-    return Hero(
-      tag: 'inventory_card',
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        body: Stack(
-          children: [
-            // 1. Vibrant Background Gradient
-            Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF001F54), // Dark Blue
-                    Color(0xFF0047BB), // NLB Blue
-                    Color(0xFFFF8200), // NLB Orange
-                    Color(0xFFE80029), // NLB Red
-                  ],
-                  stops: [0.0, 0.3, 0.7, 1.0],
-                ),
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // Background
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF001F54),
+                  Color(0xFF0047BB),
+                  Color(0xFFFF8200),
+                  Color(0xFFE80029),
+                ],
+                stops: [0.0, 0.3, 0.7, 1.0],
               ),
             ),
-
-            // 2. Background Blobs
-            Positioned(
-              top: -150,
-              left: -100,
-              child: Container(
-                width: 400,
-                height: 400,
-                decoration: BoxDecoration(
-                  color: brandBlue.withValues(alpha: 0.3),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      blurRadius: 150,
-                      color: brandBlue.withValues(alpha: 0.3),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: -100,
-              right: -100,
-              child: Container(
-                width: 350,
-                height: 350,
-                decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      blurRadius: 150,
-                      color: Colors.orange.withValues(alpha: 0.2),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // 3. Content
-            CustomScrollView(
-              slivers: [
-                // Glass App Bar
-                SliverAppBar(
-                  leading: IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () => context.pop(),
+          ),
+          // Blobs
+          Positioned(
+            top: -150,
+            left: -100,
+            child: Container(
+              width: 400,
+              height: 400,
+              decoration: BoxDecoration(
+                color: brandBlue.withValues(alpha: 0.3),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    blurRadius: 150,
+                    color: brandBlue.withValues(alpha: 0.3),
                   ),
-                  backgroundColor: Colors.transparent,
-                  pinned: true,
-                  flexibleSpace: ClipRRect(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                      child: FlexibleSpaceBar(
-                        title: GestureDetector(
-                          onTap: _toggleAdmin,
-                          child: const Text(
-                            'Inventory List',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -100,
+            right: -100,
+            child: Container(
+              width: 350,
+              height: 350,
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    blurRadius: 150,
+                    color: Colors.orange.withValues(alpha: 0.2),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Content
+          CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => context.pop(),
+                ),
+                backgroundColor: Colors.transparent,
+                pinned: true,
+                flexibleSpace: ClipRRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                    child: FlexibleSpaceBar(
+                      title: GestureDetector(
+                        onTap: _handleAdminToggle, // Direct tap on title too
+                        child: const Text(
+                          'Inventory List',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        background: Container(
-                          color: Colors.black.withValues(alpha: 0.2),
+                      ),
+                      background: Container(
+                        color: Colors.black.withValues(alpha: 0.2),
+                      ),
+                    ),
+                  ),
+                ),
+                actions: [
+                  // Admin Toggle Button (Replaced Sort Button)
+                  IconButton(
+                    icon: Icon(
+                      _isAdmin ? Icons.admin_panel_settings : Icons.person,
+                      color: _isAdmin ? Colors.green : Colors.white,
+                    ),
+                    onPressed: _handleAdminToggle,
+                    tooltip: 'Admin Mode',
+                  ),
+                ],
+              ),
+
+              // Search & Filter Bar
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _search,
+                                style: const TextStyle(color: Colors.white),
+                                decoration: InputDecoration(
+                                  hintText: 'Search Inventory',
+                                  hintStyle: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.6),
+                                  ),
+                                  prefixIcon: const Icon(
+                                    Icons.search,
+                                    color: Colors.white,
+                                  ),
+                                  suffixIcon: _search.text.isEmpty
+                                      ? null
+                                      : IconButton(
+                                          icon: const Icon(
+                                            Icons.clear,
+                                            color: Colors.white,
+                                          ),
+                                          onPressed: () {
+                                            _search.clear();
+                                          },
+                                        ),
+                                  border: InputBorder.none,
+                                ),
+                              ),
+                            ),
+                            // Sort Button (Moved here)
+                            IconButton(
+                              icon: Icon(
+                                _sortAsc
+                                    ? Icons.arrow_upward
+                                    : Icons.arrow_downward,
+                                color: Colors.white,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _sortAsc = !_sortAsc;
+                                  _applyFilters();
+                                });
+                              },
+                              tooltip: _sortAsc ? 'Sort Z-A' : 'Sort A-Z',
+                            ),
+                            // Filter Button
+                            GestureDetector(
+                              onTap: () =>
+                                  setState(() => _showFilters = !_showFilters),
+                              child: Stack(
+                                children: [
+                                  const Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: Icon(
+                                      Icons.filter_alt,
+                                      color: Colors.white,
+                                      size: 28,
+                                    ),
+                                  ),
+                                  if (totalFilters > 0)
+                                    Positioned(
+                                      right: 4,
+                                      top: 4,
+                                      child: CircleAvatar(
+                                        radius: 8,
+                                        backgroundColor: Colors.red,
+                                        child: Text(
+                                          '$totalFilters',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ),
-                  actions: [
-                    IconButton(
-                      icon: Icon(
-                        _sortAsc ? Icons.arrow_upward : Icons.arrow_downward,
-                        color: Colors.white,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _sortAsc = !_sortAsc;
-                          _applyFilters();
-                        });
-                      },
-                      tooltip: _sortAsc ? 'Sort Z-A' : 'Sort A-Z',
-                    ),
-                  ],
                 ),
+              ),
 
-                // Search & Filter Bar
+              // Filter Panel
+              if (_showFilters)
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: BackdropFilter(
                         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.15),
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
+                          color: Colors.black.withValues(alpha: 0.6),
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: _search,
-                                  style: const TextStyle(color: Colors.white),
-                                  decoration: InputDecoration(
-                                    hintText: 'Search Inventory',
-                                    hintStyle: TextStyle(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.6,
-                                      ),
-                                    ),
-                                    prefixIcon: const Icon(
-                                      Icons.search,
-                                      color: Colors.white,
-                                    ),
-                                    suffixIcon: _search.text.isEmpty
-                                        ? null
-                                        : IconButton(
-                                            icon: const Icon(
-                                              Icons.clear,
-                                              color: Colors.white,
-                                            ),
-                                            onPressed: () {
-                                              _search.clear();
-                                            },
-                                          ),
-                                    border: InputBorder.none,
-                                  ),
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () => setState(
-                                  () => _showFilters = !_showFilters,
-                                ),
-                                child: Stack(
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
                                   children: [
-                                    const Padding(
-                                      padding: EdgeInsets.all(8.0),
-                                      child: Icon(
-                                        Icons.filter_alt,
-                                        color: Colors.white,
-                                        size: 28,
-                                      ),
+                                    _GlassTabButton(
+                                      label: 'Availability',
+                                      selected: _activeTab == 0,
+                                      onTap: () =>
+                                          setState(() => _activeTab = 0),
                                     ),
-                                    if (totalFilters > 0)
-                                      Positioned(
-                                        right: 4,
-                                        top: 4,
-                                        child: CircleAvatar(
-                                          radius: 8,
-                                          backgroundColor: Colors.red,
-                                          child: Text(
-                                            '$totalFilters',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 10,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
+                                    const SizedBox(width: 12),
+                                    _GlassTabButton(
+                                      label: 'Category',
+                                      selected: _activeTab == 1,
+                                      onTap: () =>
+                                          setState(() => _activeTab = 1),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    _GlassTabButton(
+                                      label: 'Brand',
+                                      selected: _activeTab == 2,
+                                      onTap: () =>
+                                          setState(() => _activeTab = 2),
+                                    ),
                                   ],
                                 ),
+                              ),
+                              const SizedBox(height: 16),
+                              if (_activeTab == 0)
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    _GlassFilterChip(
+                                      label: 'All',
+                                      selected: _availability == 0,
+                                      onSelected: (b) => setState(() {
+                                        _availability = 0;
+                                        _applyFilters();
+                                      }),
+                                    ),
+                                    _GlassFilterChip(
+                                      label: 'Available Only',
+                                      selected: _availability == 1,
+                                      onSelected: (b) => setState(() {
+                                        _availability = 1;
+                                        _applyFilters();
+                                      }),
+                                    ),
+                                    _GlassFilterChip(
+                                      label: 'Unavailable Only',
+                                      selected: _availability == 2,
+                                      onSelected: (b) => setState(() {
+                                        _availability = 2;
+                                        _applyFilters();
+                                      }),
+                                    ),
+                                  ],
+                                )
+                              else if (_activeTab == 1)
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: _allCategories.map((c) {
+                                    final isSelected = _selectedCategories
+                                        .contains(c);
+                                    return _GlassFilterChip(
+                                      label: c,
+                                      selected: isSelected,
+                                      onSelected: (b) => setState(() {
+                                        b
+                                            ? _selectedCategories.add(c)
+                                            : _selectedCategories.remove(c);
+                                        _applyFilters();
+                                      }),
+                                    );
+                                  }).toList(),
+                                )
+                              else
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: _allBrands.map((b) {
+                                    final isSelected = _selectedBrands.contains(
+                                      b,
+                                    );
+                                    return _GlassFilterChip(
+                                      label: b,
+                                      selected: isSelected,
+                                      onSelected: (v) => setState(() {
+                                        v
+                                            ? _selectedBrands.add(b)
+                                            : _selectedBrands.remove(b);
+                                        _applyFilters();
+                                      }),
+                                    );
+                                  }).toList(),
+                                ),
+                              const Divider(color: Colors.white24, height: 32),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  TextButton(
+                                    onPressed: () => setState(() {
+                                      _selectedCategories.clear();
+                                      _selectedBrands.clear();
+                                      _availability = 0;
+                                      _applyFilters();
+                                    }),
+                                    child: const Text(
+                                      'Clear All',
+                                      style: TextStyle(color: Colors.white70),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  ElevatedButton(
+                                    onPressed: () =>
+                                        setState(() => _showFilters = false),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: brandBlue,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    child: const Text('Done'),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -378,207 +557,114 @@ class _InventoryListPageState extends State<InventoryListPage> {
                   ),
                 ),
 
-                // Filter Panel
-                if (_showFilters)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                          child: Container(
-                            color: Colors.black.withValues(alpha: 0.6),
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: Row(
-                                    children: [
-                                      _GlassTabButton(
-                                        label: 'Availability',
-                                        selected: _activeTab == 0,
-                                        onTap: () =>
-                                            setState(() => _activeTab = 0),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      _GlassTabButton(
-                                        label: 'Category',
-                                        selected: _activeTab == 1,
-                                        onTap: () =>
-                                            setState(() => _activeTab = 1),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      _GlassTabButton(
-                                        label: 'Brand',
-                                        selected: _activeTab == 2,
-                                        onTap: () =>
-                                            setState(() => _activeTab = 2),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                // Filter Content
-                                if (_activeTab == 0)
-                                  Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    children: [
-                                      _GlassFilterChip(
-                                        label: 'All',
-                                        selected: _availability == 0,
-                                        onSelected: (b) => setState(() {
-                                          _availability = 0;
-                                          _applyFilters();
-                                        }),
-                                      ),
-                                      _GlassFilterChip(
-                                        label: 'Available Only',
-                                        selected: _availability == 1,
-                                        onSelected: (b) => setState(() {
-                                          _availability = 1;
-                                          _applyFilters();
-                                        }),
-                                      ),
-                                      _GlassFilterChip(
-                                        label: 'Unavailable Only',
-                                        selected: _availability == 2,
-                                        onSelected: (b) => setState(() {
-                                          _availability = 2;
-                                          _applyFilters();
-                                        }),
-                                      ),
-                                    ],
-                                  )
-                                else if (_activeTab == 1)
-                                  Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    children: _allCategories.map((c) {
-                                      final isSelected = _selectedCategories
-                                          .contains(c);
-                                      return _GlassFilterChip(
-                                        label: c,
-                                        selected: isSelected,
-                                        onSelected: (b) => setState(() {
-                                          b
-                                              ? _selectedCategories.add(c)
-                                              : _selectedCategories.remove(c);
-                                          _applyFilters();
-                                        }),
-                                      );
-                                    }).toList(),
-                                  )
-                                else
-                                  Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    children: _allBrands.map((b) {
-                                      final isSelected = _selectedBrands
-                                          .contains(b);
-                                      return _GlassFilterChip(
-                                        label: b,
-                                        selected: isSelected,
-                                        onSelected: (v) => setState(() {
-                                          v
-                                              ? _selectedBrands.add(b)
-                                              : _selectedBrands.remove(b);
-                                          _applyFilters();
-                                        }),
-                                      );
-                                    }).toList(),
-                                  ),
-                                const Divider(
-                                  color: Colors.white24,
-                                  height: 32,
-                                ),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    TextButton(
-                                      onPressed: () => setState(() {
-                                        _selectedCategories.clear();
-                                        _selectedBrands.clear();
-                                        _availability = 0;
-                                        _applyFilters();
-                                      }),
-                                      child: const Text(
-                                        'Clear All',
-                                        style: TextStyle(color: Colors.white),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    ElevatedButton(
-                                      onPressed: () =>
-                                          setState(() => _showFilters = false),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: brandBlue,
-                                        foregroundColor: Colors.white,
-                                      ),
-                                      child: const Text('Done'),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+              // Inventory Grid
+              SliverPadding(
+                padding: const EdgeInsets.all(16),
+                sliver: SliverGrid(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: cols,
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                    childAspectRatio: 3 / 2,
                   ),
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final item = _filtered[index];
+                    return _GlassInventoryCard(
+                      item: item,
+                      isAdmin: _isAdmin,
+                      onEditTap: () async {
+                        final res = await showInventoryEditDialog(
+                          context,
+                          equipmentName: item.name,
+                          initialQuantity: item.quantity ?? 0,
+                          initialCabinet: item.cabinet ?? '',
+                        );
+                        if (!context.mounted) return;
+                        if (res == null || !res.changed) return;
 
-                // Inventory Grid with Glass Cards
-                SliverPadding(
-                  padding: const EdgeInsets.all(16),
-                  sliver: SliverGrid(
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: cols,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                      childAspectRatio: 3 / 2, // Matches other list pages
-                    ),
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      final item = _filtered[index];
-                      return _GlassInventoryCard(
-                        item: item,
-                        isAdmin: _isAdmin,
-                        // FIX: Use null-coalescing to provide non-null defaults
-                        onEditTap: () async {
-                          final res = await showInventoryEditDialog(
-                            context,
-                            equipmentName: item.name,
-                            initialQuantity: item.quantity ?? 0,
-                            initialCabinet: item.cabinet ?? '',
-                          );
-                          if (!context.mounted) return;
-                          if (res == null || !res.changed) return;
+                        final int? newQty = (res.quantity != item.quantity)
+                            ? res.quantity
+                            : null;
+                        final String? newCab = (res.cabinet != item.cabinet)
+                            ? res.cabinet
+                            : null;
 
-                          final int? newQty = (res.quantity != item.quantity)
-                              ? res.quantity
-                              : null;
-                          final String? newCab = (res.cabinet != item.cabinet)
-                              ? res.cabinet
-                              : null;
+                        if (newQty == null && newCab == null) return;
 
-                          if (newQty == null && newCab == null) return;
-
-                          _onSavePatch(item.id, newQty, newCab);
-                        },
-                      );
-                    }, childCount: _filtered.length),
-                  ),
+                        _onSavePatch(item.id, newQty, newCab);
+                      },
+                    );
+                  }, childCount: _filtered.length),
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class _AdminPasswordDialog extends StatefulWidget {
+  const _AdminPasswordDialog();
+
+  @override
+  State<_AdminPasswordDialog> createState() => _AdminPasswordDialogState();
+}
+
+class _AdminPasswordDialogState extends State<_AdminPasswordDialog> {
+  final _controller = TextEditingController();
+  String? _errorText;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (_controller.text == 'admin123') {
+      Navigator.of(context).pop(true);
+    } else {
+      setState(() {
+        _errorText = 'Incorrect Password';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: Colors.grey.shade900,
+      title: const Text('Admin Access', style: TextStyle(color: Colors.white)),
+      content: TextField(
+        controller: _controller,
+        obscureText: true,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          hintText: 'Enter Password',
+          hintStyle: const TextStyle(color: Colors.white54),
+          errorText: _errorText,
+          errorStyle: const TextStyle(color: Colors.redAccent),
+          enabledBorder: const UnderlineInputBorder(
+            borderSide: BorderSide(color: Colors.white),
+          ),
+          focusedBorder: const UnderlineInputBorder(
+            borderSide: BorderSide(color: Color(0xFF0047BB)),
+          ),
+        ),
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+        ),
+        TextButton(
+          onPressed: _submit,
+          child: const Text('Enter', style: TextStyle(color: Colors.white)),
+        ),
+      ],
     );
   }
 }
@@ -612,8 +698,8 @@ class _GlassTabButton extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: TextStyle(
-            color: Colors.white, // Always white text
+          style: const TextStyle(
+            color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -639,14 +725,10 @@ class _GlassFilterChip extends StatelessWidget {
       label: Text(label),
       selected: selected,
       onSelected: onSelected,
-      backgroundColor: Colors.black.withValues(
-        alpha: 0.3,
-      ), // Darker background for unselected
+      backgroundColor: Colors.black.withValues(alpha: 0.3),
       selectedColor: const Color(0xFF0047BB),
       checkmarkColor: Colors.white,
-      labelStyle: const TextStyle(
-        color: Colors.white, // Always white text
-      ),
+      labelStyle: const TextStyle(color: Colors.white),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(color: selected ? Colors.transparent : Colors.white38),
@@ -707,6 +789,7 @@ class _GlassInventoryCard extends StatelessWidget {
             bottom: 12,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min, // Allow column to shrink
               children: [
                 Text(
                   item.name,
@@ -720,7 +803,8 @@ class _GlassInventoryCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                // Availability Badge
+
+                // Availability Badge (Always visible, always shows stock qty)
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -738,7 +822,7 @@ class _GlassInventoryCard extends StatelessWidget {
                     ),
                   ),
                   child: Text(
-                    isAvailable ? 'In Stock: $qty' : 'Out of Stock',
+                    isAvailable ? 'Stock: $qty' : 'Out of Stock',
                     style: TextStyle(
                       color: isAvailable
                           ? Colors.greenAccent
@@ -748,13 +832,29 @@ class _GlassInventoryCard extends StatelessWidget {
                     ),
                   ),
                 ),
+
+                // Cabinet Location (Admin Only)
                 if (isAdmin && item.cabinet != null) ...[
                   const SizedBox(height: 4),
-                  Text(
-                    'Loc: ${item.cabinet}',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      fontSize: 12,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.orange.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    child: Text(
+                      'Cabinet: ${item.cabinet}',
+                      style: const TextStyle(
+                        color: Colors.orangeAccent,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
