@@ -5,7 +5,7 @@ import 'package:flutter/services.dart' show rootBundle, AssetManifest;
 import 'package:yaml/yaml.dart';
 
 import '../models/equipment_model.dart'; // Equipment
-import '../models/learn_videography_model.dart'; // VideographyGuide
+import '../models/videography_model.dart'; // VideographyGuide
 import '../models/scenario_model.dart'; // ScenarioGuide
 import '../models/admin_config_model.dart'; // AdminConfigModel
 import 'overlay_client.dart'; // InventoryOverlayClient
@@ -78,7 +78,7 @@ class DataRepository {
   // ========== static assets ==========
   Future<void> _loadAllStaticAssets() async {
     final equipPaths = await _listAssetsIn('data/equipment/');
-    final videoPaths = await _listAssetsIn('data/learn_videography/');
+    final videoPaths = await _listAssetsIn('data/videography/');
     final scenarioPaths = await _listAssetsIn('data/scenarios/');
 
     // load and parse equipment

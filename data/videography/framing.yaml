@@ -1,6 +1,7 @@
 id: framing
 name: Framing
-coverImages: []
+coverImages:
+  - assets/images/videography/framing_cover.avif
 sections:
   - title: What framing is and why it matters
     images: []
@@ -12,7 +13,8 @@ sections:
       Basic framing tools include the **rule of thirds**, **headroom**, **look room**, **leading lines**, and how you use the **background and foreground**.
 
   - title: Rule of thirds
-    images: []
+    images:
+      - assets/images/videography/framing_thirds.avif
     body: |
       The **rule of thirds** is a simple guide for placing important subjects in the frame.
 
@@ -28,7 +30,8 @@ sections:
       This often makes the image feel more dynamic and balanced while still being easy to read. You do not have to follow the rule of thirds all the time, but it is a reliable starting point when you are not sure where to place your subject.
 
   - title: Headroom
-    images: []
+    images:
+      - assets/images/videography/framing_headroom.avif
     body: |
       **Headroom** is the amount of space between the top of a person's head and the top edge of the frame.
 
@@ -59,7 +62,8 @@ sections:
       The key is to make these choices *deliberately* rather than by accident.
 
   - title: Look room (nose room)
-    images: []
+    images:
+      - assets/images/videography/framing_lookroom.avif
     body: |
       **Look room** (also called **nose room**) is the space in front of where a person is facing or looking. If someone is turned to the right, the empty space on the right side of the frame is their look room.
 
@@ -73,7 +77,8 @@ sections:
       Like headroom, you can break this rule on purpose to create a feeling of tension, discomfort, or being trapped, but it should be a clear choice, not an accident.
 
   - title: Center framing vs. off-center framing
-    images: []
+    images:
+      - assets/images/videography/framing_frame.avif
     body: |
       You can frame subjects **in the center** or **off-center**, and each choice has a different feeling.
 
@@ -92,7 +97,8 @@ sections:
       A common approach is to use off-center framing most of the time and reserve center framing for moments where you want extra impact or a more stylized look.
 
   - title: Leading lines and visual flow
-    images: []
+    images:
+      - assets/images/videography/framing_flow.avif
     body: |
       **Leading lines** are lines inside your scene that naturally guide the viewer's eye towards a subject. They can be obvious lines like roads, rails, walls, or shelves, or more subtle lines like the edges of furniture or beams of light.
 
@@ -104,7 +110,8 @@ sections:
       Be careful of strong lines that accidentally point away from your subject or that lead the eye out of the frame. If you see a bright line or edge pulling attention away, you might reframe slightly to reduce its impact.
 
   - title: Foreground, background, and depth
-    images: []
+    images:
+      - assets/images/videography/framing_depth.avif
     body: |
       Framing is not just about what is in the middle of the frame but also about how you use the **foreground** and **background**. Adding elements in front of and behind your subject can create a sense of depth and make the image feel more three-dimensional.
 
@@ -119,7 +126,8 @@ sections:
       By paying attention to foreground and background, you can quickly improve the professionalism of your framing even without changing lenses or lighting.
 
   - title: Horizon lines and level frames
-    images: []
+    images:
+      - assets/images/videography/framing_dutch_angle.avif
     body: |
       The **horizon line** or any strong horizontal line in your shot (like tables, shelves, or the edge of a wall) affects how stable your frame feels. In most cases, you want these lines to be level so the image feels balanced and not unintentionally tilted.
 

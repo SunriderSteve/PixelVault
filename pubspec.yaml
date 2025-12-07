@@ -67,7 +67,7 @@ flutter:
   assets:
     - data/
     - data/equipment/
-    - data/learn_videography/
+    - data/videography/
     - data/scenarios/
     - assets/images/equipment/
     - assets/images/videography/

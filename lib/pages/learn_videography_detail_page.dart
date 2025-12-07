@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_avif/flutter_avif.dart';
 
 import '../services/data_repository.dart';
-import '../models/learn_videography_model.dart';
+import '../models/videography_model.dart';
 
 class VideographyDetailPage extends StatefulWidget {
   final String itemID;
