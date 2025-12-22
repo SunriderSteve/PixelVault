@@ -1,0 +1,124 @@
+id: types_of_lenses
+name: Types of Lenses
+coverImages:
+  - assets/images/videography/types_of_lenses_cover.avif
+
+sections:
+  - title: The main lens types
+    images: []
+    body: |
+      Most lenses you will use for video fall into a few simple groups: **ultra-wide**, **wide**, **standard**, **telephoto**, and **prime vs. zoom**. These groups are mostly based on the **mm number**, which controls how wide or tight the view looks.
+
+      - *Ultra-wide* lenses show a lot of the scene and make spaces feel large. Example: **Sony FE 4 / 12-24 G** and **Canon EF 14mm f/2.8L II USM**.
+      - *Wide* lenses still show environment but look less extreme than ultra-wide. Example: **Sony FE 4 / 16-35** and **Canon CN-E 24mm T1.5 L F**.
+      - *Standard* lenses feel natural for general filming and everyday storytelling. Example: **Sony FE 2.8 / 24-70 GM II** and **Canon 24-70mm Ultrasonic**.
+      - *Telephoto* lenses make far subjects look close and help isolate the subject from the background. Example: **Sony FE 2.8 / 70-200 GM OSS II** and **Canon EF 70-200mm f/2.8L IS II USM**.
+
+  - title: How to interpret the mm number
+    images: []
+    body: |
+      The **mm number** tells you how wide or tight the lens view is. Smaller mm numbers look **wider** and show more environment. Larger mm numbers look **tighter** and show less environment.
+
+      *Examples*
+      - **12mm** on the Sony FE 12-24 shows a very wide view and is useful for rooms and big locations.
+      - **24mm** on a 24-70 zoom is wide and is useful for context shots, groups, and small spaces.
+      - **50mm** on the Sony FE 1.4 / 50 is a "normal-looking" view that is often great for portraits and interviews.
+      - **200mm** on a 70-200 zoom is very tight and is useful for stage events, sports, and distant subjects.
+
+      For zoom lenses, a range like **24-70mm** means the lens can change between those views. For prime lenses, a single number like **35mm** or **50mm** means the lens does not zoom.
+
+  - title: How to interpret the aperture number
+    images: []
+    body: |
+      The aperture number is usually written like **f/2.8**, **f/4**, or **f/1.4**. A smaller number generally means the lens can open wider to let in **more light** and can create **more background blur**. A larger number generally means less light and usually a background that looks more in focus.
+
+      *Examples*
+      - **f/4** on the Sony FE 4 / 12-24 G and Sony FE 4 / 16-35 is a steady, practical aperture for well-lit scenes and general filming.
+      - **f/2.8** on the Sony FE 2.8 / 24-70 GM II and 70-200 lenses helps more in low light and creates more background blur than f/4.
+      - **f/1.4** on the Sony FE 1.4 / 50 and Canon EF 35mm f/1.4L allows very low-light filming and strong background blur, but makes focusing more sensitive.
+
+      Some cinema lenses use a number like **T1.5**, such as the Canon CN-E 24mm T1.5. You can treat this as an aperture number that also represents a very wide opening.
+
+  - title: When to use ultra-wide lenses
+    images: []
+    body: |
+      Use **ultra-wide** lenses when the environment is part of the story and you want the viewer to feel the size of the space. They are useful for **architecture**, **interiors**, **wide establishing shots**, and filming in **tight rooms**.
+
+      *Tips for better ultra-wide results*
+      - Keep important faces closer to the center of the frame so they do not look stretched.
+      - Keep the camera level when filming rooms and buildings so lines do not look accidentally tilted.
+      - Check the edges and corners, because ultra-wide shots easily include distractions.
+
+  - title: When to use wide lenses
+    images: []
+    body: |
+      Use **wide** lenses when you want context but do not want the extreme look of ultra-wide. Wide lenses are good for **walkthroughs**, **documentary-style filming**, **small spaces**, and shots where you want to be close to the action while still showing the setting.
+
+      *Tips for better wide results*
+      - Step back slightly if faces look stretched.
+      - Keep backgrounds clean because wide views still show a lot of the scene.
+      - Use the rule of thirds and good headroom so the shot does not feel "messy wide."
+
+  - title: When to use standard zoom lenses
+    images: []
+    body: |
+      Use **standard zoom** lenses when you need flexibility and you want to cover many shot sizes quickly without swapping lenses. They are strong for **events**, **interviews**, **travel**, and general videography, because you can go from a wide context shot to a tighter subject shot in seconds.
+
+      *Tips for better standard zoom results*
+      - Use the wide end for context and the longer end for faces and details.
+      - Avoid zooming during the shot unless it is a deliberate style choice; it often looks cleaner to cut between shot sizes.
+      - If the background is distracting, zoom in and simplify what is behind the subject.
+
+  - title: When to use telephoto zoom lenses
+    images: []
+    body: |
+      Use **telephoto** lenses when you want to isolate the subject, make the background look softer, or film from farther away. They are excellent for **sports**, **stage performances**, **events**, and **portraits** with strong separation from the background.
+
+      *Tips for better telephoto results*
+      - Move gently because small shakes look bigger at longer focal lengths.
+      - Stabilization helps, but for long takes it is still smart to use a tripod or monopod when possible.
+      - Plan your distance so you can keep good audio, because being far away can hurt sound if you rely on camera mic audio.
+
+  - title: Prime lenses vs. zoom lenses
+    images: []
+    body: |
+      A **prime lens** has one focal length, such as **50mm** or **35mm**, and you change framing by moving the camera. A **zoom lens** has a range, such as **12-24mm**, **16-35mm**, **24-70mm**, or **70-200mm**, and you can change framing by zooming.
+
+      *Why primes are useful*
+      Many primes have wider apertures like **f/1.4**, which helps in low light and creates strong background blur.
+
+      *Why zooms are useful*
+      Zooms are faster to work with in real shoots because you can react quickly without swapping lenses.
+
+  - title: Basic lens care and handling
+    images: []
+    body: |
+      *Cap your lens when not in use*
+      Keep the **front cap** and **rear cap** on whenever the lens is not on a camera. This reduces dust, fingerprints, and accidental scratches.
+
+      *Avoid dust during lens changes*
+      Change lenses quickly, and avoid doing it in windy or dusty areas if possible. Keep a rear cap ready so you can cap the lens immediately after removal.
+
+      *Clean safely:*
+      Use a blower first to remove dust. Then use a clean microfiber cloth for smudges. Avoid wiping grit across the glass, because it can leave marks.
+
+      *Store with padding:*
+      Keep lenses in padded compartments so they do not knock into other gear. Do not store lenses loose in a bag, because impacts can damage the exterior and the internal alignment.
+
+      *Handle heavier lenses with support:*
+      Telephoto zooms can be heavier. Support the lens and camera carefully to avoid stressing the mount during carrying and setup.
+
+  - title: Quick choosing guide for common situations
+    images: []
+    body: |
+      If you need one fast way to decide, use this simple idea: **wide shows the world, telephoto shows the subject, standard balances both**.
+
+      *Tight room or interior location:* Ultra-wide or wide (e.g. **12-24mm**, **14mm**, or **16-35mm**).
+
+      *General coverage and flexibility:* Standard zoom (e.g. **24-70mm**).
+
+      *Portraits, interviews, and subject emphasis:* 50mm or 70mm end of a 24-70, or longer focal lengths when you have space.
+
+      *Stage, sports, or distant subjects:* Telephoto (e.g. **70-200mm**).
+
+      *Low light with strong subject separation:* Wide-aperture primes (e.g. **f/1.4** lenses) when you can control focus and distance.

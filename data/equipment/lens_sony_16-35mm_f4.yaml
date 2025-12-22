@@ -1,0 +1,31 @@
+id: lens_sony_16-35mm_f4
+name: Sony FE 4 / 16-35
+brand: Sony
+category: Lens
+coverImages:
+  - assets/images/equipment/lens_sony_16-35mm_f4_cover.avif
+
+sections:
+  - title: What this lens is
+    images: []
+    body: |
+      This is a **wide zoom** lens that covers wide to moderately wide views. It goes from 16mm to 35mm, which is useful for environments, groups, and moving shots where you want to stay close to the action. It has a maximum aperture of **f/4**.
+
+  - title: What it is best used for
+    images: []
+    body: |
+      This lens is great for **wide coverage** without going extremely wide. It works well for **walkthroughs**, **vlogging-style shots**, **events in tight spaces**, **establishing shots**, and **handheld movement** where a wider view feels stable and forgiving.
+
+  - title: How to use it well
+    images: []
+    body: |
+      Use 16-20mm for showing space and movement, then move toward 24-35mm when you want less edge stretching and a more natural look.
+
+      Keep the camera level for rooms and buildings to avoid "leaning walls." Pay attention to the edges of the frame, because wide shots often include unwanted objects and people.
+
+  - title: Common mistakes to avoid
+    images: []
+    body: |
+      - Avoid getting too close to faces at 16mm, because facial features can look stretched.
+      - Avoid ignoring the background; wide lenses capture a lot of messy detail.
+      - Avoid assuming wide automatically looks "cinematic"; composition still matters.

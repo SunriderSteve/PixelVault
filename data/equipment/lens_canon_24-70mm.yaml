@@ -1,0 +1,31 @@
+id: lens_canon_24-70mm
+name: Canon 24-70mm Ultrasonic
+brand: Canon
+category: Lens
+coverImages:
+  - assets/images/equipment/lens_canon_24-70mm_cover.avif
+
+sections:
+  - title: What this lens is
+    images: []
+    body: |
+      This is a **standard zoom** lens. It covers 24mm to 70mm, which is a very common range for everyday shooting. "Ultrasonic" usually refers to a focus motor designed for fast, quiet focusing.
+
+  - title: What it is best used for
+    images: []
+    body: |
+      This lens is a practical choice for **general videography**, **events**, **travel**, and **projects where you need flexibility**. It can cover wide context shots at 24mm and tighter subject shots at 70mm without swapping lenses.
+
+  - title: How to use it well
+    images: []
+    body: |
+      Use 24-35mm when you want context, and move toward 50-70mm for faces and details.
+
+      If the background is distracting, zoom in and adjust your position rather than staying wide. When changing focal length during a take, do it only when it supports the story, because zooming can feel accidental if overused.
+
+  - title: Common mistakes to avoid
+    images: []
+    body: |
+      - Avoid staying wide for close faces, because it can make facial features look slightly stretched.
+      - Avoid relying on zoom to replace good positioning; where you stand often matters more than the focal length.
+      - Avoid frequent lens changes in dusty areas; if this lens can cover the shot, using it can reduce dust problems.

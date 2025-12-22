@@ -1,0 +1,31 @@
+id: lens_canon_35mm_f1.4
+name: Canon EF 35mm f/1.4L USM
+brand: Canon
+category: Lens
+coverImages:
+  - assets/images/equipment/lens_canon_35mm_f1.4_cover.avif
+
+sections:
+  - title: What this lens is
+    images: []
+    body: |
+      This is a **wide prime** lens. It has a fixed focal length of **35mm** and a maximum aperture of **f/1.4**. It can show a good amount of environment while still keeping subjects looking natural.
+
+  - title: What it is best used for
+    images: []
+    body: |
+      This lens is excellent for **documentary-style filming**, **street scenes**, **small spaces**, **handheld moving shots**, and **storytelling where you want context plus a clear subject**. It is also strong in low light because f/1.4 lets in a lot of light.
+
+  - title: How to use it well
+    images: []
+    body: |
+      For dialogue or interviews, 35mm can look intimate and “present,” especially if you are fairly close to the subject. If faces look slightly stretched, step back a little and reframe rather than pushing too close.
+
+      If focus is difficult at f/1.4, stop down slightly (for example, f/2) to make shots more reliable while keeping a pleasing look.
+
+  - title: Common mistakes to avoid
+    images: []
+    body: |
+      - Avoid using f/1.4 in fast-moving scenes unless you can maintain focus confidently.
+      - Avoid placing important details at the very edge of frame if the edge looks stretched or distracting.
+      - Avoid forgetting the background; wide primes still include enough environment to show clutter.

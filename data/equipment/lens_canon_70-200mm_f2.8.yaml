@@ -1,0 +1,31 @@
+id: lens_canon_70-200mm_f2.8
+name: Canon EF 70-200mm f/2.8L IS II USM
+brand: Canon
+category: Lens
+coverImages:
+  - assets/images/equipment/lens_canon_70-200mm_f2.8_cover.avif
+
+sections:
+  - title: What this lens is
+    images: []
+    body: |
+      This is a **telephoto zoom** lens for Canon EF cameras. It covers 70mm to 200mm and has a maximum aperture of **f/2.8**. It includes image stabilization (IS), which helps reduce handheld shake, and USM focus motors for fast focusing.
+
+  - title: What it is best used for
+    images: []
+    body: |
+      This lens is great for **events**, **portraits**, **sports**, **stage shows**, and situations where you cannot physically get close. It is also useful when you want backgrounds to look softer and less distracting.
+
+  - title: How to use it well
+    images: []
+    body: |
+      Use 70-100mm for more general coverage and 135-200mm when you want strong subject isolation. Stabilization helps, but it does not freeze subject movement; if the subject moves fast, you still need an appropriate shutter speed.
+
+      If you are filming long takes, use a monopod or tripod to reduce fatigue and keep shots steady.
+
+  - title: Common mistakes to avoid
+    images: []
+    body: |
+      - Avoid using extreme telephoto handheld while tired; small shakes become obvious quickly.
+      - Avoid standing too far back without checking audio, because distance helps visuals but can hurt sound if you rely on camera mic audio.
+      - Avoid zooming constantly during the take unless the zoom is part of the planned style.

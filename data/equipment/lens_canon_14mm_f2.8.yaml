@@ -1,0 +1,31 @@
+id: lens_canon_14mm_f2.8
+name: Canon EF 14mm f/2.8L II USM
+brand: Canon
+category: Lens
+coverImages:
+  - assets/images/equipment/lens_canon_14mm_f2.8_cover.avif
+
+sections:
+  - title: What this lens is
+    images: []
+    body: |
+      This is an **ultra-wide prime** lens. It has a fixed focal length of **14mm** and a maximum aperture of **f/2.8**. It captures a very wide view, making spaces look larger and more dramatic.
+
+  - title: What it is best used for
+    images: []
+    body: |
+      This lens is useful for **interiors**, **architecture**, **tight spaces**, and dramatic wide establishing shots. It is also used for creative perspectives where the camera is very close to the subject but still shows a lot of the environment.
+
+  - title: How to use it well
+    images: []
+    body: |
+      - Keep the camera level to avoid making walls and buildings look like they are leaning.
+      - Keep important faces away from the edges, because ultra-wide lenses can stretch features near the frame edges.
+      - Use the wide view to tell the viewer where they are, but still choose a clear subject so the shot does not feel empty.
+
+  - title: Common mistakes to avoid
+    images: []
+    body: |
+      - Avoid using it as a default lens for people close-ups, because faces can look distorted.
+      - Avoid cluttered backgrounds, because wide lenses reveal everything.
+      - Avoid tilting without meaning to; tilts are very noticeable with ultra-wide views.

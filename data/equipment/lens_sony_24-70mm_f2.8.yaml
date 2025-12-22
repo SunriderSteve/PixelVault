@@ -1,0 +1,33 @@
+id: lens_sony_24-70mm_f2.8
+name: Sony FE 2.8 / 24-70 GM II
+brand: Sony
+category: Lens
+coverImages:
+  - assets/images/equipment/lens_sony_24-70mm_f2.8_cover.avif
+
+sections:
+  - title: What this lens is
+    images: []
+    body: |
+      This is a **standard zoom** lens, often used as an all-purpose lens. It goes from wide (24mm) to short telephoto (70mm), which covers many common shots. It has a maximum aperture of **f/2.8**, which helps in lower light and can blur backgrounds more than f/4 lenses.
+
+  - title: What it is best used for
+    images: []
+    body: |
+      This lens is a strong "default" choice for **events**, **interviews**, **run-and-gun filming**, **travel**, and general storytelling. At 24mm it can capture a room or group, and at 70mm it can tighten up to faces and details without changing lenses.
+
+  - title: How to use it well
+    images: []
+    body: |
+      Use 24-35mm for context shots where the environment matters, and use 50-70mm for cleaner portraits and less background distraction.
+
+      If you want a stable handheld look, keep your elbows in, use a gentle stance, and avoid sudden zooming during a shot unless you are intentionally making it a style choice. '
+
+      If the background is messy, zoom in rather than stepping closer, because tighter focal lengths can reduce how much background is visible.
+
+  - title: Common mistakes to avoid
+    images: []
+    body: |
+      - Avoid staying at only one focal length all day, because variety helps your edit feel more intentional.
+      - Avoid zooming just because you can; it is often better to cut between shot sizes rather than zoom during the take.
+      - Avoid shooting too wide for close faces, because 24mm close-ups can make faces look stretched.
