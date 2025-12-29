@@ -1,0 +1,101 @@
+id: light_felloni_tecpro_d50ho
+name: Dedolight Felloni Tecpro TP-LONI-D50HO
+brand: Dedolight
+category: Light
+coverImages:
+  - assets/images/equipment/light_felloni_tecpro_d50ho_cover.avif
+description: |
+  A 1x1 daylight LED panel with built-in dimming, designed for quick setups as a key, fill, or general base light.
+
+sections:
+  - title: Main parts
+    images:
+      - assets/images/equipment/light_felloni_tecpro_d50ho_back.avif
+    body: |
+      **Power switch (0 / 1):** Turns the light off and on.
+      **Dimmer knob:** Adjusts brightness from low to high.
+      **DC input (10-16.8V):** Power input for a DC supply.
+      **Fuse:** Protects the unit if there is an electrical issue.
+      **Battery plate (V-mount):** Lets you power the light with a V-mount battery (if your unit has the plate installed).
+      **Yoke and tilt knobs:** Lets you mount and angle the panel on a light stand.
+
+  - title: Mounting to a light stand
+    images:
+      - assets/images/equipment/light_felloni_tecpro_d50ho_front.avif
+    body: |
+      **Step 1: Prepare the stand**
+      • Fully spread the stand legs until it feels stable.
+      • If possible, keep one leg pointing in the same direction as the light (so the weight is supported).
+
+      **Step 2: Attach the panel**
+      • Mount the light panel to the top of the stand.
+      • Tighten the mount knob until the light cannot rotate freely.
+
+      **Step 3: Angle the light**
+      • Loosen both side tilt knobs slightly.
+      • Tilt the panel to the angle you want.
+      • Re-tighten both tilt knobs firmly.
+
+  - title: Power options
+    images:
+      - assets/images/equipment/light_felloni_tecpro_d50ho_back.avif
+    body: |
+      This light is commonly powered in three ways: **AC adapter**, **DC input**, or **V-mount battery** (depending on what accessories your unit has).
+
+      **Option A: AC adapter (most common indoors)**
+      • Connect the adapter-s output cable to the light-s **DC input**.
+      • Plug the adapter into wall power.
+      • Confirm the cable is seated firmly before turning the light on.
+
+      **Option B: DC input (10-16.8V)**
+      • Connect a compatible DC source to the **DC input**.
+      • Do not force the plug, and make sure the connector is fully inserted.
+
+      **Option C: V-mount battery**
+      • Slide the V-mount battery onto the plate until it locks.
+      • To remove it, press the battery release and slide it off.
+      • If the light does not power on, check the battery charge level and that it is properly latched.
+
+  - title: Turning on and setting brightness
+    images:
+      - assets/images/equipment/light_felloni_tecpro_d50ho_back.avif
+    body: |
+      **Power on**
+      • Flip the rear **power switch** from **0** (off) to **1** (on).
+
+      **Set brightness**
+      • Turn the **dimmer knob** toward **+** to increase brightness.
+      • Turn toward **-** to reduce brightness.
+
+      **Best practice**
+      • Start dimmer low, then raise it to your working level after the light is aimed.
+      • When powering off, turn the dimmer down first, then flip the switch to **0**.
+
+  - title: What the printed numbers mean (quick reference)
+    images: []
+    body: |
+      **5600K:** Daylight color setting for this model.
+      **50° beam:** The spread of the light (useful for broad coverage at close range).
+      **Power consumption:** This model family is commonly listed as **24W or 50W** depending on version and documentation, so rely on your unit-s label if it differs.
+      **DC 10-16.8V (max 5A):** The expected DC input range and current limit.
+      **Fuse 5A:** Fuse rating for protection.
+
+  - title: Packing down and storage
+    images: []
+    body: |
+      **Power down**
+      • Turn the dimmer down.
+      • Flip the power switch to **0**.
+      • Unplug wall power or remove the battery.
+
+      **Remove from stand**
+      • Support the light with one hand before loosening the stand mount.
+      • Loosen the mount knob slowly and lift the light off.
+
+      **Protect the front**
+      • If your kit has a front cover or case, use it to protect the LED surface from scratches.
+      • Do not stack heavy objects on the front face.
+
+      **Cable care**
+      • Coil cables in large loops (not tight coils) to reduce cable stress.
+      • Avoid sharp bends near the connector ends.
