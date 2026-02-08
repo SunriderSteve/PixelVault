@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_avif/flutter_avif.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../services/data_repository.dart';
 import '../models/videography_model.dart';
@@ -384,7 +385,20 @@ class _StyledText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<InlineSpan> children = [];
-    final RegExp pattern = RegExp(r'(\*\*(.*?)\*\*)|(\*(.*?)\*)');
+    final RegExp pattern = RegExp(
+      r'(\[([^\]]+)\]\(([^)]+)\))|(\*\*(.*?)\*\*)|(\*(.*?)\*)',
+    );
+
+    Future<void> openLink(String rawUrl) async {
+      final trimmed = rawUrl.trim();
+      final normalized =
+          (trimmed.startsWith('http://') || trimmed.startsWith('https://'))
+          ? trimmed
+          : 'https://$trimmed';
+      final uri = Uri.tryParse(normalized);
+      if (uri == null) return;
+      await launchUrl(uri, webOnlyWindowName: '_blank');
+    }
 
     // Text outline style for better readability
     final outlineStyle =
@@ -410,17 +424,48 @@ class _StyledText extends StatelessWidget {
     text.splitMapJoin(
       pattern,
       onMatch: (Match match) {
+        // Link: [text](url)
         if (match.group(1) != null) {
+          final linkText = match.group(2) ?? '';
+          final linkUrl = match.group(3) ?? '';
+
+          children.add(
+            WidgetSpan(
+              alignment: PlaceholderAlignment.baseline,
+              baseline: TextBaseline.alphabetic,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: () => openLink(linkUrl),
+                  child: Text(
+                    linkText,
+                    style: outlineStyle.copyWith(
+                      color: Colors.blue,
+                      decoration: TextDecoration.underline,
+                      decorationColor: Colors.blue, // force underline color
+                      decorationThickness: 2.0, // make it visibly “link-like”
+                      decorationStyle: TextDecorationStyle.solid,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+        // Bold: **text**
+        else if (match.group(4) != null) {
           children.add(
             TextSpan(
-              text: match.group(2),
+              text: match.group(5),
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           );
-        } else if (match.group(3) != null) {
+        }
+        // Italic: *text*
+        else if (match.group(6) != null) {
           children.add(
             TextSpan(
-              text: match.group(4),
+              text: match.group(7),
               style: const TextStyle(fontStyle: FontStyle.italic),
             ),
           );
