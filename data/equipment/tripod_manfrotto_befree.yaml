@@ -24,16 +24,16 @@ sections:
 
       **Leg Angles**
       • Locate the silver side selector at the top of each leg.
-      • Close the leg slightly to release pressure, then slide the selector upwards and bend the leg to your desired angle.
+      • Close the leg slightly to release pressure, then slide the selector downwards and bend the leg to your desired angle.
 
   - title: Adjusting Height & Head
     images: []
     body: |
       **Height Knob**
-      • Turn the **Height Knob** (located between the head & legs) counter-clockwise to adjust the height.
+      • Turn the **Height Knob** (located right above the legs) counter-clockwise to adjust the height.
 
       **Leveling Column**
-      • Loosen the **Leveling Knob** (located just above the leg spider, below the head).
+      • Loosen the **Leveling Knob** (located right below the head).
       • Wiggle the head until the **Bubble Level** is centered.
       • Tighten the Leveling Knob to lock the horizon.
 
@@ -46,7 +46,8 @@ sections:
       • Balance the camera by sliding it forward/backward, then tighten the knob firmly.
 
   - title: Pan & Tilt Controls
-    images: []
+    images: 
+    - assets/images/equipment/tripod_manfrotto_adjust.avif
     body: |
       **Tilt (Up/Down)**
       • Unlock the **Tilt Lock Knob** on the left side of the head.
