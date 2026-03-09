@@ -1,53 +1,123 @@
 id: outdoor_interview
 name: Outdoor Interview
 coverImages:
-  - assets/images/scenarios/outdoor_interview.avif
-description: |
-  Exterior interviews add real-world context but introduce wind, traffic, and changing light. Prioritize clean audio and consistent exposure while keeping the background meaningful.
-
+  - assets/images/scenarios/outdoor_interview_cover.avif
 sections:
-  - title: Location & Light
+  - title: Goal of this setup
     images: []
     body: |
-      • Choose open shade or create it with a scrim; avoid direct midday sun on faces.
-      • Backlight the subject and fill from camera side for flattering skin and separation.
-      • Use ND filters to maintain shutter angle and desired aperture.
+      The goal of an outdoor interview setup is to capture clear speech and stable, well-exposed video while handling sun, wind, and changing light. The priorities are consistent exposure, controlled shadows on the face, clean audio, and stable framing.
 
-  - title: Wind & Noise Control
+  - title: Recommended equipment
     images: []
     body: |
-      • Use lavs with furry windshields or a shotgun in a blimp with a deadcat.
-      • Place subject upwind from mic; shield with flags/vehicles/walls if possible.
-      • Monitor RF and interference; rescan wireless when changing spots.
+      **2 cameras:** Use two cameras so you have a wide shot and a close-up shot. This makes editing easier, reduces noticeable jump cuts, and gives you a backup angle if one camera has an issue.
+      
+      **Camera examples:** **Sony A7 III**, **Canon XF605**, or **Canon HF G70**.
+      
+      **Lens (close-up camera):** Use a standard or portrait-friendly lens (for example, **50mm**, **24-70mm** around **50-70mm**, or **70-200mm** around **85-135mm**) so faces look natural and the background is calmer.
+      
+      **Lens (wide camera):** Use a wider lens (for example, **16-35mm** around **24-35mm**, or **24-70mm** around **24-35mm**) to show context and body language.
+      
+      **Tripods:** Use one stable tripod per camera to avoid micro-shake in wind and to keep framing consistent.
+      
+      **ND filter:** Use built-in ND (camcorders like **XF605**) or lens ND solutions (if available) so you can keep exposure stable without changing your preferred look.
+      
+      **Audio (critical):** Use a lav mic plus a wind solution (foam + furry wind cover). A shotgun mic is optional but should also have a wind cover.
+      
+      **Light control (optional, but can be helpful):** A reflector, diffusion (scrim), or a portable soft light if you can power it and the location allows it.
 
-  - title: Camera & Exposure
+  - title: Location selection
     images: []
     body: |
-      • Lock WB (daylight/tungsten/custom) to avoid color shifts with clouds.
-      • Keep shutter near 180° rule; vary ND and aperture to control exposure.
-      • Watch highlights (sky) with zebras/false color; protect skin tones.
+      Choose a spot with a visually clean background and controllable sound. Avoid areas near roads, vents, fountains, and crowds.
+      
+      Find shade if possible, because shaded light is softer and makes faces easier to expose.
+      
+      If there is strong sun, avoid placing the subject with direct sun overhead, because it creates harsh shadows under the eyes and nose. If you must shoot in sun, orient the subject so light is flattering and consistent for the duration of the interview.
 
-  - title: Framing & Background
+  - title: Camera placement and framing
     images: []
     body: |
-      • Position subject away from busy roads or crowds where possible to reduce distractions.
-      • Keep horizon lines from cutting through heads; mind passersby entering frame.
+      **A-Cam (close-up / primary):** Put the close-up camera on a tripod at roughly eye level and frame a medium close-up or medium shot.
+      
+      **B-Cam (wide / safety):** Put the wide camera on its own tripod farther back and frame wide or medium wide for context.
+      
+      Keep both cameras on the same side of the subject's eye-line so the gaze direction does not flip between angles.
+      
+      Keep backgrounds consistent between angles and avoid having bright moving elements (cars, people) directly behind the subject.
 
-  - title: Continuity & Coverage
+  - title: Lens choice and stability outdoors
     images: []
     body: |
-      • Capture clean room tone/ambience for the edit. Shoot b-roll matching the subject’s topic.
-      • Get insurance takes in case of wind gusts or sirens ruining audio.
+      **Close-up camera:** Use **50-70mm** (or longer if space allows) for flattering faces and calmer backgrounds.
+      
+      **Wide camera:** Use **24-35mm** to show environment without stretching faces too much.
+      
+      If it is windy, lower the tripod height slightly, widen the tripod stance, and add weight to the tripod if you have a sandbag or a weighted bag.
+      
+      Avoid very long focal lengths if the wind is strong, because even small shakes become obvious.
 
-  - title: Troubleshooting
+  - title: Light direction and shadow control
     images: []
     body: |
-      • Wind overload: increase windshielding, reposition, or move to partial shelter.
-      • Harsh backlight: add fill with reflector/LED or relocate to open shade.
-      • RF dropouts: change frequencies/banks; keep line-of-sight; check squelch.
+      **Best option: open shade** because it gives softer light and fewer harsh shadows.
+      
+      If the subject is in shade but the background is bright, expose for the face first and accept a brighter background if needed.
+      
+      If you are in direct sun, try placing the sun behind the subject to reduce squinting and harsh facial shadows, then add light back to the face using a reflector or a soft fill light.
+      
+      If you use a reflector, keep it slightly off to one side and slightly above eye level to look natural, and avoid reflecting too strongly because it can make the subject uncomfortable.
 
-related:
-  - cam_sony_fx3
-  - cam_sony_a73
-  - mic_sennheiser_g4
-  - rec_zoom_f8
+  - title: Exposure control
+    images: []
+    body: |
+      Outdoors brightness changes quickly due to clouds and sun movement, so use exposure tools and lock settings.
+      
+      Enable zebra stripes on both cameras if available and adjust exposure so the face is not overexposed.
+      
+      Use ND filters to reduce brightness while keeping your preferred settings stable.
+      
+      If the background is extremely bright, prioritize correct exposure on the subject's face, because faces are what viewers notice most.
+      
+      Re-check exposure after any major cloud change or if you change framing direction.
+
+  - title: Color and white balance
+    images: []
+    body: |
+      Set a fixed white balance on both cameras rather than auto, so colors do not shift during the interview.
+      
+      If you are in shade, the light may look cooler; if you are in sun, it may look warmer. Match both cameras to the current environment.
+      
+      If the sun comes in and out, keep white balance fixed and correct small shifts in editing rather than letting the cameras constantly change.
+
+  - title: Audio setup
+    images: []
+    body: |
+      Use a lav mic as your primary audio and add a proper wind cover. A foam cover alone may not be enough in strong wind, so use a furry wind cover if available.
+      
+      Place the lav mic securely to reduce clothing rustle and tape it down if needed.
+      
+      Monitor with headphones and listen for wind rumble, traffic, and sudden background noises. If possible, record backup audio (for example, into the wide camera or a secondary recorder) in case of cable failure or wind issues.
+
+  - title: Simple outdoor interview workflow
+    images: []
+    body: |
+      1) Choose the location with the best balance of quiet sound and clean background.
+      2) Place the subject in open shade if possible, or position them to avoid harsh overhead sun.
+      3) Set up both tripods and frame wide and close-up shots on the same side of the eye-line.
+      4) Set fixed white balance on both cameras and match exposure using zebras/histogram.
+      5) Use ND filters if the scene is too bright, and lock exposure settings once correct.
+      6) Set up the lav mic with wind protection, monitor with headphones, and record a short test.
+      7) Clap once at the start for sync, then begin the interview.
+      8) Re-check exposure if clouds change significantly, and re-check audio if wind increases.
+      9) Record a short room tone sample at the end (ambient outdoor sound), which helps audio edits.
+
+  - title: Common outdoor mistakes to avoid
+    images: []
+    body: |
+      • Avoid placing the subject in harsh overhead sun, because it causes squinting and deep shadows.
+      • Avoid backgrounds with constant motion (busy roads, crowds) that distract from the subject.
+      • Avoid using auto white balance outdoors, because it can shift between clips and look inconsistent.
+      • Avoid ignoring wind protection, because wind noise can ruin an otherwise good interview.
+      • Avoid leaving tripods unweighted in strong wind, because even small movement can be noticeable, especially on the close-up camera.

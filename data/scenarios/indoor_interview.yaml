@@ -1,63 +1,108 @@
 id: indoor_interview
 name: Indoor Interview
-coverImages:
-  - assets/images/scenarios/indoor_interview.avif
-description: |
-  A controlled, sit-down interview emphasizes intelligible dialogue, flattering lighting, and stable exposure. This setup suits corporate, documentary, or educational pieces shot in offices, homes, or studios.
-
+coverImages: 
+  - assets/images/scenarios/indoor_interview_cover.avif
 sections:
-  - title: Setup Overview
+  - title: Goal of this setup
     images: []
     body: |
-      • Place the subject ~1.5–2 m from the background to reduce shadows and create separation.
-      • Seat the subject at a slight angle to camera; keep eyeline close to lens if addressing interviewer.
-      • Use a tripod or solid support; tidy the frame and remove visual distractions.
+      The goal of an indoor interview setup is to get clean, consistent video and clear speech while keeping the subject comfortable. The priorities are stable framing, flattering light, controlled background, and reliable audio monitoring.
 
-  - title: Lighting
+  - title: Recommended equipment
     images: []
     body: |
-      • Key: Soft light at ~45° from camera and slightly above eye level (softbox/bounced LED).
-      • Fill: Add or subtract fill to taste; aim for gentle contrast (key-to-fill ratio ~2:1–4:1).
-      • Back/edge: A small light behind and opposite the key adds separation on hair/shoulder.
-      • White balance lights first; match color temperatures to avoid mixed casts.
+      **2 cameras:** Use two cameras so you have a wide shot and a close-up shot. This makes editing easier, reduces noticeable jump cuts, and gives you a backup angle if one camera has an issue.
+      
+      **Lens (close-up camera):** Use a standard or portrait-friendly lens (for example, **50mm**, **24-70mm** around **50-70mm**, or **70-200mm** around **85-135mm**) so faces look natural and the background is calmer.
+      
+      **Lens (wide camera):** Use a wider lens (for example, **16-35mm** around **24-35mm**, or **24-70mm** around **24-35mm**) to show context and body language.
+      
+      **Key light:** Use a controllable light (for example, **amaran 200x S** with umbrella, **Felloni TP-LONI-D50HO**, or **Manfrotto CROMA2**) to keep skin tones consistent and avoid relying on ceiling lights.
+      
+      **Light stand / tripods:** Use one stable tripod per camera and a stable light stand for the key light so framing and lighting do not drift.
+      
+      **Audio (preferred):** Use a lav mic or a shotgun mic into a camera or recorder so speech is clear and close.
+      
+      **Optional:** A second light for fill or background separation, and a reflector if you want softer shadows without adding another powered light.
 
-  - title: Audio
+  - title: Room preparation
     images: []
     body: |
-      • Primary: Lavalier mic on chest (6–8 inches below mouth) or a boomed shotgun just out of frame.
-      • Engage high-pass filter to tame rumble; aim for peaks around −12 dBFS on recorder.
-      • Minimize clothing rustle; hide lav cables with strain relief; monitor with closed-back headphones.
+      Choose a quiet room and reduce noise sources (aircon blast, fans, loud PCs, hallway chatter) where possible. 
+      
+      Turn off or reduce harsh overhead lights if they create unflattering shadows or mixed color. 
+      
+      Check the background for distractions and remove items that look messy or draw attention. Leave some distance between the subject and the background so the background looks cleaner and easier to control.
 
-  - title: Camera & Exposure
+  - title: Camera placement and framing
     images: []
     body: |
-      • Frame rate: 24/25/30p as required; set shutter near 180° rule (e.g., 1/50 at 25p).
-      • Aperture: f/2.8–4 for a modestly shallow background; stop down if subject moves a lot.
-      • ISO: stay near base ISO for best DR; use lights instead of raising ISO where possible.
-      • Use zebras or false color to expose skin consistently; lock WB.
+      **A-Cam (close-up / primary):** Put the close-up camera on a tripod at roughly eye level. Frame a medium close-up or medium shot depending on style. This is the angle you will use most of the time.
+      
+      **B-Cam (wide / safety):** Put the wide camera on its own tripod farther back. Frame wide or medium wide so you show more of the environment and body language.
+      
+      Keep both cameras on the same side of the subject's eye-line so the direction of their gaze does not flip between angles. If the subject is looking slightly off-camera (towards the interviewer), give comfortable look room in that direction on both cameras.
 
-  - title: Composition & Background
+  - title: Lens choice and basic setup
     images: []
     body: |
-      • Rule of thirds for headroom and nose-room when in profile; center if speaking to camera.
-      • Add depth with practicals/books/plants but keep background tidy and relevant.
-      • Avoid reflective surfaces that reveal crew; turn off flickery fixtures.
+      **Close-up camera:** If using a zoom lens (24-70mm), start around **50-70mm** for a natural and flattering look. If using a 50mm prime, adjust framing by moving the tripod rather than relying on digital zoom.
+      
+      **Wide camera:** Use **24-35mm** on a 16-35mm or use **24-35mm** on a 24-70mm to capture context without making faces look stretched.
+      
+      Avoid very wide focal lengths for the close-up camera because wide lenses can stretch faces.
 
-  - title: B-roll & Coverage
+  - title: Lighting setup
     images: []
     body: |
-      • Capture room tone (30–60 s). Shoot cutaways (hands, nods, environment, tools) for smoother edits.
-      • Consider a second angle (tight CU) if available to ease cutting.
+      Use one main light as your key light and keep it consistent throughout the interview. Place the key light slightly to one side of the close-up camera and slightly above eye level, angled down toward the subject.
+      
+      If using **amaran 200x S with umbrella**, mount the light securely on the stand, lock the tilt handle, attach the umbrella and diffusion sheet, then set brightness and color temperature on the rear controls.
+      
+      If using a panel light like **Felloni** or **CROMA2**, mount it securely and use the dimmer and color controls to match the room.
+      
+      After lighting the close-up angle, check the wide camera frame to ensure the lighting still looks natural and does not reveal unwanted equipment or harsh wall shadows. If the shadows feel too strong, add a second light as a gentle fill on the opposite side or bounce light using a reflector. Keep the subject separated from the background so they do not cast harsh shadows on the wall.
 
-  - title: Troubleshooting
+  - title: Match the light color
     images: []
     body: |
-      • Echoey rooms: add rugs/blankets/soft furnishings; move away from bare walls.
-      • Flicker/banding: adjust shutter slightly (e.g., 1/50↔1/60) or enable anti-flicker.
-      • Skin too shiny: powder or lower key; increase diffusion.
+      If the room lights are warm, set your key light warmer so it blends, or turn off the warm room lights and rely on the key light. If you have a bi-color light (like **CROMA2** or **amaran 200x S**), adjust color temperature until skin and whites look natural. 
+      
+      Try to avoid mixing strong daylight from a window with strong warm ceiling lights, because it makes matching harder and can create different colors across the face.
 
-related:
-  - cam_sony_fx3
-  - cam_sony_a73
-  - rec_zoom_f8
-  - mic_sennheiser_g4
+  - title: Exposure and monitoring
+    images: []
+    body: |
+      Enable exposure aids on both cameras if available. If the cameras support zebra stripes, turn them on and adjust exposure so the face is not overexposed. Use the histogram if available to confirm you are not crushing shadows or clipping highlights. Lock in settings once they look correct so the cameras do not change brightness mid-interview.
+      
+      Do a quick test recording and watch it back to confirm skin tones, brightness, and audio before starting.
+
+  - title: Audio setup
+    images: []
+    body: |
+      Place the microphone as close to the subject as possible without appearing in the frame. For a lav mic, clip it on the chest area and keep it away from clothing that rubs. For a shotgun mic, aim it at the subject's mouth from just out of frame.
+      
+      If possible, record usable audio into the close-up camera and also capture backup audio on the wide camera (even if it is only scratch audio).
+      
+      Monitor with headphones and listen for background hum or aircon noise, crackling from a loose cable, and audio that is too quiet or distorting. Record a short test and play it back through headphones before starting.
+
+  - title: Simple interview workflow
+    images: []
+    body: |
+      1) Prepare the room and background.
+      2) Set up both camera tripods and frame the wide and close-up shots.
+      3) Set up the key light, aim it, and adjust brightness and color.
+      4) Match white balance and exposure on both cameras and lock settings.
+      5) Set up the microphone and do a headphone check.
+      6) Sync reference: clap once at the start so both cameras can be lined up easily in editing.
+      7) Start the interview and avoid changing camera position or light placement unless necessary.
+      8) After the interview, record 10 seconds of “room tone” (silence) if you plan to edit audio, as it helps with clean audio edits.
+
+  - title: Common mistakes to avoid
+    images: []
+    body: |
+      • Avoid relying only on ceiling lights, because they often create harsh shadows under the eyes.
+      • Avoid placing the subject right against a wall, because it looks flat and creates strong wall shadows.
+      • Avoid placing bright windows directly behind the subject, because it can force the camera to darken the face.
+      • Avoid starting without an audio test, because bad audio is harder to fix than slightly imperfect video.
+      • Avoid leaving one camera on auto while the other is locked, because the angles can drift in brightness or colour and look mismatched in editing.
