@@ -1,0 +1,241 @@
+id: light_nanlite_pavotube_ii
+name: Nanlite PavoTube II 15C / 30C
+brand: Nanlite
+category: Light
+coverImages:
+  - assets/images/equipment/light_nanlite_pavotube_ii_cover.avif
+
+description: |
+  A battery-powered RGBWW tube light with CCT, HSI, and built-in effect modes. It can be powered by its internal battery, DC adapter, or compatible USB-C PD power, and can also be controlled by Bluetooth, 2.4G, and DMX.
+
+sections:
+  - title: Identify the main parts
+    images: []
+    body: |
+      **Power switch:** Turns the light on and off.
+      
+      **Display:** Shows the current mode, settings, battery status, and menu options.
+      
+      **USB Type-C port:** Used for firmware updates and compatible USB-C PD power input.
+      
+      **MODE button:** Switches between **CCT**, **HSI**, **EFFECT**, and **MENU**.
+      
+      **Dimmer knob:** Adjusts brightness and other setting values.
+      
+      **LOCK button:** Long press to lock or unlock the controls.
+      
+      **Function knob:** Used to move between selectable items in the current mode or menu.
+      
+      **DMX port:** Used with a DMX adapter cable for DMX signal input and output.
+      
+      **DC power socket:** Used with the power adapter.
+      
+      **Fixing hole:** Used for hanging the light with a steel wire rope.
+
+  - title: Powering the light
+    images: []
+    body: |
+      **Option 1: Power adapter**
+      Connect the power adapter to the **DC power socket** on the light, then connect the adapter to wall power.
+
+      **Option 2: Built-in battery**
+      The fixture has a built-in lithium battery and can run after it has been charged.
+
+      **Option 3: USB-C PD power**
+      - You can power the light through the **USB Type-C port** using a compatible PD power source.
+      - The **PavoTube II 15C** requires **PD3.0 / 20W or above**.
+      - The **PavoTube II 30C** requires **PD3.0 / 30W or above**.
+
+      After power is connected, toggle the **power switch** to turn the fixture on.
+
+  - title: Mounting and placement
+    images: []
+    body: |
+      The light can be used in several ways depending on your setup.
+
+      **Standing on its own**
+      The tube can be placed horizontally or vertically using its built-in end supports.
+
+      **Hanging**
+      - The fixing hole can be used with a steel wire rope to hang the fixture safely.
+      - Follow the kit's hanging instructions and ensure the mounting point is secure.
+
+      **Light stand mounting**
+      - The included clip has **two 1/4-20" screw holes**.
+      - Mount the clip to a light stand directly, or attach it to a ball head first, then mount it on a stand.
+      - Tighten all knobs properly so the tube does not rotate or slip.
+
+  - title: Basic operation and control flow
+    images: []
+    body: |
+      - Turn the **power switch** on.
+      - Press the **MODE** button to cycle through **CCT**, **HSI**, **EFFECT**, and **MENU**.
+      - Rotate the **function knob** to choose which parameter you want to adjust.
+      - Rotate the **dimmer knob** to change the value of that parameter.
+
+      When the light is unlocked, pressing the **dimmer knob** can turn the light output off and back on without fully shutting down the fixture. This is useful when you want to black out the light temporarily but keep your settings.
+
+  - title: CCT mode
+    images: []
+    body: |
+      - Press the **MODE** button until the display shows **CCT**.
+      - In **CCT mode**, rotate the **function knob** to choose between **DIM**, **CCT**, or **G/M**.
+      - Then rotate the **dimmer knob** to change the selected value.
+
+      **DIM:** 0% to 100%
+      **CCT:** 2700K to 7500K
+      **G/M:** -150 to +150
+
+      Use **CCT mode** when you want normal white light, either warmer or cooler, and when you need to match room lighting or daylight.
+
+  - title: HSI mode
+    images: []
+    body: |
+      - Press the **MODE** button until the display shows **HSI**.
+      - In **HSI mode**, rotate the **function knob** to choose **DIM**, **HUE**, or **SAT**.
+      - Then rotate the **dimmer knob** to adjust the selected value.
+
+      **DIM:** 0% to 100%
+      **HUE:** 0 to 360
+      **SAT:** 0 to 100
+
+      Use **HSI mode** when you want colored light instead of white light.
+
+  - title: EFFECT mode
+    images: []
+    body: |
+      - Press the **MODE** button until the display shows **EFFECT**.
+      - Rotate the **function knob** to **FX**, then rotate the **dimmer knob** to choose the effect.
+
+      Built-in effects include:
+      **HUE LOOP**
+      **CCT LOOP**
+      **INT LOOP**
+      **CCT FLASH**
+      **HUE FLASH**
+      **CCT PULSE**
+      **HUE PULSE**
+      **STORM AUTO**
+      **POLICE CAR**
+      **TV**
+      **PAPARAZZI**
+      **CANDLE/FIRE**
+      **DISCO**
+      **BAD BULB**
+      **FIREWORK**
+      **EXPLOSION AUTO**
+      **WELDING**
+
+      After choosing an effect, rotate the **function knob** to move between that effect's adjustable parameters, then rotate the **dimmer knob** to change them.
+
+  - title: MENU functions
+    images: []
+    body: |
+      - Press the **MODE** button until the display shows **MENU**.
+      - Rotate the **function knob** to choose a menu item.
+      - Rotate the **dimmer knob** to change the selected setting, or press the **function knob** when the menu item requires confirmation.
+
+      Main menu items include:
+      **CHANNEL**
+      **BLUETOOTH**
+      **DMX MODE**
+      **DMX REDUCED CHANNELS**
+      **DMX DIMMING CURVE**
+      **DMX SMOOTHING**
+      **WIRELESS DMX**
+      **WIRELESS PROTOCOL**
+      **FIRMWARE UPDATE**
+      **LANGUAGE**
+      **VERSION**
+
+  - title: Bluetooth reset
+    images: []
+    body: |
+      - Go to **MENU**.
+      - Rotate the **function knob** to **BLUETOOTH**.
+      - Press the **function knob** to enter the Bluetooth reset screen.
+      - Rotate the **function knob** to **RESET**.
+      - Press the **function knob** again to confirm.
+
+      Use this if the light is not pairing properly or if you need to clear the previous Bluetooth connection.
+
+  - title: Wireless and remote control options
+    images: []
+    body: |
+      The PavoTube II 15C / 30C supports:
+      **Bluetooth**
+      **2.4G remote control**
+      **DMX/RDM**
+      **Wireless DMX**
+
+      Before using **2.4G**, **DMX**, or **RDM**, make sure the correct **channel** is set in the menu.
+
+      For **wireless protocol**, go to **MENU > WIRELESS PROTOCOL** and choose the version you need:
+      **V2.0** when using **WS-RC-C2**
+      **V1.0** when using certain other Nanlite remote controllers
+
+      If **Wireless DMX** is turned on, you can also set the **wireless DMX universe** from **A to H**. Note that regular remote control and transmitter box use cannot be combined with wireless DMX at the same time.
+
+  - title: DMX setup
+    images: []
+    body: |
+      To use DMX, connect the light fixture to a DMX or RDM console using the correct DMX adapter cable.
+      The DMX adapter cable is sold separately.
+
+      In the **MENU**, you can configure:
+      **Channel**
+      **DMX mode**
+      **Reduced channels**
+      **Dimming curve**
+      **DMX smoothing**
+      **Wireless DMX**
+
+      If the fixture is the last unit in a DMX chain, connect a **DMX terminator** to the **DMX OUT** of the last fixture to reduce signal interference.
+
+  - title: Firmware update
+    images: []
+    body: |
+      - Insert a USB drive containing the latest firmware file into the fixture.
+      - Go to **MENU**.
+      - Rotate the **function knob** to **FIRMWARE UPDATE**.
+      - Press the **function knob** to open the update screen.
+      - Rotate the **function knob** to **UPDATE**.
+      - Press the **function knob** again to confirm.
+
+      When the update is complete, the screen will show **FIRMWARE UPDATED**.
+
+  - title: Language and version
+    images: []
+    body: |
+      To change the menu language, go to **MENU > LANGUAGE** and use the **dimmer knob** to choose the available language option.
+      
+      To check the current firmware version, go to **MENU > VERSION**.
+
+  - title: Locking the controls
+    images: []
+    body: |
+      - Long press the **LOCK** button for about **3 seconds** to lock all functions.
+      - While locked, changing knobs or pressing controls will not alter the current settings.
+      - Long press the **LOCK** button again to unlock the fixture.
+
+      Use this when the light is already set and you do not want settings changed accidentally during a shoot.
+
+  - title: Quick troubleshooting
+    images: []
+    body: |
+      **The light will not turn on**
+      - Check whether the power adapter connection is loose.
+      - Check whether the input voltage is within the required range.
+      - If using USB-C PD, confirm the adapter meets the required PD standard.
+
+      **DMX control is not working**
+      - Check whether the DMX channel is set correctly.
+      Check whether the DMX cable is connected properly and is not damaged.
+
+      **The display is on but there is no light output**
+      - Check whether **DIM** is set to **0%**.
+      - Check whether the current effect mode is causing the light to appear off at that moment, such as storm or welding behavior.
+
+      **The fixture is flickering**
+      - Check whether the surrounding area is too hot.
+      - Make sure the fixture is not unintentionally left in **EFFECT** mode.

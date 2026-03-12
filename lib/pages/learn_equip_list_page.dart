@@ -31,7 +31,11 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
   void initState() {
     super.initState();
     _allItems = DataRepository().getAllEquipment();
-    _filteredItems = List.from(_allItems);
+
+    _filteredItems = _allItems.where((item) {
+      return item.description.trim().isNotEmpty || item.sections.isNotEmpty;
+    }).toList();
+
     _allCategories = _allItems.map((e) => e.category).toSet().toList();
     _allBrands = _allItems.map((e) => e.brand).toSet().toList();
     _searchController.addListener(_updateFilters);
@@ -45,9 +49,12 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
         final matchesCategory =
             _selectedCategories.isEmpty ||
             _selectedCategories.contains(item.category);
+        final hasContent =
+            item.description.trim().isNotEmpty || item.sections.isNotEmpty;
         final matchesBrand =
             _selectedBrands.isEmpty || _selectedBrands.contains(item.brand);
-        return matchesQuery && matchesCategory && matchesBrand;
+
+        return matchesQuery && matchesCategory && matchesBrand && hasContent;
       }).toList();
     });
   }
