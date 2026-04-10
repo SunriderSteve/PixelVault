@@ -5,8 +5,8 @@ on:
   push:
     branches: [main]
 
-#env:
-  #FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
   contents: read # default, needed to checkout code

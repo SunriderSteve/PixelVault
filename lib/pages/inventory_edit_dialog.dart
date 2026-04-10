@@ -136,10 +136,10 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.grey.shade900.withOpacity(0.85), // Dark glass base
+              color: Colors.grey.shade900.withValues(alpha:0.85), // Dark glass base
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: Colors.white.withOpacity(0.1),
+                color: Colors.white.withValues(alpha:0.1),
                 width: 1,
               ),
             ),
@@ -164,7 +164,7 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
                   widget.equipmentName,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha:0.7),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -186,7 +186,7 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
                       onPressed: () => Navigator.of(context).pop(), // Cancel
                       child: Text(
                         'Cancel',
-                        style: TextStyle(color: Colors.white.withOpacity(0.6)),
+                        style: TextStyle(color: Colors.white.withValues(alpha:0.6)),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -267,7 +267,7 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
+            color: Colors.white.withValues(alpha:0.05),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -294,9 +294,6 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
                     contentPadding: EdgeInsets.zero,
                   ),
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  onChanged: (val) {
-                    // Logic handled on save or button press; text field is free form until then
-                  },
                 ),
               ),
               _CircleIconButton(
@@ -335,9 +332,9 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             hintText: 'e.g. A1, Shelf B...',
-            hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
+            hintStyle: TextStyle(color: Colors.white.withValues(alpha:0.4)),
             filled: true,
-            fillColor: Colors.white.withOpacity(0.05),
+            fillColor: Colors.white.withValues(alpha:0.05),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
@@ -394,7 +391,7 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha:0.05),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -428,7 +425,7 @@ class _CircleIconButton extends StatelessWidget {
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withOpacity(0.3)),
+            border: Border.all(color: Colors.white.withValues(alpha:0.3)),
           ),
           child: Icon(icon, color: Colors.white),
         ),
@@ -461,7 +458,7 @@ class _DiffRow extends StatelessWidget {
                 children: [
                   TextSpan(
                     text: '$label: ',
-                    style: TextStyle(color: Colors.white.withOpacity(0.6)),
+                    style: TextStyle(color: Colors.white.withValues(alpha:0.6)),
                   ),
                   TextSpan(
                     text: oldValue,

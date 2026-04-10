@@ -103,23 +103,25 @@ class InventoryOverlayClient {
 
   /// update one equipment entry in overlay gist
   /// pass only fields you want to change
-  Future<void> updateEntry(
+  ///
+  /// returns the authoritative post-write overlay map parsed from the PATCH
+  /// response so callers can apply ground truth without a second fetch
+  Future<Map<String, Map<String, dynamic>>> updateEntry(
     String equipmentId, {
     int? quantity,
     String? cabinet,
     required String token, // GitHub PAT with gist scope
   }) async {
-    if (quantity == null && cabinet == null) return; // nothing to change
-
-    // read latest raw to avoid clobber
-    final bust = DateTime.now().millisecondsSinceEpoch;
-    final rawUri = Uri.parse('${admin.gistRawUrl}?t=$bust');
-    final getResp = await http.get(rawUri);
-    if (getResp.statusCode ~/ 100 != 2) {
-      throw Exception('overlay read failed: ${getResp.statusCode}');
+    if (quantity == null && cabinet == null) {
+      // nothing to change — hand back current state via a fresh API read so
+      // the caller doesn't end up with a stale view
+      return _readViaApi(token);
     }
 
-    final current = _overlayYamlToMap(getResp.body);
+    // read pre-write baseline via the authenticated API rather than the raw
+    // CDN — the raw endpoint serves cached content and can miss a concurrent
+    // admin's edit, causing us to clobber their change on write
+    final current = await _readViaApi(token);
 
     // merge minimal change
     final entry = Map<String, dynamic>.from(current[equipmentId] ?? const {});
@@ -151,23 +153,49 @@ class InventoryOverlayClient {
         'overlay write failed: ${patchResp.statusCode} ${patchResp.body}',
       );
     }
+
+    // GitHub's PATCH response echoes the updated gist including file content,
+    // so we can return ground truth directly — no extra fetch, no CDN lag
+    try {
+      final respJson = jsonDecode(patchResp.body) as Map<String, dynamic>;
+      final files = respJson['files'] as Map<String, dynamic>?;
+      final f = files?[admin.gistFile] as Map<String, dynamic>?;
+      final content = f?['content'] as String?;
+      if (content != null) return _parseYaml(content);
+    } catch (e) {
+      debugPrint('overlay patch response parse failed: $e');
+    }
+
+    // fallback: we know what we just wrote
+    return current;
   }
 
-  /// parse overlay yaml to map id -> {quantity, cabinet}
-  Map<String, Map<String, dynamic>> _overlayYamlToMap(String s) {
-    final y = loadYaml(s);
-    if (y is! YamlMap) return {};
-    final out = <String, Map<String, dynamic>>{};
-    for (final e in y.entries) {
-      final id = e.key?.toString() ?? '';
-      final val = e.value;
-      if (id.isEmpty || val is! YamlMap) continue;
-      out[id] = {
-        'quantity': (val['quantity'] as num?)?.toInt(),
-        'cabinet': val['cabinet'] as String?,
-      };
+  /// read overlay map via authenticated GitHub API (fresh, bypasses CDN)
+  Future<Map<String, Map<String, dynamic>>> _readViaApi(String token) async {
+    final id = admin.gistId.trim();
+    final file = admin.gistFile.trim();
+    if (id.isEmpty) {
+      throw Exception('gistId missing in admin config');
     }
-    return out;
+
+    final uri = Uri.parse('https://api.github.com/gists/$id');
+    final resp = await http.get(
+      uri,
+      headers: {
+        'Authorization': 'token $token',
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    );
+    if (resp.statusCode ~/ 100 != 2) {
+      throw Exception('overlay read failed: ${resp.statusCode}');
+    }
+    final body = jsonDecode(resp.body) as Map<String, dynamic>;
+    final files = body['files'] as Map<String, dynamic>?;
+    final f = files?[file] as Map<String, dynamic>?;
+    final content = f?['content'] as String?;
+    if (content == null) return {};
+    return _parseYaml(content);
   }
 
   /// write stable minimal yaml from overlay map

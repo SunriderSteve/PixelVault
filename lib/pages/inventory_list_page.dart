@@ -49,10 +49,14 @@ class _InventoryListPageState extends State<InventoryListPage> {
     super.initState();
     final repo = DataRepository();
     _all = List.from(repo.getAllEquipment());
-    _filtered = List.from(_all);
 
     _allCategories = _all.map((e) => e.category).toSet().toList()..sort();
     _allBrands = _all.map((e) => e.brand).toSet().toList()..sort();
+
+    // Initial filtered list is empty query + no filters, sorted A–Z to match
+    // the default `_sortAsc = true` state (previously rendered unsorted).
+    _filtered = List.of(_all)
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
     _search.addListener(_applyFilters);
     repo.overlayEpoch.addListener(_onOverlayChanged);
@@ -66,12 +70,12 @@ class _InventoryListPageState extends State<InventoryListPage> {
   }
 
   void _onOverlayChanged() {
+    if (!mounted) return;
     final fresh = DataRepository().getAllEquipment();
-    setState(() {
-      _all.clear();
-      _all.addAll(fresh);
-      _applyFilters();
-    });
+    _all
+      ..clear()
+      ..addAll(fresh);
+    _applyFilters(); // already wraps its work in setState
   }
 
   void _applyFilters() {
@@ -176,7 +180,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Changes saved to Gist!')));
+        ).showSnackBar(const SnackBar(content: Text('Changes saved!')));
       }
     } catch (e) {
       if (mounted) {
@@ -573,7 +577,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
                     crossAxisCount: cols,
                     mainAxisSpacing: 16,
                     crossAxisSpacing: 16,
-                    childAspectRatio: 4 / 3,
+                    childAspectRatio: 1,
                   ),
                   delegate: SliverChildBuilderDelegate((context, index) {
                     final item = _filtered[index];

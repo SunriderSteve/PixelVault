@@ -36,6 +36,21 @@ class DataRepository {
   Timer? _overlayTimer; // periodic overlay refresher
   bool _fetchingOverlay = false; // prevents overlap
 
+  // ---- post-write stale-poll guard ----
+  // After a successful write we record the expected post-write values per
+  // equipment id here. On each subsequent poll, any id present in this map
+  // is checked against the fetched value:
+  //   - match   -> CDN has caught up, drop the pending entry
+  //   - mismatch -> fetched data is stale (raw-gist CDN serves pre-write
+  //                 content for a while even with cache-busting), so we
+  //                 overwrite the fetched entry with the pending value
+  //                 before it reaches _applyOverlay, preventing the UI
+  //                 from flickering back to the old state
+  // Safety: a TTL bounds each entry so a permanently-diverging value (e.g.
+  // a concurrent edit by another admin) eventually wins.
+  final Map<String, _PendingWrite> _pendingWrites = {};
+  static const Duration _pendingWriteTtl = Duration(seconds: 60);
+
   // ---- overlay change signal ----
   final ValueNotifier<int> overlayEpoch = ValueNotifier<int>(
     0,
@@ -43,16 +58,6 @@ class DataRepository {
 
   // expose overlay entry for a given equipment id
   Map<String, dynamic>? getOverlayFor(String id) => _overlay[id];
-
-  // restart periodic overlay polling from now (uses admin.pollSeconds)
-  void _resetOverlayPollingTimer() {
-    _overlayTimer?.cancel();
-    final seconds = (_admin?.pollSeconds ?? 5);
-    _overlayTimer = Timer.periodic(Duration(seconds: seconds), (_) {
-      // safe to call async without await in a timer
-      fetchOverlayOnce();
-    });
-  }
 
   // ========== init pipeline ==========
   Future<void> _init() async {
@@ -131,6 +136,13 @@ class DataRepository {
           .fetch(); // may return null if unavailable
       if (map == null) return false;
 
+      // Reject stale entries for ids we recently wrote to — the raw-gist
+      // CDN can keep serving pre-write content for a while. This mutates
+      // `map` in place so _applyOverlay sees only values we trust.
+      if (_pendingWrites.isNotEmpty) {
+        _reconcilePendingWrites(map);
+      }
+
       _applyOverlay(map);
 
       // 🔔 notify UI that overlay changed (InventoryListPage listens to this)
@@ -143,6 +155,43 @@ class DataRepository {
     } finally {
       _fetchingOverlay = false;
     }
+  }
+
+  /// merge pending post-write expectations into an incoming poll result.
+  ///
+  /// for each pending id we:
+  ///   - drop it if the TTL has elapsed (safety net for a permanently
+  ///     diverging value, e.g. another admin edited the same id)
+  ///   - drop it if the fetched value matches the expected value (the CDN
+  ///     has caught up, the write is confirmed)
+  ///   - otherwise overwrite the fetched entry with the expected value so
+  ///     _applyOverlay doesn't revert the UI to stale data
+  void _reconcilePendingWrites(Map<String, Map<String, dynamic>> fetched) {
+    final now = DateTime.now();
+    final toDrop = <String>[];
+    _pendingWrites.forEach((id, pending) {
+      if (now.difference(pending.writtenAt) > _pendingWriteTtl) {
+        toDrop.add(id);
+        return;
+      }
+      final fetchedEntry = fetched[id];
+      if (fetchedEntry != null &&
+          _overlayEntriesEqual(fetchedEntry, pending.expected)) {
+        toDrop.add(id);
+      } else {
+        fetched[id] = Map<String, dynamic>.from(pending.expected);
+      }
+    });
+    for (final id in toDrop) {
+      _pendingWrites.remove(id);
+    }
+  }
+
+  bool _overlayEntriesEqual(
+    Map<String, dynamic> a,
+    Map<String, dynamic> b,
+  ) {
+    return a['quantity'] == b['quantity'] && a['cabinet'] == b['cabinet'];
   }
 
   void _startOverlayPolling() {
@@ -183,42 +232,78 @@ class DataRepository {
       throw StateError('missing access token in admin_config.yaml');
     }
 
-    // snapshot for revert on failure
-    final prev = Map<String, dynamic>.from(_overlay[equipmentId] ?? const {});
+    // snapshot for revert on failure — capture BOTH the overlay map entry
+    // and the equipment cache entry. The UI reads from _equipment, so both
+    // have to be kept in sync or the optimistic update is invisible.
+    final prevOverlayEntry = _overlay[equipmentId] == null
+        ? null
+        : Map<String, dynamic>.from(_overlay[equipmentId]!);
+    final prevEquipment = _equipment[equipmentId];
 
-    // cancel timer to avoid race where a poll grabs stale values mid-write
+    // cancel timer so an in-flight stale poll response can't clobber the
+    // fresh state we're about to write
     _overlayTimer?.cancel();
 
-    // optimistic local update immediately (cosmetic until next poll)
-    final next = Map<String, dynamic>.from(prev);
-    if (quantity != null) next['quantity'] = quantity;
-    if (cabinet != null) next['cabinet'] = cabinet;
-    _overlay[equipmentId] = next;
-    overlayEpoch.value++; // notify listeners (inventory page will re-render)
+    // optimistic local update: write both the overlay map AND the equipment
+    // cache. Previously only _overlay was touched, but InventoryListPage
+    // rebuilds from getAllEquipment() (which reads _equipment), so the user
+    // kept seeing stale values until the next poll landed.
+    final nextOverlay = Map<String, dynamic>.from(prevOverlayEntry ?? const {});
+    if (quantity != null) nextOverlay['quantity'] = quantity;
+    if (cabinet != null) nextOverlay['cabinet'] = cabinet;
+    _overlay[equipmentId] = nextOverlay;
+
+    if (prevEquipment != null) {
+      _equipment[equipmentId] = prevEquipment.copyWith(
+        quantity: quantity,
+        cabinet: cabinet,
+      );
+    }
+    overlayEpoch.value++; // notify listeners (inventory page re-renders)
 
     // write to gist
     try {
-      await client.updateEntry(
+      final fresh = await client.updateEntry(
         equipmentId,
         quantity: quantity,
         cabinet: cabinet,
         token: token,
       );
+
+      // PATCH response echoes the authoritative post-write gist, so apply it
+      // directly — this bypasses the raw-gist CDN that otherwise serves stale
+      // content for some time after a write.
+      _applyOverlay(fresh);
+      overlayEpoch.value++;
+
+      // Record the post-write state as pending. Subsequent polls that come
+      // back with stale CDN data will be reconciled against this value in
+      // _reconcilePendingWrites, preventing a revert-then-recover flicker.
+      final confirmed = fresh[equipmentId];
+      if (confirmed != null) {
+        _pendingWrites[equipmentId] = _PendingWrite(
+          expected: Map<String, dynamic>.from(confirmed),
+          writtenAt: DateTime.now(),
+        );
+      } else {
+        _pendingWrites.remove(equipmentId);
+      }
     } catch (e) {
       // revert local optimistic change on failure
-      if (prev.isEmpty) {
+      if (prevOverlayEntry == null) {
         _overlay.remove(equipmentId);
       } else {
-        _overlay[equipmentId] = prev;
+        _overlay[equipmentId] = prevOverlayEntry;
       }
-      overlayEpoch.value++; // notify revert
-      // restart polling even on failure
-      _resetOverlayPollingTimer();
+      if (prevEquipment != null) {
+        _equipment[equipmentId] = prevEquipment;
+      }
+      overlayEpoch.value++;
+      _startOverlayPolling();
       rethrow;
     }
 
-    // success: do NOT fetch immediately; let polling pull the ground truth later
-    _resetOverlayPollingTimer();
+    _startOverlayPolling();
   }
 
   // ========== public queries ==========
@@ -250,4 +335,12 @@ class DataRepository {
     _overlayTimer?.cancel();
     _overlayTimer = null;
   }
+}
+
+/// expected post-write overlay entry + when it was written, used to guard
+/// against stale poll responses clobbering a just-confirmed value
+class _PendingWrite {
+  final Map<String, dynamic> expected;
+  final DateTime writtenAt;
+  _PendingWrite({required this.expected, required this.writtenAt});
 }
