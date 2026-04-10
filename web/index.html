@@ -31,8 +31,138 @@
 
   <title>pixel_vault</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background-color: #001F54;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    #pv-loading {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg,
+        #001F54 0%,
+        #0047BB 30%,
+        #FF8200 70%,
+        #E80029 100%);
+      background-size: 200% 200%;
+      animation: pv-bg-shift 8s ease-in-out infinite;
+      transition: opacity 0.6s ease-out;
+    }
+
+    #pv-loading.pv-hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    @keyframes pv-bg-shift {
+      0%, 100% { background-position: 0% 50%; }
+      50%      { background-position: 100% 50%; }
+    }
+
+    .pv-blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.45;
+      pointer-events: none;
+    }
+    .pv-blob-1 {
+      width: 420px; height: 420px;
+      top: -140px; left: -120px;
+      background: #0047BB;
+      animation: pv-float 6s ease-in-out infinite;
+    }
+    .pv-blob-2 {
+      width: 360px; height: 360px;
+      bottom: -120px; right: -120px;
+      background: #FF8200;
+      animation: pv-float 7s ease-in-out infinite reverse;
+    }
+
+    @keyframes pv-float {
+      0%, 100% { transform: translate(0, 0); }
+      50%      { transform: translate(30px, 20px); }
+    }
+
+    .pv-center {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 1;
+    }
+
+    .pv-spinner {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: 4px solid rgba(255, 255, 255, 0.18);
+      border-top-color: #ffffff;
+      animation: pv-spin 1s linear infinite;
+    }
+
+    @keyframes pv-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .pv-title {
+      margin-top: 28px;
+      color: #ffffff;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);
+      animation: pv-pulse 2s ease-in-out infinite;
+    }
+
+    .pv-subtitle {
+      margin-top: 10px;
+      color: rgba(255, 255, 255, 0.75);
+      font-size: 14px;
+      letter-spacing: 1px;
+    }
+
+    @keyframes pv-pulse {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.65; }
+    }
+  </style>
 </head>
 <body>
+  <div id="pv-loading">
+    <div class="pv-blob pv-blob-1"></div>
+    <div class="pv-blob pv-blob-2"></div>
+    <div class="pv-center">
+      <div class="pv-spinner"></div>
+      <div class="pv-title">PixelVault</div>
+      <div class="pv-subtitle">Loading...</div>
+    </div>
+  </div>
+
+  <script>
+    // Remove the loading screen once Flutter has rendered its first frame.
+    window.addEventListener('flutter-first-frame', function () {
+      var loader = document.getElementById('pv-loading');
+      if (!loader) return;
+      loader.classList.add('pv-hidden');
+      // Fully remove from DOM after the fade-out transition finishes.
+      setTimeout(function () {
+        if (loader && loader.parentNode) {
+          loader.parentNode.removeChild(loader);
+        }
+      }, 700);
+    });
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

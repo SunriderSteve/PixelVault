@@ -432,8 +432,8 @@ class _ImageCarouselState extends State<_ImageCarousel> {
                 margin: const EdgeInsets.symmetric(horizontal: 4.0),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(
-                    _current == entry.key ? 0.9 : 0.3,
+                  color: Colors.white.withValues(
+                    alpha: _current == entry.key ? 0.9 : 0.3,
                   ),
                 ),
               ),
@@ -511,17 +511,8 @@ class _RelatedGrid extends StatelessWidget {
 class _StyledText extends StatelessWidget {
   final String text;
   final TextStyle? style;
-  final TextAlign textAlign;
-  final int? maxLines;
-  final TextOverflow? overflow;
 
-  const _StyledText({
-    required this.text,
-    this.style,
-    this.textAlign = TextAlign.start,
-    this.maxLines,
-    this.overflow,
-  });
+  const _StyledText({required this.text, this.style});
 
   @override
   Widget build(BuildContext context) {
@@ -548,7 +539,7 @@ class _StyledText extends StatelessWidget {
             Shadow(
               offset: const Offset(1.0, 1.0),
               blurRadius: 2.0,
-              color: Colors.black.withOpacity(0.8),
+              color: Colors.black.withValues(alpha: 0.8),
             ),
           ],
         ) ??
@@ -621,9 +612,7 @@ class _StyledText extends StatelessWidget {
 
     return Text.rich(
       TextSpan(style: outlineStyle, children: children),
-      textAlign: textAlign,
-      maxLines: maxLines,
-      overflow: overflow,
+      textAlign: TextAlign.start,
     );
   }
 }
