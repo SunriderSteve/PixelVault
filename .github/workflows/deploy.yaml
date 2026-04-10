@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
 
+#env:
+  #FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 permissions:
   contents: read # default, needed to checkout code
   pages: write # needed to upload/publish Pages
@@ -16,7 +19,7 @@ jobs:
 
     steps:
       # 1. Check out the repo
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # 2. Install Flutter
       - uses: subosito/flutter-action@v2

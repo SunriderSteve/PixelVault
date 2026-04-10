@@ -573,7 +573,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
                     crossAxisCount: cols,
                     mainAxisSpacing: 16,
                     crossAxisSpacing: 16,
-                    childAspectRatio: 3 / 2,
+                    childAspectRatio: 4 / 3,
                   ),
                   delegate: SliverChildBuilderDelegate((context, index) {
                     final item = _filtered[index];
@@ -822,8 +822,8 @@ class _GlassInventoryCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: isAvailable
-                        ? Colors.green.withValues(alpha: 0.3)
-                        : Colors.red.withValues(alpha: 0.3),
+                        ? Colors.green.withValues(alpha: 0.5)
+                        : Colors.red.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: isAvailable
@@ -852,7 +852,7 @@ class _GlassInventoryCard extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.3),
+                      color: Colors.orange.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: Colors.orange.withValues(alpha: 0.5),
