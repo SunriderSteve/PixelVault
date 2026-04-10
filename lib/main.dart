@@ -20,7 +20,6 @@ class PixelVaultApp extends StatelessWidget {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'PixelVault',
-      // If your router is named `appRouter`, use `routerConfig: appRouter`
       routerConfig: appRouter,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0047BB)),

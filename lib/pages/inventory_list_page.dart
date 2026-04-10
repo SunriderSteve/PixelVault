@@ -3,10 +3,15 @@ import 'dart:ui'; // For ImageFilter
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_avif/flutter_avif.dart';
+import 'package:web/web.dart' as web;
 
 import '../services/data_repository.dart';
 import '../models/equipment_model.dart'; // Equipment
 import 'inventory_edit_dialog.dart';
+
+// Key used to persist admin mode in the browser's localStorage so that
+// admin login survives page reloads and full browser restarts.
+const String _adminStorageKey = 'pv_admin_mode';
 
 class InventoryListPage extends StatefulWidget {
   const InventoryListPage({super.key});
@@ -29,8 +34,9 @@ class _InventoryListPageState extends State<InventoryListPage> {
   final Set<String> _selectedCategories = {};
   final Set<String> _selectedBrands = {};
 
-  // admin mode
-  bool _isAdmin = false;
+  // admin mode — restored from localStorage so admin sessions persist
+  // across page reloads / browser restarts.
+  bool _isAdmin = web.window.localStorage.getItem(_adminStorageKey) == '1';
 
   // data
   late final List<Equipment> _all; // All items from repo
@@ -138,6 +144,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
 
       if (shouldExit == true) {
         setState(() => _isAdmin = false);
+        web.window.localStorage.removeItem(_adminStorageKey);
       }
       return;
     }
@@ -149,6 +156,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
     ).then((success) {
       if (success == true) {
         setState(() => _isAdmin = true);
+        web.window.localStorage.setItem(_adminStorageKey, '1');
         if (mounted) {
           ScaffoldMessenger.of(
             context,
