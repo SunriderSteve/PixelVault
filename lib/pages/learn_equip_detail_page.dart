@@ -1,11 +1,27 @@
-import 'dart:ui'; // For ImageFilter
+// PixelVault — Equipment guide detail page.
+//
+// Shows the full guide for a single piece of equipment, loaded by id
+// from [DataRepository] in initState and cached in [_equip]. The page
+// lays out, top to bottom:
+//
+//   • Title
+//   • Cover image or multi-image [_ImageCarousel]
+//   • Description ("About") in a glass card
+//   • Zero or more content sections, each in its own glass card
+//   • A "Related equipment" grid when the YAML declares related ids
+//
+// The body text supports a tiny inline markdown subset handled by
+// [_StyledText]: `**bold**`, `*italic*`, and `[label](url)` links.
+
+import 'dart:ui'; // For ImageFilter used by BackdropFilter.
+
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_avif/flutter_avif.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../services/data_repository.dart';
 import '../models/equipment_model.dart';
+import '../services/data_repository.dart';
 
 class EquipDetailPage extends StatefulWidget {
   final String itemID;
@@ -16,13 +32,17 @@ class EquipDetailPage extends StatefulWidget {
 }
 
 class _LearnEquipDetailPageState extends State<EquipDetailPage> {
+  /// The resolved equipment record for [widget.itemID]. Looked up once
+  /// in [initState] so the build method stays pure.
   late final Equipment _equip;
 
   @override
   void initState() {
     super.initState();
-    final all = DataRepository().getAllEquipment();
-    _equip = all.firstWhere(
+    // Throws on missing id rather than silently rendering a blank page —
+    // routing should never produce an unknown id, so surface the bug
+    // loudly if it happens.
+    _equip = DataRepository().getAllEquipment().firstWhere(
       (e) => e.id == widget.itemID,
       orElse: () => throw Exception('Equipment not found: ${widget.itemID}'),
     );
@@ -36,24 +56,24 @@ class _LearnEquipDetailPageState extends State<EquipDetailPage> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 1. Background Gradient
+          // ── 1. Background gradient ──────────────────────────────
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color(0xFF001F54), // Dark Blue
-                  Color(0xFF0047BB), // NLB Blue
-                  Color(0xFFFF8200), // NLB Orange
-                  Color(0xFFE80029), // NLB Red
+                  Color(0xFF001F54),
+                  Color(0xFF0047BB),
+                  Color(0xFFFF8200),
+                  Color(0xFFE80029),
                 ],
                 stops: [0.0, 0.3, 0.7, 1.0],
               ),
             ),
           ),
 
-          // 2. Background Blobs
+          // ── 2. Ambient blob glows ───────────────────────────────
           Positioned(
             top: -150,
             left: -100,
@@ -91,10 +111,10 @@ class _LearnEquipDetailPageState extends State<EquipDetailPage> {
             ),
           ),
 
-          // 3. Content
+          // ── 3. Foreground content ──────────────────────────────
           CustomScrollView(
             slivers: [
-              // Glass AppBar
+              // Frosted pinned app bar showing the guide name.
               SliverAppBar(
                 leading: IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -128,7 +148,9 @@ class _LearnEquipDetailPageState extends State<EquipDetailPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Title
+                        // Large title — duplicates the AppBar title so
+                        // users scrolling mid-page still see it clearly
+                        // above the cover image.
                         Text(
                           _equip.name,
                           style: Theme.of(context).textTheme.headlineSmall
@@ -139,7 +161,8 @@ class _LearnEquipDetailPageState extends State<EquipDetailPage> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Cover Image / Carousel (Centered)
+                        // Cover image(s) — carousel when the YAML lists
+                        // more than one cover, otherwise a single image.
                         if (_equip.coverImages.length > 1)
                           Center(
                             child: _ImageCarousel(
@@ -165,7 +188,7 @@ class _LearnEquipDetailPageState extends State<EquipDetailPage> {
 
                         const SizedBox(height: 24),
 
-                        // Description
+                        // Description card (only when non-empty).
                         if (_equip.description.isNotEmpty)
                           _GlassContainer(
                             child: _DescriptionTile(text: _equip.description),
@@ -173,13 +196,14 @@ class _LearnEquipDetailPageState extends State<EquipDetailPage> {
 
                         const SizedBox(height: 16),
 
-                        // Sections
+                        // Content sections, each in its own glass card.
                         for (final s in _equip.sections) ...[
                           _GlassContainer(child: _EquipSectionTile(section: s)),
                           const SizedBox(height: 16),
                         ],
 
-                        // Related
+                        // Related equipment grid (only when the YAML
+                        // declares related ids).
                         if (_equip.related.isNotEmpty)
                           _GlassContainer(
                             child: ExpansionTile(
@@ -214,6 +238,9 @@ class _LearnEquipDetailPageState extends State<EquipDetailPage> {
   }
 }
 
+/// Rounded, blurred, semi-transparent container used to host each
+/// content block. The blur is what gives the card the "frosted glass"
+/// look over the gradient background.
 class _GlassContainer extends StatelessWidget {
   final Widget child;
   const _GlassContainer({required this.child});
@@ -240,6 +267,9 @@ class _GlassContainer extends StatelessWidget {
   }
 }
 
+/// Expansion tile rendering the equipment's "About" description text.
+/// Starts expanded because the description is the primary content on
+/// most guides.
 class _DescriptionTile extends StatelessWidget {
   final String text;
   const _DescriptionTile({required this.text});
@@ -277,10 +307,15 @@ class _DescriptionTile extends StatelessWidget {
   }
 }
 
+/// Expansion tile for a single [EquipSection]. Renders the section's
+/// images (carousel or single) above the body text. Starts collapsed
+/// so long guides don't dump everything at once.
 class _EquipSectionTile extends StatelessWidget {
   final EquipSection section;
   const _EquipSectionTile({required this.section});
 
+  /// Shared cap for inline section images so a huge asset can't blow
+  /// out the layout; the image still scales down to fit naturally.
   static const double _maxImageHeight = 360;
 
   @override
@@ -336,6 +371,9 @@ class _EquipSectionTile extends StatelessWidget {
   }
 }
 
+/// PageView-backed image carousel with prev/next arrows and tappable
+/// dot indicators. Used by both the cover section and the per-section
+/// tiles whenever the guide lists more than one image.
 class _ImageCarousel extends StatefulWidget {
   final List<String> images;
   final double height;
@@ -347,15 +385,23 @@ class _ImageCarousel extends StatefulWidget {
 }
 
 class _ImageCarouselState extends State<_ImageCarousel> {
-  final _controller = PageController();
+  final PageController _controller = PageController();
   int _current = 0;
 
+  /// Jump to a specific page — used by the dot indicators below the
+  /// carousel so users can tap a dot to land on that image directly.
   void _goToPage(int index) {
     _controller.animateToPage(
       index,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
@@ -373,7 +419,6 @@ class _ImageCarouselState extends State<_ImageCarousel> {
                 onPageChanged: (idx) => setState(() => _current = idx),
                 itemBuilder: (context, index) {
                   return Center(
-                    // Center image within page view
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: AvifImage.asset(
@@ -384,7 +429,9 @@ class _ImageCarouselState extends State<_ImageCarousel> {
                   );
                 },
               ),
-              // Navigation Buttons
+
+              // Prev / next chevrons — only rendered when there is
+              // actually a page to move to in that direction.
               if (_current > 0)
                 Positioned(
                   left: 8,
@@ -420,7 +467,9 @@ class _ImageCarouselState extends State<_ImageCarousel> {
           ),
         ),
         const SizedBox(height: 12),
-        // Interactive Dots
+
+        // Tappable page dots. The current page's dot is solid; the
+        // rest render at reduced opacity.
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: widget.images.asMap().entries.map((entry) {
@@ -445,23 +494,29 @@ class _ImageCarouselState extends State<_ImageCarousel> {
   }
 }
 
+/// Small responsive grid of related-equipment thumbnails. Resolves the
+/// id list against the full equipment catalogue so unknown ids are
+/// silently skipped rather than crashing the page.
 class _RelatedGrid extends StatelessWidget {
   final List<String> ids;
   const _RelatedGrid({required this.ids});
 
   @override
   Widget build(BuildContext context) {
-    final repo = DataRepository();
-    final all = repo.getAllEquipment();
+    final all = DataRepository().getAllEquipment();
 
+    // Resolve the id list into Equipment objects, skipping ids that
+    // don't match anything in the catalogue.
     final List<Equipment> items = [];
     for (final id in ids) {
       final match = all.where((e) => e.id == id);
       if (match.isNotEmpty) items.add(match.first);
     }
 
-    final width = MediaQuery.of(context).size.width;
-    final cols = (width / 180).clamp(2, 5).toInt();
+    // Column count scales with page width, clamped between 2 and 5 so
+    // the thumbnails never get too tall or too thin.
+    final double width = MediaQuery.of(context).size.width;
+    final int cols = (width / 180).clamp(2, 5).toInt();
 
     return GridView.builder(
       physics: const NeverScrollableScrollPhysics(),
@@ -475,7 +530,9 @@ class _RelatedGrid extends StatelessWidget {
       ),
       itemBuilder: (context, i) {
         final e = items[i];
-        final cover = e.coverImages.isNotEmpty ? e.coverImages.first : '';
+        final String cover = e.coverImages.isNotEmpty
+            ? e.coverImages.first
+            : '';
         return InkWell(
           onTap: () => context.push('/learn/equip-guides/${e.id}'),
           child: Column(
@@ -508,6 +565,16 @@ class _RelatedGrid extends StatelessWidget {
   }
 }
 
+/// Minimal inline markdown renderer for body text. Supports exactly
+/// three constructs, handled by a single regex with alternation:
+///
+///   • `[label](url)`  — tappable link, opened via url_launcher
+///   • `**bold**`      — bold text span
+///   • `*italic*`      — italic text span
+///
+/// Anything else is emitted as a plain text span. Every span inherits
+/// a subtle black text shadow so body text stays legible against the
+/// variable-brightness gradient background.
 class _StyledText extends StatelessWidget {
   final String text;
   final TextStyle? style;
@@ -521,19 +588,23 @@ class _StyledText extends StatelessWidget {
       r'(\[([^\]]+)\]\(([^)]+)\))|(\*\*(.*?)\*\*)|(\*(.*?)\*)',
     );
 
+    // Open a link in a new tab on web / the default handler elsewhere.
+    // Missing schemes are normalized to https:// so bare `example.com`
+    // entries in YAML still work.
     Future<void> openLink(String rawUrl) async {
-      final trimmed = rawUrl.trim();
-      final normalized =
+      final String trimmed = rawUrl.trim();
+      final String normalized =
           (trimmed.startsWith('http://') || trimmed.startsWith('https://'))
           ? trimmed
           : 'https://$trimmed';
-      final uri = Uri.tryParse(normalized);
+      final Uri? uri = Uri.tryParse(normalized);
       if (uri == null) return;
       await launchUrl(uri, webOnlyWindowName: '_blank');
     }
 
-    // Text outline style for better readability
-    final outlineStyle =
+    // Base style gets a black drop-shadow outline for legibility over
+    // the bright gradient background.
+    final TextStyle outlineStyle =
         style?.copyWith(
           shadows: [
             Shadow(
@@ -553,14 +624,16 @@ class _StyledText extends StatelessWidget {
           ],
         );
 
+    // splitMapJoin walks the string, calling onMatch for every regex
+    // hit and onNonMatch for the text between matches — the return
+    // values are discarded because we accumulate into `children`.
     text.splitMapJoin(
       pattern,
       onMatch: (Match match) {
-        // Link: [text](url)
+        // Group 1: full link construct `[text](url)`.
         if (match.group(1) != null) {
-          final linkText = match.group(2) ?? '';
-          final linkUrl = match.group(3) ?? '';
-
+          final String linkText = match.group(2) ?? '';
+          final String linkUrl = match.group(3) ?? '';
           children.add(
             WidgetSpan(
               alignment: PlaceholderAlignment.baseline,
@@ -574,8 +647,8 @@ class _StyledText extends StatelessWidget {
                     style: outlineStyle.copyWith(
                       color: Colors.blue,
                       decoration: TextDecoration.underline,
-                      decorationColor: Colors.blue, // force underline color
-                      decorationThickness: 2.0, // make it visibly “link-like”
+                      decorationColor: Colors.blue,
+                      decorationThickness: 2.0,
                       decorationStyle: TextDecorationStyle.solid,
                     ),
                   ),
@@ -584,7 +657,7 @@ class _StyledText extends StatelessWidget {
             ),
           );
         }
-        // Bold: **text**
+        // Group 4: `**bold**`.
         else if (match.group(4) != null) {
           children.add(
             TextSpan(
@@ -593,7 +666,7 @@ class _StyledText extends StatelessWidget {
             ),
           );
         }
-        // Italic: *text*
+        // Group 6: `*italic*`.
         else if (match.group(6) != null) {
           children.add(
             TextSpan(

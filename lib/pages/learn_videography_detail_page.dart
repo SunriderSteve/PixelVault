@@ -1,11 +1,29 @@
-import 'dart:ui';
+// PixelVault — Videography guide detail page.
+//
+// Shows the full guide for a single videography topic, loaded by id
+// from [DataRepository] in initState and cached in [_guide]. The page
+// lays out, top to bottom:
+//
+//   • Title
+//   • Cover image or multi-image [_ImageCarousel]
+//   • Content sections, each in its own glass card
+//
+// Videography guides don't have a top-level "description" or
+// "related" list the way equipment and scenarios do — the sections
+// carry all the body content.
+//
+// Body text supports a tiny inline markdown subset handled by
+// [_StyledText]: `**bold**`, `*italic*`, and `[label](url)` links.
+
+import 'dart:ui'; // For ImageFilter used by BackdropFilter.
+
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_avif/flutter_avif.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../services/data_repository.dart';
 import '../models/videography_model.dart';
+import '../services/data_repository.dart';
 
 class VideographyDetailPage extends StatefulWidget {
   final String itemID;
@@ -16,11 +34,16 @@ class VideographyDetailPage extends StatefulWidget {
 }
 
 class _VideographyDetailPageState extends State<VideographyDetailPage> {
+  /// The resolved guide record for [widget.itemID]. Looked up once in
+  /// [initState] so the build method stays pure.
   late final VideographyGuide _guide;
 
   @override
   void initState() {
     super.initState();
+    // Throws on missing id rather than silently rendering a blank page —
+    // routing should never produce an unknown id, so surface the bug
+    // loudly if it happens.
     final guide = DataRepository().getVideographyGuide(widget.itemID);
     if (guide == null) {
       throw Exception('Guide not found: ${widget.itemID}');
@@ -36,7 +59,7 @@ class _VideographyDetailPageState extends State<VideographyDetailPage> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 1. Background
+          // ── 1. Background gradient ──────────────────────────────
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -52,7 +75,10 @@ class _VideographyDetailPageState extends State<VideographyDetailPage> {
               ),
             ),
           ),
-          // 2. Blobs
+
+          // ── 2. Ambient blob glow (top-left) ─────────────────────
+          // Single blob here — detail pages lean lighter on ambient
+          // lighting so the glass cards stay readable.
           Positioned(
             top: -150,
             left: -100,
@@ -72,9 +98,10 @@ class _VideographyDetailPageState extends State<VideographyDetailPage> {
             ),
           ),
 
-          // 3. Content
+          // ── 3. Foreground content ──────────────────────────────
           CustomScrollView(
             slivers: [
+              // Frosted pinned app bar showing the guide name.
               SliverAppBar(
                 leading: IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -100,6 +127,7 @@ class _VideographyDetailPageState extends State<VideographyDetailPage> {
                   ),
                 ),
               ),
+
               SliverList(
                 delegate: SliverChildListDelegate([
                   Padding(
@@ -107,7 +135,9 @@ class _VideographyDetailPageState extends State<VideographyDetailPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Title
+                        // Large title — duplicates the AppBar title so
+                        // users scrolling mid-page still see it clearly
+                        // above the cover image.
                         Text(
                           _guide.name,
                           style: Theme.of(context).textTheme.headlineSmall
@@ -119,7 +149,8 @@ class _VideographyDetailPageState extends State<VideographyDetailPage> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Main Cover images
+                        // Cover image(s) — carousel when the YAML lists
+                        // more than one cover, otherwise a single image.
                         if (_guide.coverImages.length > 1)
                           Center(
                             child: _ImageCarousel(
@@ -139,8 +170,8 @@ class _VideographyDetailPageState extends State<VideographyDetailPage> {
                           ),
                         const SizedBox(height: 24),
 
-                        // Sections
-                        for (var section in _guide.sections) ...[
+                        // Content sections, each in its own glass card.
+                        for (final section in _guide.sections) ...[
                           _GlassContainer(
                             child: _SectionTile(section: section),
                           ),
@@ -159,6 +190,9 @@ class _VideographyDetailPageState extends State<VideographyDetailPage> {
   }
 }
 
+/// Rounded, blurred, semi-transparent container used to host each
+/// content block. The blur is what gives the card the "frosted glass"
+/// look over the gradient background.
 class _GlassContainer extends StatelessWidget {
   final Widget child;
   const _GlassContainer({required this.child});
@@ -171,9 +205,7 @@ class _GlassContainer extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.black.withValues(
-              alpha: 0.6,
-            ), // Updated to match inventory
+            color: Colors.black.withValues(alpha: 0.6),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
           ),
@@ -184,10 +216,15 @@ class _GlassContainer extends StatelessWidget {
   }
 }
 
+/// Expansion tile for a single [GuideSection]. Renders the section's
+/// images (carousel or single) above the body text. Starts collapsed
+/// so long guides don't dump everything at once.
 class _SectionTile extends StatelessWidget {
   final GuideSection section;
   const _SectionTile({required this.section});
 
+  /// Shared cap for inline section images so a huge asset can't blow
+  /// out the layout; the image still scales down to fit naturally.
   static const double _maxImageHeight = 360;
 
   @override
@@ -199,13 +236,14 @@ class _SectionTile extends StatelessWidget {
           color: Colors.white,
           fontWeight: FontWeight.bold,
           fontSize: 18,
-        ), // Updated style
+        ),
       ),
       iconColor: Colors.white,
       collapsedIconColor: Colors.white70,
       childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       children: [
-        // Section images: carousel if multiple
+        // Section images: carousel when there are multiple, single
+        // centered image otherwise, skipped entirely when empty.
         if (section.images.length > 1)
           Center(
             child: _ImageCarousel(
@@ -231,7 +269,7 @@ class _SectionTile extends StatelessWidget {
 
         if (section.images.isNotEmpty) const SizedBox(height: 12),
 
-        // Section body text
+        // Section body — styled via the mini markdown parser.
         Align(
           alignment: Alignment.centerLeft,
           child: _StyledText(
@@ -240,7 +278,7 @@ class _SectionTile extends StatelessWidget {
               color: Colors.white,
               fontSize: 16,
               height: 1.5,
-            ), // Updated style
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -249,6 +287,9 @@ class _SectionTile extends StatelessWidget {
   }
 }
 
+/// PageView-backed image carousel with prev/next arrows and tappable
+/// dot indicators. Used by both the cover section and the per-section
+/// tiles whenever the guide lists more than one image.
 class _ImageCarousel extends StatefulWidget {
   final List<String> images;
   final double height;
@@ -260,7 +301,7 @@ class _ImageCarousel extends StatefulWidget {
 }
 
 class _ImageCarouselState extends State<_ImageCarousel> {
-  final _controller = PageController();
+  final PageController _controller = PageController();
   int _current = 0;
 
   void _previous() {
@@ -277,12 +318,20 @@ class _ImageCarouselState extends State<_ImageCarousel> {
     );
   }
 
+  /// Jump to a specific page — used by the dot indicators below the
+  /// carousel so users can tap a dot to land on that image directly.
   void _goToPage(int index) {
     _controller.animateToPage(
       index,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
@@ -310,7 +359,9 @@ class _ImageCarouselState extends State<_ImageCarousel> {
                   );
                 },
               ),
-              // Navigation Buttons - White Background, Black Icons
+
+              // Prev / next chevrons — only rendered when there is
+              // actually a page to move to in that direction.
               if (_current > 0)
                 Positioned(
                   left: 8,
@@ -342,7 +393,9 @@ class _ImageCarouselState extends State<_ImageCarousel> {
           ),
         ),
         const SizedBox(height: 12),
-        // Interactive Dots - White
+
+        // Tappable page dots. Current page is fully opaque; the rest
+        // render at reduced opacity.
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: widget.images.asMap().entries.map((entry) {
@@ -367,6 +420,16 @@ class _ImageCarouselState extends State<_ImageCarousel> {
   }
 }
 
+/// Minimal inline markdown renderer for body text. Supports exactly
+/// three constructs, handled by a single regex with alternation:
+///
+///   • `[label](url)`  — tappable link, opened via url_launcher
+///   • `**bold**`      — bold text span
+///   • `*italic*`      — italic text span
+///
+/// Anything else is emitted as a plain text span. Every span inherits
+/// a subtle black text shadow so body text stays legible against the
+/// variable-brightness gradient background.
 class _StyledText extends StatelessWidget {
   final String text;
   final TextStyle? style;
@@ -380,19 +443,23 @@ class _StyledText extends StatelessWidget {
       r'(\[([^\]]+)\]\(([^)]+)\))|(\*\*(.*?)\*\*)|(\*(.*?)\*)',
     );
 
+    // Open a link in a new tab on web / the default handler elsewhere.
+    // Missing schemes are normalized to https:// so bare `example.com`
+    // entries in YAML still work.
     Future<void> openLink(String rawUrl) async {
-      final trimmed = rawUrl.trim();
-      final normalized =
+      final String trimmed = rawUrl.trim();
+      final String normalized =
           (trimmed.startsWith('http://') || trimmed.startsWith('https://'))
           ? trimmed
           : 'https://$trimmed';
-      final uri = Uri.tryParse(normalized);
+      final Uri? uri = Uri.tryParse(normalized);
       if (uri == null) return;
       await launchUrl(uri, webOnlyWindowName: '_blank');
     }
 
-    // Text outline style for better readability
-    final outlineStyle =
+    // Base style gets a black drop-shadow outline for legibility over
+    // the bright gradient background.
+    final TextStyle outlineStyle =
         style?.copyWith(
           shadows: [
             Shadow(
@@ -412,14 +479,16 @@ class _StyledText extends StatelessWidget {
           ],
         );
 
+    // splitMapJoin walks the string, calling onMatch for every regex
+    // hit and onNonMatch for the text between matches — the return
+    // values are discarded because we accumulate into `children`.
     text.splitMapJoin(
       pattern,
       onMatch: (Match match) {
-        // Link: [text](url)
+        // Group 1: full link construct `[text](url)`.
         if (match.group(1) != null) {
-          final linkText = match.group(2) ?? '';
-          final linkUrl = match.group(3) ?? '';
-
+          final String linkText = match.group(2) ?? '';
+          final String linkUrl = match.group(3) ?? '';
           children.add(
             WidgetSpan(
               alignment: PlaceholderAlignment.baseline,
@@ -433,8 +502,8 @@ class _StyledText extends StatelessWidget {
                     style: outlineStyle.copyWith(
                       color: Colors.blue,
                       decoration: TextDecoration.underline,
-                      decorationColor: Colors.blue, // force underline color
-                      decorationThickness: 2.0, // make it visibly “link-like”
+                      decorationColor: Colors.blue,
+                      decorationThickness: 2.0,
                       decorationStyle: TextDecorationStyle.solid,
                     ),
                   ),
@@ -443,7 +512,7 @@ class _StyledText extends StatelessWidget {
             ),
           );
         }
-        // Bold: **text**
+        // Group 4: `**bold**`.
         else if (match.group(4) != null) {
           children.add(
             TextSpan(
@@ -452,7 +521,7 @@ class _StyledText extends StatelessWidget {
             ),
           );
         }
-        // Italic: *text*
+        // Group 6: `*italic*`.
         else if (match.group(6) != null) {
           children.add(
             TextSpan(

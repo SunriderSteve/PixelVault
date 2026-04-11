@@ -1,11 +1,23 @@
-import 'dart:math' as math;
-import 'dart:ui'; // For ImageFilter
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:flutter_avif/flutter_avif.dart';
+// PixelVault — Equipment guides list page.
+//
+// Stateful grid of equipment guide tiles with a combined search +
+// category/brand filter panel at the top. Each tile deep-links to an
+// [EquipDetailPage] via `/learn/equip-guides/:id`.
+//
+// Search and filtering both funnel through [_updateFilters], which
+// recomputes [_filtered] and calls setState in one pass. Guides without
+// any content (no description AND no sections) are hidden from the list
+// so empty YAMLs don't show up as dead tiles.
 
-import '../services/data_repository.dart';
+import 'dart:math' as math;
+import 'dart:ui'; // For ImageFilter used by BackdropFilter.
+
+import 'package:flutter/material.dart';
+import 'package:flutter_avif/flutter_avif.dart';
+import 'package:go_router/go_router.dart';
+
 import '../models/equipment_model.dart';
+import '../services/data_repository.dart';
 
 class LearnEquipListPage extends StatefulWidget {
   const LearnEquipListPage({super.key});
@@ -15,13 +27,22 @@ class LearnEquipListPage extends StatefulWidget {
 }
 
 class _LearnEquipListPageState extends State<LearnEquipListPage> {
+  // ── Search / filter state ───────────────────────────────────────────
   final TextEditingController _searchController = TextEditingController();
+
+  /// Whether the expandable filter panel is currently visible.
   bool _showFilters = false;
-  int _activeTab = 0; // 0: Category, 1: Brand
+
+  /// Tab index inside the filter panel: 0 = Category, 1 = Brand.
+  int _activeTab = 0;
 
   final Set<String> _selectedCategories = {};
   final Set<String> _selectedBrands = {};
 
+  // ── Source data ─────────────────────────────────────────────────────
+  // `_allItems`, `_allCategories`, and `_allBrands` are immutable for the
+  // life of this page; `_filteredItems` is recomputed on every search /
+  // filter change via [_updateFilters].
   late final List<Equipment> _allItems;
   late List<Equipment> _filteredItems;
   late final List<String> _allCategories;
@@ -32,39 +53,17 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
     super.initState();
     _allItems = DataRepository().getAllEquipment();
 
-    _filteredItems = _allItems.where((item) {
-      return item.description.trim().isNotEmpty || item.sections.isNotEmpty;
-    }).toList();
+    // Seed `_filteredItems` with only guides that actually have content —
+    // `_updateFilters` applies the same rule, but we populate up front so
+    // the first paint doesn't flash all-items before the filter runs.
+    _filteredItems = _allItems.where(_hasContent).toList();
 
-    _allCategories = _allItems.map((e) => e.category).toSet().toList();
-    _allBrands = _allItems.map((e) => e.brand).toSet().toList();
+    // Build the filter option lists. Alphabetical so the chip order is
+    // stable across sessions regardless of YAML load order.
+    _allCategories = _allItems.map((e) => e.category).toSet().toList()..sort();
+    _allBrands = _allItems.map((e) => e.brand).toSet().toList()..sort();
+
     _searchController.addListener(_updateFilters);
-  }
-
-  void _updateFilters() {
-    final query = _searchController.text.toLowerCase();
-    setState(() {
-      _filteredItems = _allItems.where((item) {
-        final matchesQuery = item.name.toLowerCase().contains(query);
-        final matchesCategory =
-            _selectedCategories.isEmpty ||
-            _selectedCategories.contains(item.category);
-        final hasContent =
-            item.description.trim().isNotEmpty || item.sections.isNotEmpty;
-        final matchesBrand =
-            _selectedBrands.isEmpty || _selectedBrands.contains(item.brand);
-
-        return matchesQuery && matchesCategory && matchesBrand && hasContent;
-      }).toList();
-    });
-  }
-
-  void _clearFilters() {
-    setState(() {
-      _selectedCategories.clear();
-      _selectedBrands.clear();
-      _updateFilters();
-    });
   }
 
   @override
@@ -73,44 +72,85 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
     super.dispose();
   }
 
+  // ── Filter logic ────────────────────────────────────────────────────
+
+  /// Guides without either a description or any sections are considered
+  /// "empty" and hidden from the list — this keeps placeholder YAML
+  /// files from cluttering the grid.
+  bool _hasContent(Equipment item) =>
+      item.description.trim().isNotEmpty || item.sections.isNotEmpty;
+
+  /// Recomputes [_filteredItems] from the current search text plus the
+  /// selected category/brand filters, and triggers a rebuild. Every
+  /// mutator calls this single method so the filtering pipeline is
+  /// defined in exactly one place.
+  void _updateFilters() {
+    final String query = _searchController.text.toLowerCase();
+    setState(() {
+      _filteredItems = _allItems.where((item) {
+        final bool matchesQuery = item.name.toLowerCase().contains(query);
+        final bool matchesCategory =
+            _selectedCategories.isEmpty ||
+            _selectedCategories.contains(item.category);
+        final bool matchesBrand =
+            _selectedBrands.isEmpty || _selectedBrands.contains(item.brand);
+        return matchesQuery &&
+            matchesCategory &&
+            matchesBrand &&
+            _hasContent(item);
+      }).toList();
+    });
+  }
+
+  /// Clear both filter sets and refresh the list. `_updateFilters`
+  /// already wraps the list rebuild in setState, so no outer setState
+  /// is needed here.
+  void _clearFilters() {
+    _selectedCategories.clear();
+    _selectedBrands.clear();
+    _updateFilters();
+  }
+
+  // ── Build ───────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
-    // Brand Blue
     const brandBlue = Color(0xFF0047BB);
 
-    // Responsive Grid
+    // Responsive column count — one column per ~420 px, min 2.
     const double maxTileWidth = 420;
-    final cols = math.max(
+    final int cols = math.max(
       2,
       (MediaQuery.of(context).size.width / maxTileWidth).floor(),
     );
-    final totalFilters = _selectedCategories.length + _selectedBrands.length;
+    final int totalFilters =
+        _selectedCategories.length + _selectedBrands.length;
 
-    // Hero wrapping the entire scaffold for smooth transition
+    // Root Hero matches the home page's "Equipment Guides" card.
     return Hero(
       tag: 'equip_guides_card',
       child: Scaffold(
-        backgroundColor: Colors.black, // Base background
+        backgroundColor: Colors.black,
         body: Stack(
           children: [
-            // 1. Vibrant Background Gradient
+            // ── 1. Background gradient ──────────────────────────────
             Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Color(0xFF001F54), // Dark Blue
-                    Color(0xFF0047BB), // NLB Blue
-                    Color(0xFFFF8200), // NLB Orange
-                    Color(0xFFE80029), // NLB Red
+                    Color(0xFF001F54),
+                    Color(0xFF0047BB),
+                    Color(0xFFFF8200),
+                    Color(0xFFE80029),
                   ],
                   stops: [0.0, 0.3, 0.7, 1.0],
                 ),
               ),
             ),
 
-            // 2. Background Blobs for Depth
+            // ── 2. Ambient blob glows ───────────────────────────────
             Positioned(
               top: -150,
               left: -100,
@@ -148,10 +188,10 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
               ),
             ),
 
-            // 3. Content with Glassmorphism
+            // ── 3. Foreground content ──────────────────────────────
             CustomScrollView(
               slivers: [
-                // Glass App Bar
+                // Frosted pinned app bar.
                 SliverAppBar(
                   leading: IconButton(
                     icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -178,7 +218,7 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
                   ),
                 ),
 
-                // Search & Filter Bar (Glassmorphism)
+                // Search bar + filter toggle (glassmorphism).
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -216,6 +256,9 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
                                       Icons.search,
                                       color: Colors.white,
                                     ),
+                                    // Only show the clear button when the
+                                    // field has text — otherwise an empty
+                                    // icon slot eats space on small screens.
                                     suffixIcon: _searchController.text.isEmpty
                                         ? null
                                         : IconButton(
@@ -232,6 +275,8 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
                                   ),
                                 ),
                               ),
+                              // Filter panel toggle. Shows a small badge
+                              // with the number of active filter chips.
                               GestureDetector(
                                 onTap: () => setState(
                                   () => _showFilters = !_showFilters,
@@ -273,7 +318,10 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
                   ),
                 ),
 
-                // Filter Panel (Conditional)
+                // ── Expandable filter panel ──
+                // Rendered conditionally — only appears while
+                // [_showFilters] is true. Hosts the Category/Brand tab
+                // switcher and the chip grid for the active tab.
                 if (_showFilters)
                   SliverToBoxAdapter(
                     child: Padding(
@@ -291,6 +339,7 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                // Tab switcher: Category / Brand.
                                 Row(
                                   children: [
                                     _GlassTabButton(
@@ -309,38 +358,46 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
                                   ],
                                 ),
                                 const SizedBox(height: 16),
+
+                                // Chip list for the currently active tab.
+                                // Tapping a chip mutates the selection set
+                                // and calls _updateFilters (which already
+                                // wraps in setState, so no outer setState
+                                // is needed here).
                                 Wrap(
                                   spacing: 8,
                                   runSpacing: 8,
                                   children: _activeTab == 0
                                       ? _allCategories.map((c) {
-                                          final isSelected = _selectedCategories
-                                              .contains(c);
+                                          final bool isSelected =
+                                              _selectedCategories.contains(c);
                                           return _GlassFilterChip(
                                             label: c,
                                             selected: isSelected,
-                                            onSelected: (sel) => setState(() {
-                                              sel
-                                                  ? _selectedCategories.add(c)
-                                                  : _selectedCategories.remove(
-                                                      c,
-                                                    );
+                                            onSelected: (sel) {
+                                              if (sel) {
+                                                _selectedCategories.add(c);
+                                              } else {
+                                                _selectedCategories.remove(c);
+                                              }
                                               _updateFilters();
-                                            }),
+                                            },
                                           );
                                         }).toList()
                                       : _allBrands.map((b) {
-                                          final isSelected = _selectedBrands
-                                              .contains(b);
+                                          final bool isSelected =
+                                              _selectedBrands.contains(b);
                                           return _GlassFilterChip(
                                             label: b,
                                             selected: isSelected,
-                                            onSelected: (sel) => setState(() {
-                                              sel
-                                                  ? _selectedBrands.add(b)
-                                                  : _selectedBrands.remove(b);
+                                            onSelected: (sel) {
+                                              if (sel) {
+                                                _selectedBrands.add(b);
+                                              } else {
+                                                _selectedBrands.remove(b);
+                                              }
                                               _updateFilters();
-                                            }),
+                                            },
                                           );
                                         }).toList(),
                                 ),
@@ -348,6 +405,8 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
                                   color: Colors.white24,
                                   height: 32,
                                 ),
+
+                                // Clear-all + Done row.
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
@@ -378,7 +437,7 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
                     ),
                   ),
 
-                // Grid Content
+                // Equipment tile grid.
                 SliverPadding(
                   padding: const EdgeInsets.all(16),
                   sliver: SliverGrid(
@@ -390,7 +449,7 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
                     ),
                     delegate: SliverChildBuilderDelegate((context, index) {
                       final eq = _filteredItems[index];
-                      final imagePath = eq.coverImages.isNotEmpty
+                      final String imagePath = eq.coverImages.isNotEmpty
                           ? eq.coverImages.first
                           : '';
                       return _GlassEquipmentCard(
@@ -411,6 +470,9 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
   }
 }
 
+/// Pill-shaped tab toggle used at the top of the filter panel. Not a
+/// real [TabBar] because the filter panel only has two options and the
+/// visual style needs to match the page's glass theme.
 class _GlassTabButton extends StatelessWidget {
   final String label;
   final bool selected;
@@ -434,14 +496,16 @@ class _GlassTabButton extends StatelessWidget {
               : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected ? Colors.white : Colors.white54, // Brighter border
+            // Slightly brighter border when selected so the active tab
+            // reads at a glance even in the darkened filter panel.
+            color: selected ? Colors.white : Colors.white54,
             width: 1,
           ),
         ),
         child: Text(
           label,
-          style: TextStyle(
-            color: selected ? Colors.white : Colors.white, // Always white text
+          style: const TextStyle(
+            color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -450,6 +514,9 @@ class _GlassTabButton extends StatelessWidget {
   }
 }
 
+/// Thin wrapper around the material [FilterChip] with PixelVault's
+/// glass/brand colour palette baked in. Kept local because no other
+/// page in the app currently uses filter chips.
 class _GlassFilterChip extends StatelessWidget {
   final String label;
   final bool selected;
@@ -467,26 +534,24 @@ class _GlassFilterChip extends StatelessWidget {
       label: Text(label),
       selected: selected,
       onSelected: onSelected,
-      backgroundColor: Colors.black.withValues(
-        alpha: 0.3,
-      ), // Darker background for unselected
+      // Darker background for unselected so text stays legible against
+      // the blurred gradient behind the filter panel.
+      backgroundColor: Colors.black.withValues(alpha: 0.3),
       selectedColor: const Color(0xFF0047BB),
       checkmarkColor: Colors.white,
-      labelStyle: const TextStyle(
-        color: Colors.white, // Always white text
-      ),
+      labelStyle: const TextStyle(color: Colors.white),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: selected
-              ? Colors.transparent
-              : Colors.white38, // Visible border
-        ),
+        side: BorderSide(color: selected ? Colors.transparent : Colors.white38),
       ),
     );
   }
 }
 
+/// Glassmorphism tile for a single equipment guide. Structurally
+/// identical to the scenario / videography cards on other list pages,
+/// kept local because list pages don't currently share a common card
+/// widget.
 class _GlassEquipmentCard extends StatelessWidget {
   final String title;
   final String imagePath;
@@ -504,13 +569,13 @@ class _GlassEquipmentCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Stack(
         children: [
-          // Background Image
+          // Cover image or a translucent fallback when empty.
           Positioned.fill(
             child: imagePath.isNotEmpty
                 ? AvifImage.asset(imagePath, fit: BoxFit.cover)
                 : Container(color: Colors.white.withValues(alpha: 0.1)),
           ),
-          // Gradient Overlay
+          // Darkening gradient for title legibility.
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -526,7 +591,7 @@ class _GlassEquipmentCard extends StatelessWidget {
               ),
             ),
           ),
-          // Text Content
+          // Centered bottom title.
           Positioned(
             bottom: 0,
             left: 0,
@@ -553,7 +618,7 @@ class _GlassEquipmentCard extends StatelessWidget {
               ),
             ),
           ),
-          // Tap handler
+          // Tap ripple layer.
           Positioned.fill(
             child: Material(
               color: Colors.transparent,

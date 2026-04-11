@@ -29,23 +29,26 @@ sections:
       Some kits also include a **battery accessory kit**, such as the **AK-B01 NP-F battery kit** or the **AK-B02 V-mount battery kit**, depending on the version.
 
   - title: Mounting the light
-    images: []
+    images: 
+      - assets/images/equipment/light_godox_ml60_01.avif
+      - assets/images/equipment/light_godox_ml60_03.avif
     body: |
-      Attach the **holder AD-E2** or your mounting bracket securely to the light first.
-      Mount the light onto a light stand and tighten the stand knob firmly so the light does not wobble.
-      Tighten the tilt adjustment handle so the light does not suddenly drop forward or backward.
-      Before switching the light on, make sure the stand legs are fully spread and the setup is stable.
+      - Attach the **holder AD-E2** or your mounting bracket securely to the light first.
+      - Mount the light onto a light stand and tighten the stand knob firmly so the light does not wobble.
+      - Tighten the tilt adjustment handle so the light does not suddenly drop forward or backward.
+      - Before switching the light on, make sure the stand legs are fully spread and the setup is stable.
 
   - title: Protective cover and reflector
     images: []
     body: |
-      Remove the **lamp head protective cover** before turning the light on.
-      To attach the reflector, align it with the front mount, insert it properly, and rotate it until it locks.
-      To remove the reflector, press or release the locking mechanism and rotate it back out.
-      Reinstall the protective cover when packing the light away so the COB area stays protected.
+      - Remove the **lamp head protective cover** before turning the light on.
+      - To attach the reflector, align it with the front mount, insert it properly, and rotate it until it locks.
+      - To remove the reflector, press or release the locking mechanism and rotate it back out.
+      - Reinstall the protective cover when packing the light away so the COB area stays protected.
 
   - title: Using the Godox Collapsible Diffusion Dome AK-R22
-    images: []
+    images: 
+      - assets/images/equipment/light_godox_ml60_diffuser.avif
     body: |
       The **Godox AK-R22 Collapsible Diffusion Dome** is an optional diffuser that softens the light output and makes shadows less harsh. It is useful when you want a gentler look on faces or when the bare reflector feels too strong. :contentReference[oaicite:0]{index=0}
 
@@ -69,81 +72,83 @@ sections:
       • Store it dry and flat/collapsed properly so it keeps its shape.
 
   - title: Powering the light
-    images: []
+    images:  
+      - assets/images/equipment/light_godox_ml60_02.avif
     body: |
       **AC power:** Connect the adapter to the **DC input port** on the light, then connect the AC power cord to the adapter and wall outlet.
       **Battery power:** If you are using a battery kit, attach the battery case to the holder, connect the DC cable from the battery case to the light body, and insert the correct batteries.
-      If using the **NP-F battery kit**, two NP-F batteries must be used together. Single-battery use is not supported.
-      After power is connected, flip the **power switch** to **ON** to start the light. Flip it to **OFF** when done.
+      
+      If using the **NP-F battery kit**, two NP-F batteries must be used together. Single-battery use is not supported. After power is connected, flip the **power switch** to **ON** to start the light. Flip it to **OFF** when done.
 
   - title: Setting brightness
     images: []
     body: |
-      Rotate the **DIM/MODE** knob to adjust brightness.
-      The brightness range is **0% to 100%**.
-      Turn one direction to reduce brightness and the other direction to increase brightness.
-      Use lower brightness first when setting up, then raise it gradually once the light is aimed correctly.
+      - Rotate the **DIM/MODE** knob to adjust brightness.
+      - The brightness range is **0% to 100%**.
+      - Turn one direction to reduce brightness and the other direction to increase brightness.
+      - Use lower brightness first when setting up, then raise it gradually once the light is aimed correctly.
 
   - title: Setting color temperature (CCT mode)
     images: []
     body: |
-      Press the **DIM/MODE** button briefly to switch modes until the display shows **CCT**.
-      In **CCT mode**, rotating the **FN** knob adjusts the **color temperature**.
-      The color temperature range is approximately **2800K to 6500K**.
-      Rotating the **DIM/MODE** knob in this mode adjusts **brightness**.
+      - Press the **DIM/MODE** button briefly to switch modes until the display shows **CCT**.
+      - In **CCT mode**, rotating the **FN** knob adjusts the **color temperature**.
+      - The color temperature range is approximately **2800K to 6500K**.
+      - Rotating the **DIM/MODE** knob in this mode adjusts **brightness**.
+      
       This mode is used when you want to match warm indoor lighting or cooler daylight.
 
   - title: Using FX mode
     images: []
     body: |
-      Press the **DIM/MODE** button briefly until the display shows **FX**.
-      In **FX mode**, rotate the **DIM/MODE** knob to choose the lighting effect.
-      The built-in FX effects include **Flash**, **Lightning**, **Cloudy**, **Broken Bulb**, **TV**, **Candle**, **Fire**, **Fireworks**, **Explosion**, **Welding**, and **SOS**.
-      After choosing an FX effect, press the **FN** button to adjust that effect’s parameter.
-      In FX mode, the brightness range is still **0% to 100%**.
+      - Press the **DIM/MODE** button briefly until the display shows **FX**.
+      - In **FX mode**, rotate the **DIM/MODE** knob to choose the lighting effect.
+      - The built-in FX effects include **Flash**, **Lightning**, **Cloudy**, **Broken Bulb**, **TV**, **Candle**, **Fire**, **Fireworks**, **Explosion**, **Welding**, and **SOS**.
+      - After choosing an FX effect, press the **FN** button to adjust that effect’s parameter.
+      - In FX mode, the brightness range is still **0% to 100%**.
 
   - title: Bluetooth app control
     images: []
     body: |
-      Press the **FN** button to enter the Bluetooth settings.
-      Rotate the **DIM/MODE** knob to choose **Bluetooth On**, **Bluetooth Off**, or **Bluetooth Reset**.
-      When Bluetooth is turned on, you can connect the light to the **Godox Light** app.
-      If the app cannot find the light, choose **Bluetooth Reset**, then confirm the reset and try pairing again.
-      Use app control when you want to adjust the light remotely without touching the stand.
+      - Press the **FN** button to enter the Bluetooth settings.
+      - Rotate the **DIM/MODE** knob to choose **Bluetooth On**, **Bluetooth Off**, or **Bluetooth Reset**.
+      - When Bluetooth is turned on, you can connect the light to the **Godox Light** app.
+      - If the app cannot find the light, choose **Bluetooth Reset**, then confirm the reset and try pairing again.
+      - Use app control when you want to adjust the light remotely without touching the stand.
 
   - title: Battery and temperature warnings
     images: []
     body: |
-      When battery power becomes low, the display will show a **low battery symbol**.
-      When the light becomes too hot, the display will show a **high temperature warning**.
-      If the light temperature rises further, the unit may automatically reduce brightness to protect itself.
-      Keep the vents clear and let the light cool before packing it away.
+      - When battery power becomes low, the display will show a **low battery symbol**.
+      - When the light becomes too hot, the display will show a **high temperature warning**.
+      - If the light temperature rises further, the unit may automatically reduce brightness to protect itself.
+      - Keep the vents clear and let the light cool before packing it away.
 
   - title: Output and practical use
     images: []
     body: |
-      The light is brighter when used with the included **reflector** than when used bare.
-      In general use, attach the reflector when you need stronger output and more direction.
-      Use the bare light or add diffusion when you want a softer look.
-      Because this is a bi-color light, you can quickly match a wide range of indoor and outdoor lighting situations from the light itself.
+      - The light is brighter when used with the included **reflector** than when used bare.
+      - In general use, attach the reflector when you need stronger output and more direction.
+      - Use the bare light or add diffusion when you want a softer look.
+      - Because this is a bi-color light, you can quickly match a wide range of indoor and outdoor lighting situations from the light itself.
 
   - title: Packing up
     images: []
     body: |
-      Turn the brightness down first, then switch the light **OFF**.
-      Disconnect the power cable or remove the battery setup.
-      Let the light cool for a short while before handling the front.
-      Remove the reflector, then place the **lamp head protective cover** back on the front of the light.
-      Fold or remove the holder/bracket if needed, place the light and accessories back into the **carry bag**, and make sure the adapter and cables are packed neatly without sharp bends.
+      - Turn the brightness down first, then switch the light **OFF**.
+      - Disconnect the power cable or remove the battery setup.
+      - Let the light cool for a short while before handling the front.
+      - Remove the reflector, then place the **lamp head protective cover** back on the front of the light.
+      - Fold or remove the holder/bracket if needed, place the light and accessories back into the **carry bag**, and make sure the adapter and cables are packed neatly without sharp bends.
 
   - title: Care and handling
     images: []
     body: |
-      Do not block the fan or air vents during use.
-      Do not store the light while it is still hot.
-      Keep the front COB area covered when not in use.
-      Coil cables loosely instead of tightly to reduce wear.
-      If using battery kits, remove batteries before long-term storage.
+      - Do not block the fan or air vents during use.
+      - Do not store the light while it is still hot.
+      - Keep the front COB area covered when not in use.
+      - Coil cables loosely instead of tightly to reduce wear.
+      - If using battery kits, remove batteries before long-term storage.
 
   - title: Quick troubleshooting
     images: []

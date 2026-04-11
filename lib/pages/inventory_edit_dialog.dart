@@ -1,8 +1,27 @@
-import 'dart:ui'; // For ImageFilter
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // For FilteringTextInputFormatter
+// PixelVault — Inventory edit dialog.
+//
+// Modal dialog used from the inventory list when an admin taps the edit
+// icon on an equipment card. It presents a two-step flow:
+//
+//   1. Edit mode    — lets the user change quantity (via +/- buttons or a
+//                     text field) and cabinet location (free-text).
+//   2. Confirm mode — shows a diff of what changed and requires the user
+//                     to confirm before the changes are returned.
+//
+// The dialog returns an [InventoryEditResult] (or null if cancelled) via
+// [Navigator.pop]. Callers should inspect [InventoryEditResult.changed] to
+// decide whether to persist the update.
 
-/// result returned after final Save
+import 'dart:ui'; // For ImageFilter used by BackdropFilter.
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // FilteringTextInputFormatter.
+
+/// Result returned by [showInventoryEditDialog] after the user confirms.
+///
+/// [changed] is true if either [quantity] or [cabinet] differs from the
+/// initial values the dialog was opened with. Callers can short-circuit
+/// persistence when this flag is false.
 class InventoryEditResult {
   final int quantity;
   final String cabinet;
@@ -15,7 +34,12 @@ class InventoryEditResult {
   });
 }
 
-/// open edit dialog for quantity and cabinet
+/// Opens the inventory edit dialog.
+///
+/// Returns the user's edits wrapped in an [InventoryEditResult], or `null`
+/// if the user dismissed the dialog via Cancel. The dialog is intentionally
+/// not barrier-dismissible — cancel must be explicit so a stray tap can't
+/// discard in-progress edits.
 Future<InventoryEditResult?> showInventoryEditDialog(
   BuildContext context, {
   required String equipmentName,
@@ -24,7 +48,7 @@ Future<InventoryEditResult?> showInventoryEditDialog(
 }) {
   return showDialog<InventoryEditResult>(
     context: context,
-    barrierColor: Colors.black54, // Darken background slightly
+    barrierColor: Colors.black54, // Slight darken so the dialog pops.
     barrierDismissible: false,
     builder: (context) => _InventoryEditDialog(
       equipmentName: equipmentName,
@@ -34,6 +58,7 @@ Future<InventoryEditResult?> showInventoryEditDialog(
   );
 }
 
+/// Internal two-step state: edit form → confirmation diff.
 enum _StepMode { edit, confirm }
 
 class _InventoryEditDialog extends StatefulWidget {
@@ -52,9 +77,10 @@ class _InventoryEditDialog extends StatefulWidget {
 }
 
 class _InventoryEditDialogState extends State<_InventoryEditDialog> {
-  // Use controllers for both fields to manage text input
-  late TextEditingController _qtyCtrl;
-  late TextEditingController _cabinetCtrl;
+  // Controllers keep the quantity and cabinet fields editable from both
+  // the text inputs and the helper buttons (+/-, reset).
+  late final TextEditingController _qtyCtrl;
+  late final TextEditingController _cabinetCtrl;
 
   _StepMode _mode = _StepMode.edit;
 
@@ -72,18 +98,26 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
     super.dispose();
   }
 
+  // ── Step transitions ──────────────────────────────────────────────────
+
+  /// Handler for the "Review" button in edit mode.
+  ///
+  /// If the user cleared the quantity field entirely we restore the
+  /// initial value so we never ship an empty / NaN quantity to the
+  /// confirmation step.
   void _onSavePressed() {
-    // Validate quantity on save: if empty or invalid, revert to initial
     if (_qtyCtrl.text.isEmpty) {
       _qtyCtrl.text = '${widget.initialQuantity}';
     }
-
-    setState(() {
-      _mode = _StepMode.confirm;
-    });
+    setState(() => _mode = _StepMode.confirm);
   }
 
+  /// Handler for the final "Save" button in confirm mode. Pops the dialog
+  /// with the accumulated edits wrapped in an [InventoryEditResult].
   void _onConfirmPressed() {
+    // Fall back to the initial quantity if the field somehow contains an
+    // unparseable value — defensive, the digitsOnly formatter should
+    // prevent this in practice.
     final int currentQty =
         int.tryParse(_qtyCtrl.text) ?? widget.initialQuantity;
     final String currentCab = _cabinetCtrl.text.trim();
@@ -101,33 +135,34 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
     );
   }
 
-  void _onBackToEdit() {
-    setState(() {
-      _mode = _StepMode.edit;
-    });
-  }
+  /// Handler for the "Back" button in confirm mode — returns to edit.
+  void _onBackToEdit() => setState(() => _mode = _StepMode.edit);
 
-  // Helper to safely increment/decrement
+  // ── Field mutators ────────────────────────────────────────────────────
+
+  /// Increment/decrement the quantity field, clamped at zero so we never
+  /// show a negative stock count.
   void _adjustQuantity(int delta) {
-    int current = int.tryParse(_qtyCtrl.text) ?? widget.initialQuantity;
-    int newVal = current + delta;
-    if (newVal < 0) newVal = 0;
-    _qtyCtrl.text = '$newVal';
+    final int current =
+        int.tryParse(_qtyCtrl.text) ?? widget.initialQuantity;
+    final int newVal = current + delta;
+    _qtyCtrl.text = '${newVal < 0 ? 0 : newVal}';
   }
 
-  void _resetQuantity() {
-    _qtyCtrl.text = '${widget.initialQuantity}';
-  }
+  /// Reset the quantity input back to the value the dialog opened with.
+  void _resetQuantity() => _qtyCtrl.text = '${widget.initialQuantity}';
 
-  void _resetCabinet() {
-    _cabinetCtrl.text = widget.initialCabinet;
-  }
+  /// Reset the cabinet input back to the value the dialog opened with.
+  void _resetCabinet() => _cabinetCtrl.text = widget.initialCabinet;
+
+  // ── Build ─────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    // Glassmorphism Container
+    // Glassmorphism wrapper — the Dialog itself is fully transparent so
+    // the BackdropFilter can blur everything beneath it.
     return Dialog(
-      backgroundColor: Colors.transparent, // Important for glass effect
+      backgroundColor: Colors.transparent,
       elevation: 0,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
@@ -136,10 +171,12 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.grey.shade900.withValues(alpha:0.85), // Dark glass base
+              // Dark semi-transparent base so the blur still carries a
+              // strong glass tint instead of washing out.
+              color: Colors.grey.shade900.withValues(alpha: 0.85),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: Colors.white.withValues(alpha:0.1),
+                color: Colors.white.withValues(alpha: 0.1),
                 width: 1,
               ),
             ),
@@ -147,7 +184,8 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Header
+                // Header — swaps between "Edit Inventory" and "Confirm
+                // Changes" depending on the current step.
                 Text(
                   _mode == _StepMode.edit
                       ? 'Edit Inventory'
@@ -164,13 +202,13 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
                   widget.equipmentName,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white.withValues(alpha:0.7),
+                    color: Colors.white.withValues(alpha: 0.7),
                   ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
 
-                // Body Content
+                // Body — either the edit form or the confirmation diff.
                 if (_mode == _StepMode.edit)
                   _buildEditForm()
                 else
@@ -178,15 +216,19 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
 
                 const SizedBox(height: 24),
 
-                // Action Buttons
+                // Action bar. Cancel is always present; the primary
+                // button(s) depend on the current step. Using a spread
+                // in the else branch avoids an extra nested Row.
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed: () => Navigator.of(context).pop(), // Cancel
+                      onPressed: () => Navigator.of(context).pop(),
                       child: Text(
                         'Cancel',
-                        style: TextStyle(color: Colors.white.withValues(alpha:0.6)),
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.6),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -204,30 +246,27 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
                         ),
                         child: const Text('Review'),
                       )
-                    else
-                      Row(
-                        children: [
-                          TextButton(
-                            onPressed: _onBackToEdit,
-                            child: const Text(
-                              'Back',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: _onConfirmPressed,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text('Save'),
-                          ),
-                        ],
+                    else ...[
+                      TextButton(
+                        onPressed: _onBackToEdit,
+                        child: const Text(
+                          'Back',
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: _onConfirmPressed,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Save'),
+                      ),
+                    ],
                   ],
                 ),
               ],
@@ -238,11 +277,13 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
     );
   }
 
+  /// Edit-mode body: quantity stepper + cabinet text field, each with a
+  /// "reset to initial value" button for quick undo.
   Widget _buildEditForm() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Quantity Controls
+        // ── Quantity label + reset ──
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -253,7 +294,6 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            // Reset Button
             IconButton(
               icon: const Icon(Icons.refresh, size: 18, color: Colors.white70),
               onPressed: _resetQuantity,
@@ -264,10 +304,14 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
           ],
         ),
         const SizedBox(height: 8),
+
+        // ── Quantity stepper row: [−] [text field] [+] ──
+        // The text field accepts direct typing (digits-only) while the
+        // buttons offer one-tap steps for quick adjustments.
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha:0.05),
+            color: Colors.white.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -277,7 +321,6 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
                 icon: Icons.remove,
                 onTap: () => _adjustQuantity(-1),
               ),
-              // Editable Input Field
               SizedBox(
                 width: 80,
                 child: TextField(
@@ -293,6 +336,8 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.zero,
                   ),
+                  // Digits only — the tryParse fallback in
+                  // _onConfirmPressed is purely defensive thanks to this.
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 ),
               ),
@@ -305,7 +350,7 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
         ),
         const SizedBox(height: 16),
 
-        // Cabinet Input
+        // ── Cabinet label + reset ──
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -316,7 +361,6 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            // Reset Button
             IconButton(
               icon: const Icon(Icons.refresh, size: 18, color: Colors.white70),
               onPressed: _resetCabinet,
@@ -327,14 +371,16 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
           ],
         ),
         const SizedBox(height: 8),
+
+        // ── Cabinet free-text input ──
         TextField(
           controller: _cabinetCtrl,
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             hintText: 'e.g. A1, Shelf B...',
-            hintStyle: TextStyle(color: Colors.white.withValues(alpha:0.4)),
+            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4)),
             filled: true,
-            fillColor: Colors.white.withValues(alpha:0.05),
+            fillColor: Colors.white.withValues(alpha: 0.05),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
@@ -349,11 +395,15 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
     );
   }
 
+  /// Confirm-mode body: renders a list of diff rows for any field that
+  /// actually changed. If nothing differs we show a "No changes" hint so
+  /// the user can still step back or cancel cleanly.
   Widget _buildConfirmView() {
-    final changes = <Widget>[];
     final int currentQty =
         int.tryParse(_qtyCtrl.text) ?? widget.initialQuantity;
     final String currentCab = _cabinetCtrl.text.trim();
+
+    final List<Widget> changes = [];
 
     if (currentQty != widget.initialQuantity) {
       changes.add(
@@ -391,7 +441,7 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha:0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -408,6 +458,8 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
   }
 }
 
+/// Small round icon button used for the quantity +/- stepper. Uses an
+/// [InkWell] for the ripple and a thin white border for the glass look.
 class _CircleIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
@@ -425,7 +477,7 @@ class _CircleIconButton extends StatelessWidget {
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withValues(alpha:0.3)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
           ),
           child: Icon(icon, color: Colors.white),
         ),
@@ -434,6 +486,12 @@ class _CircleIconButton extends StatelessWidget {
   }
 }
 
+/// Single row of the confirmation diff. Renders as:
+///
+///     label: oldValue  →  newValue
+///
+/// with the old value struck through in red and the new value highlighted
+/// in green so the change direction is immediately obvious.
 class _DiffRow extends StatelessWidget {
   final String label;
   final String oldValue;
@@ -458,7 +516,9 @@ class _DiffRow extends StatelessWidget {
                 children: [
                   TextSpan(
                     text: '$label: ',
-                    style: TextStyle(color: Colors.white.withValues(alpha:0.6)),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.6),
+                    ),
                   ),
                   TextSpan(
                     text: oldValue,

@@ -1,11 +1,20 @@
-import 'dart:math' as math;
-import 'dart:ui';
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:flutter_avif/flutter_avif.dart';
+// PixelVault — Videography guides list page.
+//
+// Stateful grid of videography guide tiles with a top search bar. Each
+// tile deep-links to [VideographyDetailPage] via
+// `/learn/videography-guides/:id`. Search is a simple case-insensitive
+// `contains` match on the guide name, applied reactively via a
+// [TextEditingController] listener registered in initState.
 
-import '../services/data_repository.dart';
+import 'dart:math' as math;
+import 'dart:ui'; // For ImageFilter used by BackdropFilter.
+
+import 'package:flutter/material.dart';
+import 'package:flutter_avif/flutter_avif.dart';
+import 'package:go_router/go_router.dart';
+
 import '../models/videography_model.dart';
+import '../services/data_repository.dart';
 
 class LearnVideographyListPage extends StatefulWidget {
   const LearnVideographyListPage({super.key});
@@ -15,7 +24,10 @@ class LearnVideographyListPage extends StatefulWidget {
 }
 
 class _LearnVideographyListPageState extends State<LearnVideographyListPage> {
-  final _searchCtrl = TextEditingController();
+  final TextEditingController _searchCtrl = TextEditingController();
+
+  // Source list + search-filtered view. `_all` is immutable for the
+  // life of this page; `_filtered` is recomputed on every search change.
   late final List<VideographyGuide> _all;
   late List<VideographyGuide> _filtered;
 
@@ -23,15 +35,17 @@ class _LearnVideographyListPageState extends State<LearnVideographyListPage> {
   void initState() {
     super.initState();
     _all = DataRepository().getAllVideographyGuides();
-    _filtered = List.from(_all);
+    _filtered = List.of(_all);
     _searchCtrl.addListener(_onSearch);
   }
 
+  /// Case-insensitive `contains` filter on the guide name. An empty
+  /// query shows every guide in its original order.
   void _onSearch() {
-    final q = _searchCtrl.text.toLowerCase();
+    final String q = _searchCtrl.text.toLowerCase();
     setState(() {
       _filtered = q.isEmpty
-          ? List.from(_all)
+          ? List.of(_all)
           : _all.where((g) => g.name.toLowerCase().contains(q)).toList();
     });
   }
@@ -45,20 +59,22 @@ class _LearnVideographyListPageState extends State<LearnVideographyListPage> {
   @override
   Widget build(BuildContext context) {
     const brandBlue = Color(0xFF0047BB);
+
+    // Responsive column count — one column per ~420 px, min 2.
     const double maxTileWidth = 420;
-    final cols = math.max(
+    final int cols = math.max(
       2,
       (MediaQuery.of(context).size.width / maxTileWidth).floor(),
     );
 
-    // Hero wrapper
+    // Root Hero matches the home page's "Videography Basics" card.
     return Hero(
       tag: 'video_guides_card',
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(
           children: [
-            // 1. Background Gradient
+            // ── 1. Background gradient ──────────────────────────────
             Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
@@ -74,7 +90,7 @@ class _LearnVideographyListPageState extends State<LearnVideographyListPage> {
                 ),
               ),
             ),
-            // 2. Blobs
+            // ── 2. Ambient blob glow (top-right) ────────────────────
             Positioned(
               top: -100,
               right: -100,
@@ -94,9 +110,10 @@ class _LearnVideographyListPageState extends State<LearnVideographyListPage> {
               ),
             ),
 
-            // 3. Content
+            // ── 3. Foreground content ──────────────────────────────
             CustomScrollView(
               slivers: [
+                // Frosted pinned app bar.
                 SliverAppBar(
                   leading: IconButton(
                     icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -122,6 +139,8 @@ class _LearnVideographyListPageState extends State<LearnVideographyListPage> {
                     ),
                   ),
                 ),
+
+                // Glassmorphism search bar.
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
@@ -161,6 +180,8 @@ class _LearnVideographyListPageState extends State<LearnVideographyListPage> {
                     ),
                   ),
                 ),
+
+                // Guide tile grid.
                 SliverPadding(
                   padding: const EdgeInsets.all(16),
                   sliver: SliverGrid(
@@ -194,6 +215,10 @@ class _LearnVideographyListPageState extends State<LearnVideographyListPage> {
   }
 }
 
+/// Glassmorphism tile for a single videography guide. Structurally
+/// identical to the scenario / equipment cards on other list pages —
+/// image, gradient, centered title, tap layer — but kept local because
+/// the list pages don't currently share a common card widget.
 class _GlassGuideCard extends StatelessWidget {
   final String title;
   final String imagePath;
@@ -211,11 +236,13 @@ class _GlassGuideCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Stack(
         children: [
+          // Cover image or a translucent fallback when empty.
           Positioned.fill(
             child: imagePath.isNotEmpty
                 ? AvifImage.asset(imagePath, fit: BoxFit.cover)
                 : Container(color: Colors.white.withValues(alpha: 0.1)),
           ),
+          // Darkening gradient for title legibility.
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -231,6 +258,7 @@ class _GlassGuideCard extends StatelessWidget {
               ),
             ),
           ),
+          // Centered bottom title.
           Positioned(
             bottom: 0,
             left: 0,
@@ -257,6 +285,7 @@ class _GlassGuideCard extends StatelessWidget {
               ),
             ),
           ),
+          // Tap ripple layer.
           Positioned.fill(
             child: Material(
               color: Colors.transparent,

@@ -1,31 +1,46 @@
+// PixelVault — Production scenarios list page.
+//
+// Stateless grid of production-scenario tiles. Each tile deep-links to a
+// [ScenarioDetailPage] via `/scenarios/:id`.
+
 import 'dart:math' as math;
-import 'dart:ui';
+import 'dart:ui'; // For ImageFilter used by BackdropFilter.
+
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_avif/flutter_avif.dart';
+import 'package:go_router/go_router.dart';
 
-import '../services/data_repository.dart';
 import '../models/scenario_model.dart';
+import '../services/data_repository.dart';
 
+/// Grid page listing every production scenario loaded by
+/// [DataRepository]. Stateless because the catalogue is static — if
+/// search/filter is ever added, convert to StatefulWidget and model it
+/// on [LearnVideographyListPage].
 class ScenarioListPage extends StatelessWidget {
   const ScenarioListPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     final List<ScenarioGuide> items = DataRepository().getAllScenarios();
+
+    // Responsive column count: one column per ~420 px of screen width,
+    // never fewer than 2 so the layout doesn't collapse to a list.
     const double maxTileWidth = 420.0;
-    final cols = math.max(
+    final int cols = math.max(
       2,
       (MediaQuery.of(context).size.width / maxTileWidth).floor(),
     );
 
+    // Root Hero matches the home page's "Production Scenarios" card so
+    // the tile image animates into this screen on navigation.
     return Hero(
       tag: 'scenarios_card',
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(
           children: [
-            // 1. Background
+            // ── 1. Background gradient ──────────────────────────────
             Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
@@ -41,7 +56,9 @@ class ScenarioListPage extends StatelessWidget {
                 ),
               ),
             ),
-            // 2. Blobs
+            // ── 2. Ambient purple blob ──────────────────────────────
+            // Only one blob on this page — the purple tint is the
+            // scenario section's accent colour.
             Positioned(
               bottom: -100,
               left: -50,
@@ -61,9 +78,10 @@ class ScenarioListPage extends StatelessWidget {
               ),
             ),
 
-            // 3. Content
+            // ── 3. Foreground content ──────────────────────────────
             CustomScrollView(
               slivers: [
+                // Frosted pinned app bar.
                 SliverAppBar(
                   leading: IconButton(
                     icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -89,6 +107,8 @@ class ScenarioListPage extends StatelessWidget {
                     ),
                   ),
                 ),
+
+                // Scenario tile grid.
                 SliverPadding(
                   padding: const EdgeInsets.all(16),
                   sliver: SliverGrid(
@@ -120,6 +140,9 @@ class ScenarioListPage extends StatelessWidget {
   }
 }
 
+/// Glassmorphism tile for a single scenario. Layers a cover image, a
+/// bottom-up darkening gradient (for title legibility), the title text,
+/// and an [InkWell] tap layer on top.
 class _GlassScenarioCard extends StatelessWidget {
   final String title;
   final String imagePath;
@@ -137,11 +160,14 @@ class _GlassScenarioCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Stack(
         children: [
+          // Cover image, or a subtle translucent placeholder if the
+          // scenario has no cover art.
           Positioned.fill(
             child: imagePath.isNotEmpty
                 ? AvifImage.asset(imagePath, fit: BoxFit.cover)
                 : Container(color: Colors.white.withValues(alpha: 0.1)),
           ),
+          // Darkening gradient so the title stays legible over any image.
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -157,6 +183,7 @@ class _GlassScenarioCard extends StatelessWidget {
               ),
             ),
           ),
+          // Title text, centered along the bottom of the tile.
           Positioned(
             bottom: 0,
             left: 0,
@@ -183,6 +210,8 @@ class _GlassScenarioCard extends StatelessWidget {
               ),
             ),
           ),
+          // Tap ripple layer, sits above everything so feedback shows
+          // through on press.
           Positioned.fill(
             child: Material(
               color: Colors.transparent,
