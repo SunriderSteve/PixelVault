@@ -5,9 +5,6 @@ on:
   push:
     branches: [main]
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 permissions:
   contents: read # default, needed to checkout code
   pages: write # needed to upload/publish Pages
@@ -32,15 +29,15 @@ jobs:
       - run: flutter build web --release --base-href /PixelVault/
 
       # 4. Configure GitHub Pages
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
 
       # 5. Upload the build output
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: build/web
 
       # 6. Deploy to GitHub Pages
-      - uses: actions/deploy-pages@v4
+      - uses: actions/deploy-pages@v5
         with:
           # optional: wait for the Pages deployment to complete
           wait-for-deployment: true
