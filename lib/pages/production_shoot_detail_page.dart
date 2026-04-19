@@ -38,9 +38,7 @@ class _ProductionShootDetailPageState extends State<ProductionShootDetailPage> {
   @override
   void initState() {
     super.initState();
-    _items = Map.from(
-      DataRepository().getShoot(widget.shootName) ?? {},
-    );
+    _items = Map.from(DataRepository().getShoot(widget.shootName) ?? {});
     DataRepository().shootsEpoch.addListener(_onChanged);
   }
 
@@ -78,9 +76,9 @@ class _ProductionShootDetailPageState extends State<ProductionShootDetailPage> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to update: $e')));
     }
   }
 
@@ -98,10 +96,7 @@ class _ProductionShootDetailPageState extends State<ProductionShootDetailPage> {
     if (!mounted || result == null || result.isEmpty) return;
 
     try {
-      await DataRepository().addEquipmentToShoot(
-        widget.shootName,
-        result,
-      );
+      await DataRepository().addEquipmentToShoot(widget.shootName, result);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -112,9 +107,9 @@ class _ProductionShootDetailPageState extends State<ProductionShootDetailPage> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to add: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to add: $e')));
     }
   }
 
@@ -123,7 +118,10 @@ class _ProductionShootDetailPageState extends State<ProductionShootDetailPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.grey.shade900,
-        title: const Text('Remove Item?', style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'Remove Item?',
+          style: TextStyle(color: Colors.white),
+        ),
         content: Text(
           'Remove "$equipName" from this shoot?',
           style: const TextStyle(color: Colors.white70),
@@ -131,11 +129,17 @@ class _ProductionShootDetailPageState extends State<ProductionShootDetailPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white54),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Remove', style: TextStyle(color: Colors.redAccent)),
+            child: const Text(
+              'Remove',
+              style: TextStyle(color: Colors.redAccent),
+            ),
           ),
         ],
       ),
@@ -150,9 +154,9 @@ class _ProductionShootDetailPageState extends State<ProductionShootDetailPage> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to remove: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to remove: $e')));
     }
   }
 
@@ -186,7 +190,9 @@ class _ProductionShootDetailPageState extends State<ProductionShootDetailPage> {
     for (final id in sortedIds) {
       final shootEquip = _items[id] ?? ShootEquip();
       Equipment? equip = repo.getEquipmentById(id);
-      if (equip == null && id.startsWith('custom_') && shootEquip.name != null) {
+      if (equip == null &&
+          id.startsWith('custom_') &&
+          shootEquip.name != null) {
         equip = Equipment(
           id: id,
           name: shootEquip.name!,
@@ -317,42 +323,47 @@ class _ProductionShootDetailPageState extends State<ProductionShootDetailPage> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                    child: Builder(builder: (_) {
-                      final total = _items.length;
-                      final checked =
-                          _items.values.where((v) => v.checked).length;
-                      final left = total - checked;
-                      final allDone = left == 0;
-                      return Align(
-                        alignment: Alignment.centerLeft,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: allDone
-                                ? Colors.green.withValues(alpha: 0.25)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
+                    child: Builder(
+                      builder: (_) {
+                        final total = _items.length;
+                        final checked = _items.values
+                            .where((v) => v.checked)
+                            .length;
+                        final left = total - checked;
+                        final allDone = left == 0;
+                        return Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
                               color: allDone
-                                  ? Colors.greenAccent
-                                  : Colors.white.withValues(alpha: 0.4),
-                              width: 1.5,
+                                  ? Colors.green.withValues(alpha: 0.25)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: allDone
+                                    ? Colors.greenAccent
+                                    : Colors.white.withValues(alpha: 0.4),
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Text(
+                              '$left/$total Left',
+                              style: TextStyle(
+                                color: allDone
+                                    ? Colors.greenAccent
+                                    : Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                          child: Text(
-                            '$left/$total Left',
-                            style: TextStyle(
-                              color: allDone ? Colors.greenAccent : Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
+                        );
+                      },
+                    ),
                   ),
                 ),
                 SliverList(
@@ -384,10 +395,8 @@ class _ProductionShootDetailPageState extends State<ProductionShootDetailPage> {
                             onCheckChanged: (v) =>
                                 _toggleCheck(entry.key.id, v),
                             onInfoTap: () => _showEquipmentInfo(entry.key),
-                            onRemove: () => _removeEquipment(
-                              entry.key.id,
-                              entry.key.name,
-                            ),
+                            onRemove: () =>
+                                _removeEquipment(entry.key.id, entry.key.name),
                           ),
                     ],
                     const SizedBox(height: 24),
@@ -533,9 +542,7 @@ class _EquipmentRow extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.08),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             ),
             child: Row(
               children: [
@@ -561,9 +568,7 @@ class _EquipmentRow extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: checked
-                                ? Colors.white38
-                                : Colors.white,
+                            color: checked ? Colors.white38 : Colors.white,
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                             decoration: checked
@@ -578,21 +583,13 @@ class _EquipmentRow extends StatelessWidget {
                           spacing: 6,
                           runSpacing: 4,
                           children: [
-                            _Tag(
-                              label: 'Need: $bringQty',
-                              color: Colors.cyan,
-                            ),
+                            _Tag(label: 'Need: $bringQty', color: Colors.cyan),
                             if (isCustom)
-                              const _Tag(
-                                label: 'Custom',
-                                color: Colors.purple,
-                              )
+                              const _Tag(label: 'Custom', color: Colors.purple)
                             else ...[
                               _Tag(
                                 label: 'Stock: $qty',
-                                color: qty > 0
-                                    ? Colors.green
-                                    : Colors.red,
+                                color: qty > 0 ? Colors.green : Colors.red,
                               ),
                               _Tag(
                                 label: equipment.brand,
@@ -644,9 +641,9 @@ class _Tag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.4),
+        color: color.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.5)),
+        border: Border.all(color: color.withValues(alpha: 1)),
       ),
       child: Text(
         label,
@@ -654,16 +651,16 @@ class _Tag extends StatelessWidget {
           color: color == Colors.green
               ? Colors.greenAccent
               : color == Colors.red
-                  ? Colors.redAccent
-                  : color == Colors.orange
-                      ? Colors.orangeAccent
-                      : color == Colors.cyan
-                          ? Colors.cyanAccent
-                          : color == Colors.lightBlueAccent
-                              ? Colors.lightBlueAccent.shade100
-                              : color == Colors.purple
-                                  ? Colors.purpleAccent
-                                  : Colors.white70,
+              ? Colors.redAccent
+              : color == Colors.orange
+              ? Colors.amber.shade200
+              : color == Colors.cyan
+              ? Colors.cyanAccent
+              : color == Colors.lightBlueAccent
+              ? const Color.fromARGB(255, 192, 233, 251)
+              : color == Colors.purple
+              ? Colors.purple.shade100
+              : Colors.white70,
           fontSize: 11,
           fontWeight: FontWeight.w600,
         ),
@@ -758,9 +755,9 @@ class _EquipmentInfoPopupState extends State<_EquipmentInfoPopup> {
       setState(() => _originalQty = _bringQty);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to update: $e')));
     }
   }
 
@@ -782,9 +779,7 @@ class _EquipmentInfoPopupState extends State<_EquipmentInfoPopup> {
             decoration: BoxDecoration(
               color: Colors.grey.shade900.withValues(alpha: 0.95),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.15),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -884,10 +879,7 @@ class _EquipmentInfoPopupState extends State<_EquipmentInfoPopup> {
                           label: 'Category',
                           value: widget.equipment.category,
                         ),
-                        _InfoRow(
-                          label: 'Brand',
-                          value: widget.equipment.brand,
-                        ),
+                        _InfoRow(label: 'Brand', value: widget.equipment.brand),
                         _InfoRow(
                           label: 'Stock',
                           value: qty > 0 ? '$qty' : 'Out of Stock',
@@ -1080,9 +1072,7 @@ class _PopupCircleBtn extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: Colors.white.withValues(alpha: 0.12),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.3),
-          ),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
         ),
         child: Icon(icon, color: Colors.white70, size: 18),
       ),

@@ -32,13 +32,14 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart' show rootBundle, AssetManifest;
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:yaml/yaml.dart';
 
 import '../models/admin_config_model.dart';
 import '../models/equipment_model.dart';
 import '../models/scenario_model.dart';
 import '../models/videography_model.dart';
+import 'guides_client.dart';
 import 'overlay_client.dart';
 import 'production_shoots_client.dart';
 
@@ -69,6 +70,7 @@ class DataRepository {
   AdminConfigModel? _admin; // Parsed from /data/admin_config.yaml.
   InventoryOverlayClient? _overlayClient; // Owns all gist HTTP.
   ProductionShootsClient? _shootsClient; // Production shoots gist HTTP.
+  GuidesClient? _guidesClient; // Static guide YAML gist HTTP.
   Map<String, Map<String, dynamic>> _overlay = {}; // id -> {quantity, storage}
 
   // ── Production shoots ──────────────────────────────────────────
@@ -133,8 +135,9 @@ class DataRepository {
     await _loadAdminConfig();
     _overlayClient = _admin == null ? null : InventoryOverlayClient(_admin!);
     _shootsClient = _admin == null ? null : ProductionShootsClient(_admin!);
+    _guidesClient = _admin == null ? null : GuidesClient(_admin!);
 
-    await _loadAllStaticAssets(); // Parse bundled YAMLs into memory.
+    await _loadGuidesFromGist(); // Parse guide YAMLs from gist into memory.
     await fetchOverlayOnce(); // Apply the initial overlay.
     await fetchShootsOnce(); // Load production shoots.
     _startOverlayPolling(); // Begin periodic overlay refresh.
@@ -159,54 +162,53 @@ class DataRepository {
   }
 
   // ══════════════════════════════════════════════════════════════
-  // Static assets
+  // Guide content (fetched from gist)
   // ══════════════════════════════════════════════════════════════
 
-  /// Walk the asset manifest for each content directory and parse
-  /// every `.yaml` file into its corresponding in-memory map.
-  Future<void> _loadAllStaticAssets() async {
-    final equipPaths = await _listAssetsIn('data/equipment/');
-    final videoPaths = await _listAssetsIn('data/videography/');
-    final scenarioPaths = await _listAssetsIn('data/scenarios/');
+  /// Fetch the three guide YAML files from the gist and parse each
+  /// multi-document stream into its corresponding in-memory map.
+  /// Falls back gracefully — a missing file leaves its map empty
+  /// rather than crashing the app.
+  Future<void> _loadGuidesFromGist() async {
+    final client = _guidesClient;
+    if (client == null) return;
+
+    // Fetch all three categories in parallel.
+    final results = await Future.wait([
+      client.fetchEquipmentYaml(),
+      client.fetchVideographyYaml(),
+      client.fetchScenarioYaml(),
+    ]);
 
     // Equipment.
-    for (final path in equipPaths) {
-      final yamlStr = await rootBundle.loadString(path);
-      final y = loadYaml(yamlStr) as YamlMap;
-      final eq = Equipment.fromYaml(y);
-      _equipment[eq.id] = eq;
+    final equipYaml = results[0];
+    if (equipYaml != null) {
+      for (final doc in loadYamlStream(equipYaml)) {
+        if (doc is! YamlMap) continue;
+        final eq = Equipment.fromYaml(doc);
+        _equipment[eq.id] = eq;
+      }
     }
 
     // Videography guides.
-    for (final path in videoPaths) {
-      final yamlStr = await rootBundle.loadString(path);
-      final y = loadYaml(yamlStr) as YamlMap;
-      final v = VideographyGuide.fromYaml(y);
-      _videography[v.id] = v;
+    final videoYaml = results[1];
+    if (videoYaml != null) {
+      for (final doc in loadYamlStream(videoYaml)) {
+        if (doc is! YamlMap) continue;
+        final v = VideographyGuide.fromYaml(doc);
+        _videography[v.id] = v;
+      }
     }
 
     // Production scenarios.
-    for (final path in scenarioPaths) {
-      final yamlStr = await rootBundle.loadString(path);
-      final y = loadYaml(yamlStr) as YamlMap;
-      final s = ScenarioGuide.fromYaml(y);
-      _scenarios[s.id] = s;
+    final scenarioYaml = results[2];
+    if (scenarioYaml != null) {
+      for (final doc in loadYamlStream(scenarioYaml)) {
+        if (doc is! YamlMap) continue;
+        final s = ScenarioGuide.fromYaml(doc);
+        _scenarios[s.id] = s;
+      }
     }
-  }
-
-  /// List every asset path under [prefix] that ends with [ext], using
-  /// the generated [AssetManifest]. This lets us drop new YAML files
-  /// into `data/...` without touching code — they're picked up the
-  /// next time the bundle is rebuilt.
-  Future<List<String>> _listAssetsIn(
-    String prefix, {
-    String ext = '.yaml',
-  }) async {
-    final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
-    final all = manifest.listAssets();
-    return all
-        .where((p) => p.startsWith(prefix) && p.endsWith(ext))
-        .toList(growable: false);
   }
 
   // ══════════════════════════════════════════════════════════════

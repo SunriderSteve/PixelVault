@@ -9,6 +9,14 @@ class AdminConfigModel {
   final String shootsFile;
   final String shootsRawUrl;
 
+  // Guide files (multi-document YAML, fetched from the same gist)
+  final String equipmentGuidesFile;
+  final String equipmentGuidesRawUrl;
+  final String videographyGuidesFile;
+  final String videographyGuidesRawUrl;
+  final String scenarioGuidesFile;
+  final String scenarioGuidesRawUrl;
+
   const AdminConfigModel({
     required this.gistId,
     required this.gistFile,
@@ -17,6 +25,12 @@ class AdminConfigModel {
     required this.accessToken,
     required this.shootsFile,
     required this.shootsRawUrl,
+    required this.equipmentGuidesFile,
+    required this.equipmentGuidesRawUrl,
+    required this.videographyGuidesFile,
+    required this.videographyGuidesRawUrl,
+    required this.scenarioGuidesFile,
+    required this.scenarioGuidesRawUrl,
   });
 
   // Rotates all printable ASCII (space ' ' = 32 .. '~' = 126)
@@ -64,6 +78,18 @@ class AdminConfigModel {
       ),
       shootsFile: (g['shoots_file'] as String?) ?? 'production_shoots.yaml',
       shootsRawUrl: (g['shoots_raw_url'] as String?) ?? '',
+      equipmentGuidesFile:
+          (g['equipment_guides_file'] as String?) ?? 'equipment_guides.yaml',
+      equipmentGuidesRawUrl:
+          (g['equipment_guides_raw_url'] as String?) ?? '',
+      videographyGuidesFile:
+          (g['videography_guides_file'] as String?) ?? 'videography_guides.yaml',
+      videographyGuidesRawUrl:
+          (g['videography_guides_raw_url'] as String?) ?? '',
+      scenarioGuidesFile:
+          (g['scenario_guides_file'] as String?) ?? 'scenario_guides.yaml',
+      scenarioGuidesRawUrl:
+          (g['scenario_guides_raw_url'] as String?) ?? '',
     );
   }
 }
