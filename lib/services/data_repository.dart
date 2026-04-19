@@ -40,6 +40,7 @@ import '../models/equipment_model.dart';
 import '../models/scenario_model.dart';
 import '../models/videography_model.dart';
 import 'overlay_client.dart';
+import 'production_shoots_client.dart';
 
 class DataRepository {
   // ── Singleton wiring ────────────────────────────────────────────
@@ -67,12 +68,27 @@ class DataRepository {
   // ── Overlay + admin config ──────────────────────────────────────
   AdminConfigModel? _admin; // Parsed from /data/admin_config.yaml.
   InventoryOverlayClient? _overlayClient; // Owns all gist HTTP.
-  Map<String, Map<String, dynamic>> _overlay =
-      {}; // id -> {quantity, cabinet}
+  ProductionShootsClient? _shootsClient; // Production shoots gist HTTP.
+  Map<String, Map<String, dynamic>> _overlay = {}; // id -> {quantity, storage}
+
+  // ── Production shoots ──────────────────────────────────────────
+  // shootName -> { equipId -> checked }
+  Map<String, Map<String, ShootEquip>> _shoots = {};
+  final ValueNotifier<int> shootsEpoch = ValueNotifier<int>(0);
 
   // ── Polling state ───────────────────────────────────────────────
   Timer? _overlayTimer; // Periodic overlay refresher.
   bool _fetchingOverlay = false; // Reentrancy guard for fetchOverlayOnce.
+
+  // ── Shoot write debounce ─────────────────────────────────────
+  // Batches rapid shoot mutations into a single Gist API call.
+  // Each mutation applies its change optimistically, queues an _ShootOp,
+  // and resets a 1 second timer. When the timer fires, one readViaApi +
+  // replay all ops + one writeAll is issued.
+  Timer? _shootsDebounce;
+  final List<_ShootOp> _pendingShootOps = [];
+  Map<String, Map<String, ShootEquip>>? _shootsSnapshot; // rollback
+  bool _flushingShootOps = false;
 
   // ── Post-write stale-poll guard ─────────────────────────────────
   // After a successful write we record the expected post-write values
@@ -111,9 +127,11 @@ class DataRepository {
     // before we try to touch the network.
     await _loadAdminConfig();
     _overlayClient = _admin == null ? null : InventoryOverlayClient(_admin!);
+    _shootsClient = _admin == null ? null : ProductionShootsClient(_admin!);
 
     await _loadAllStaticAssets(); // Parse bundled YAMLs into memory.
     await fetchOverlayOnce(); // Apply the initial overlay.
+    await fetchShootsOnce(); // Load production shoots.
     _startOverlayPolling(); // Begin periodic refresh.
   }
 
@@ -257,11 +275,8 @@ class DataRepository {
   /// Shallow field-by-field comparison over the two mutable inventory
   /// fields. Sufficient because those are the only fields that ever
   /// make it into the overlay map in the first place.
-  bool _overlayEntriesEqual(
-    Map<String, dynamic> a,
-    Map<String, dynamic> b,
-  ) {
-    return a['quantity'] == b['quantity'] && a['cabinet'] == b['cabinet'];
+  bool _overlayEntriesEqual(Map<String, dynamic> a, Map<String, dynamic> b) {
+    return a['quantity'] == b['quantity'] && a['storage'] == b['storage'];
   }
 
   /// (Re)start the periodic overlay refresher. Safe to call multiple
@@ -288,7 +303,7 @@ class DataRepository {
       if (eq == null) return;
       _equipment[id] = eq.copyWith(
         quantity: (v['quantity'] as num?)?.toInt(),
-        cabinet: v['cabinet'] as String?,
+        storage: v['storage'] as String?,
       );
     });
   }
@@ -301,7 +316,7 @@ class DataRepository {
   Future<void> applyInventoryChanges(
     String equipmentId, {
     int? quantity,
-    String? cabinet,
+    String? storage,
   }) async {
     final client = _overlayClient;
     if (client == null) throw StateError('overlay client not ready');
@@ -330,17 +345,15 @@ class DataRepository {
     // InventoryListPage rebuilds from [getAllEquipment] (which reads
     // [_equipment]), so the user saw stale values until the next
     // poll landed.
-    final nextOverlay = Map<String, dynamic>.from(
-      prevOverlayEntry ?? const {},
-    );
+    final nextOverlay = Map<String, dynamic>.from(prevOverlayEntry ?? const {});
     if (quantity != null) nextOverlay['quantity'] = quantity;
-    if (cabinet != null) nextOverlay['cabinet'] = cabinet;
+    if (storage != null) nextOverlay['storage'] = storage;
     _overlay[equipmentId] = nextOverlay;
 
     if (prevEquipment != null) {
       _equipment[equipmentId] = prevEquipment.copyWith(
         quantity: quantity,
-        cabinet: cabinet,
+        storage: storage,
       );
     }
     overlayEpoch.value++; // InventoryListPage re-renders.
@@ -352,7 +365,7 @@ class DataRepository {
       final fresh = await client.updateEntry(
         equipmentId,
         quantity: quantity,
-        cabinet: cabinet,
+        storage: storage,
         token: token,
       );
 
@@ -388,6 +401,312 @@ class DataRepository {
     }
 
     _startOverlayPolling();
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // Production shoots: fetch + mutate
+  // ══════════════════════════════════════════════════════════════
+
+  /// Fetch production shoots once from the gist.
+  Future<bool> fetchShootsOnce() async {
+    if (_shootsClient == null) return false;
+    try {
+      final map = await _shootsClient!.fetch();
+      if (map == null) return false;
+      _shoots = map;
+      shootsEpoch.value++;
+      return true;
+    } catch (e) {
+      debugPrint('shoots fetch error: $e');
+      return false;
+    }
+  }
+
+  // ── Shoot debounce helpers ────────────────────────────────────
+
+  /// Queue a shoot operation for debounced flush. The caller must
+  /// apply the optimistic local change to [_shoots] before calling this.
+  void _scheduleShootFlush(_ShootOp op) {
+    _shootsSnapshot ??= _deepCopyShoots(_shoots);
+    _pendingShootOps.add(op);
+    _shootsDebounce?.cancel();
+    _shootsDebounce = Timer(
+      const Duration(milliseconds: 1000),
+      () => _executeShootFlush(),
+    );
+  }
+
+  /// Execute one batched write of all pending shoot operations.
+  Future<void> _executeShootFlush() async {
+    if (_flushingShootOps) return;
+    _flushingShootOps = true;
+
+    final ops = List<_ShootOp>.from(_pendingShootOps);
+    final snapshot = _shootsSnapshot;
+    _pendingShootOps.clear();
+    _shootsSnapshot = null;
+
+    final client = _shootsClient!;
+    final String token = _admin?.accessToken ?? '';
+
+    try {
+      final fresh = await client.readViaApi(token);
+      for (final op in ops) {
+        op.apply(fresh);
+      }
+      final ground = await client.writeAll(fresh, token: token);
+      _shoots = ground;
+      // Re-apply any ops that were queued while the flush was
+      // in-flight so their optimistic changes aren't lost, and
+      // update the rollback snapshot to confirmed ground truth.
+      if (_pendingShootOps.isNotEmpty) {
+        _shootsSnapshot = _deepCopyShoots(_shoots);
+        for (final pendingOp in _pendingShootOps) {
+          pendingOp.apply(_shoots);
+        }
+      }
+      shootsEpoch.value++;
+    } catch (e) {
+      if (snapshot != null) {
+        _shoots = snapshot;
+        // Re-apply any ops queued during the failed flush so
+        // their optimistic state is preserved for the next attempt.
+        for (final pendingOp in _pendingShootOps) {
+          pendingOp.apply(_shoots);
+        }
+      }
+      shootsEpoch.value++;
+      debugPrint('shoots debounced flush error: $e');
+    } finally {
+      _flushingShootOps = false;
+      // If new ops arrived during the flush, start a new debounce.
+      if (_pendingShootOps.isNotEmpty) {
+        _shootsDebounce?.cancel();
+        _shootsDebounce = Timer(
+          const Duration(milliseconds: 1000),
+          () => _executeShootFlush(),
+        );
+      }
+    }
+  }
+
+  /// Cancel debounce and flush immediately. Called before structural
+  /// shoot operations (create / rename / delete).
+  Future<void> _flushPendingShootOps() async {
+    _shootsDebounce?.cancel();
+    if (_pendingShootOps.isEmpty) return;
+    await _executeShootFlush();
+  }
+
+  static Map<String, Map<String, ShootEquip>> _deepCopyShoots(
+    Map<String, Map<String, ShootEquip>> src,
+  ) {
+    return {
+      for (final e in src.entries)
+        e.key: {
+          for (final ie in e.value.entries)
+            ie.key: ShootEquip(
+              checked: ie.value.checked,
+              qty: ie.value.qty,
+              name: ie.value.name,
+            ),
+        },
+    };
+  }
+
+  /// All production shoots: `shootName -> { equipId -> ShootEquip }`.
+  Map<String, Map<String, ShootEquip>> getAllShoots() =>
+      Map.unmodifiable(_shoots);
+
+  /// Get a single shoot by name.
+  Map<String, ShootEquip>? getShoot(String name) => _shoots[name];
+
+  /// Create a new empty shoot. Flushes pending ops first, then writes
+  /// to gist immediately.
+  Future<void> createShoot(String name) async {
+    final client = _shootsClient;
+    if (client == null) throw StateError('shoots client not ready');
+    final String token = _admin?.accessToken ?? '';
+    if (token.isEmpty) throw StateError('missing access token');
+
+    await _flushPendingShootOps();
+
+    _shoots[name] = {};
+    shootsEpoch.value++;
+
+    try {
+      final fresh = await client.readViaApi(token);
+      fresh[name] = {};
+      final ground = await client.writeAll(fresh, token: token);
+      _shoots = ground;
+      shootsEpoch.value++;
+    } catch (e) {
+      _shoots.remove(name);
+      shootsEpoch.value++;
+      rethrow;
+    }
+  }
+
+  /// Rename a shoot. Flushes pending ops first.
+  Future<void> renameShoot(String oldName, String newName) async {
+    final client = _shootsClient;
+    if (client == null) throw StateError('shoots client not ready');
+    final String token = _admin?.accessToken ?? '';
+    if (token.isEmpty) throw StateError('missing access token');
+
+    await _flushPendingShootOps();
+
+    final items = _shoots.remove(oldName);
+    if (items == null) throw StateError('shoot "$oldName" not found');
+    _shoots[newName] = items;
+    shootsEpoch.value++;
+
+    try {
+      final fresh = await client.readViaApi(token);
+      final freshItems = fresh.remove(oldName) ?? {};
+      fresh[newName] = freshItems;
+      final ground = await client.writeAll(fresh, token: token);
+      _shoots = ground;
+      shootsEpoch.value++;
+    } catch (e) {
+      _shoots.remove(newName);
+      _shoots[oldName] = items;
+      shootsEpoch.value++;
+      rethrow;
+    }
+  }
+
+  /// Delete a shoot by name. Flushes pending ops first.
+  Future<void> deleteShoot(String name) async {
+    final client = _shootsClient;
+    if (client == null) throw StateError('shoots client not ready');
+    final String token = _admin?.accessToken ?? '';
+    if (token.isEmpty) throw StateError('missing access token');
+
+    await _flushPendingShootOps();
+
+    final prev = _shoots.remove(name);
+    shootsEpoch.value++;
+
+    try {
+      final fresh = await client.readViaApi(token);
+      fresh.remove(name);
+      final ground = await client.writeAll(fresh, token: token);
+      _shoots = ground;
+      shootsEpoch.value++;
+    } catch (e) {
+      if (prev != null) _shoots[name] = prev;
+      shootsEpoch.value++;
+      rethrow;
+    }
+  }
+
+  /// Add equipment to a shoot with specified quantities.
+  /// Optimistic update + debounced flush.
+  Future<void> addEquipmentToShoot(
+    String shootName,
+    Map<String, int> equipQtys,
+  ) async {
+    if (_shootsClient == null) throw StateError('shoots client not ready');
+    if ((_admin?.accessToken ?? '').isEmpty) {
+      throw StateError('missing access token');
+    }
+
+    final items = _shoots[shootName] ?? {};
+    for (final e in equipQtys.entries) {
+      items[e.key] = ShootEquip(qty: e.value);
+    }
+    _shoots[shootName] = items;
+    shootsEpoch.value++;
+
+    _scheduleShootFlush(_AddEquipOp(shootName, Map.from(equipQtys)));
+  }
+
+  /// Toggle the check state of an equipment item in a shoot.
+  /// Optimistic update + debounced flush.
+  Future<void> toggleShootEquipCheck(
+    String shootName,
+    String equipId,
+    bool checked,
+  ) async {
+    if (_shootsClient == null) throw StateError('shoots client not ready');
+    if ((_admin?.accessToken ?? '').isEmpty) {
+      throw StateError('missing access token');
+    }
+
+    final items = _shoots[shootName];
+    if (items == null) return;
+    final entry = items[equipId];
+    if (entry == null) return;
+    entry.checked = checked;
+    shootsEpoch.value++;
+
+    _scheduleShootFlush(_ToggleCheckOp(shootName, equipId, checked));
+  }
+
+  /// Update the bring-quantity of an equipment item in a shoot.
+  /// Optimistic update + debounced flush.
+  Future<void> updateShootEquipQty(
+    String shootName,
+    String equipId,
+    int newQty,
+  ) async {
+    if (_shootsClient == null) throw StateError('shoots client not ready');
+    if ((_admin?.accessToken ?? '').isEmpty) {
+      throw StateError('missing access token');
+    }
+
+    final items = _shoots[shootName];
+    if (items == null) return;
+    final entry = items[equipId];
+    if (entry == null) return;
+    entry.qty = newQty;
+    shootsEpoch.value++;
+
+    _scheduleShootFlush(_UpdateQtyOp(shootName, equipId, newQty));
+  }
+
+  /// Add a custom (non-catalog) equipment item to a shoot. The name is
+  /// stored inside [ShootEquip] since there is no Equipment record for it.
+  /// Returns the generated id so callers can reference the new entry.
+  /// Optimistic update + debounced flush.
+  Future<String> addCustomEquipmentToShoot(
+    String shootName,
+    String customName,
+    int qty,
+  ) async {
+    if (_shootsClient == null) throw StateError('shoots client not ready');
+    if ((_admin?.accessToken ?? '').isEmpty) {
+      throw StateError('missing access token');
+    }
+
+    final String id = 'custom_${DateTime.now().millisecondsSinceEpoch}';
+    final items = _shoots[shootName] ?? {};
+    items[id] = ShootEquip(qty: qty, name: customName);
+    _shoots[shootName] = items;
+    shootsEpoch.value++;
+
+    _scheduleShootFlush(_AddCustomEquipOp(shootName, id, customName, qty));
+    return id;
+  }
+
+  /// Remove an equipment item from a shoot.
+  /// Optimistic update + debounced flush.
+  Future<void> removeEquipmentFromShoot(
+    String shootName,
+    String equipId,
+  ) async {
+    if (_shootsClient == null) throw StateError('shoots client not ready');
+    if ((_admin?.accessToken ?? '').isEmpty) {
+      throw StateError('missing access token');
+    }
+
+    final items = _shoots[shootName];
+    if (items == null) return;
+    items.remove(equipId);
+    shootsEpoch.value++;
+
+    _scheduleShootFlush(_RemoveEquipOp(shootName, equipId));
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -428,11 +747,14 @@ class DataRepository {
   // Cleanup
   // ══════════════════════════════════════════════════════════════
 
-  /// Stop the polling loop. The singleton itself lives for the whole
-  /// app lifetime, so this is mostly useful in tests.
+  /// Stop the polling loop and cancel any pending shoot flush. The
+  /// singleton itself lives for the whole app lifetime, so this is
+  /// mostly useful in tests.
   void dispose() {
     _overlayTimer?.cancel();
     _overlayTimer = null;
+    _shootsDebounce?.cancel();
+    _shootsDebounce = null;
   }
 }
 
@@ -444,4 +766,77 @@ class _PendingWrite {
   final Map<String, dynamic> expected;
   final DateTime writtenAt;
   _PendingWrite({required this.expected, required this.writtenAt});
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Shoot operations — replayed on fresh API data during flush
+// ══════════════════════════════════════════════════════════════════
+
+abstract class _ShootOp {
+  void apply(Map<String, Map<String, ShootEquip>> shoots);
+}
+
+class _ToggleCheckOp extends _ShootOp {
+  final String shootName;
+  final String equipId;
+  final bool checked;
+  _ToggleCheckOp(this.shootName, this.equipId, this.checked);
+
+  @override
+  void apply(Map<String, Map<String, ShootEquip>> shoots) {
+    shoots[shootName]?[equipId]?.checked = checked;
+  }
+}
+
+class _UpdateQtyOp extends _ShootOp {
+  final String shootName;
+  final String equipId;
+  final int qty;
+  _UpdateQtyOp(this.shootName, this.equipId, this.qty);
+
+  @override
+  void apply(Map<String, Map<String, ShootEquip>> shoots) {
+    shoots[shootName]?[equipId]?.qty = qty;
+  }
+}
+
+class _AddEquipOp extends _ShootOp {
+  final String shootName;
+  final Map<String, int> equipQtys;
+  _AddEquipOp(this.shootName, this.equipQtys);
+
+  @override
+  void apply(Map<String, Map<String, ShootEquip>> shoots) {
+    final items = shoots[shootName] ?? {};
+    for (final e in equipQtys.entries) {
+      items[e.key] = ShootEquip(qty: e.value);
+    }
+    shoots[shootName] = items;
+  }
+}
+
+class _AddCustomEquipOp extends _ShootOp {
+  final String shootName;
+  final String customId;
+  final String customName;
+  final int qty;
+  _AddCustomEquipOp(this.shootName, this.customId, this.customName, this.qty);
+
+  @override
+  void apply(Map<String, Map<String, ShootEquip>> shoots) {
+    final items = shoots[shootName] ?? {};
+    items[customId] = ShootEquip(qty: qty, name: customName);
+    shoots[shootName] = items;
+  }
+}
+
+class _RemoveEquipOp extends _ShootOp {
+  final String shootName;
+  final String equipId;
+  _RemoveEquipOp(this.shootName, this.equipId);
+
+  @override
+  void apply(Map<String, Map<String, ShootEquip>> shoots) {
+    shoots[shootName]?.remove(equipId);
+  }
 }

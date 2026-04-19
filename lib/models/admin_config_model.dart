@@ -6,6 +6,8 @@ class AdminConfigModel {
   final String gistRawUrl;
   final int pollSeconds;
   final String accessToken;
+  final String shootsFile;
+  final String shootsRawUrl;
 
   const AdminConfigModel({
     required this.gistId,
@@ -13,6 +15,8 @@ class AdminConfigModel {
     required this.gistRawUrl,
     required this.pollSeconds,
     required this.accessToken,
+    required this.shootsFile,
+    required this.shootsRawUrl,
   });
 
   // Rotates all printable ASCII (space ' ' = 32 .. '~' = 126)
@@ -58,6 +62,8 @@ class AdminConfigModel {
         (g['access_token'] as String?) ?? '',
         g['caesar_shift'] is int ? -(g['caesar_shift'] as int) : 0,
       ),
+      shootsFile: (g['shoots_file'] as String?) ?? 'production_shoots.yaml',
+      shootsRawUrl: (g['shoots_raw_url'] as String?) ?? '',
     );
   }
 }

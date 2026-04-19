@@ -22,7 +22,7 @@
 //
 //     <equipment_id>:
 //       quantity: <int>
-//       cabinet: "<string>"
+//       storage: "<string>"
 //
 // Exactly one entry per equipment id, holding only the mutable
 // inventory fields. All static fields (name, brand, images, …) live
@@ -46,7 +46,7 @@ class InventoryOverlayClient {
 
   // ── Public read API ─────────────────────────────────────────────
 
-  /// Fetch the overlay map `id -> {quantity, cabinet}`.
+  /// Fetch the overlay map `id -> {quantity, storage}`.
   ///
   /// Tries the raw CDN first and falls back to the GitHub API. Returns
   /// null only if both endpoints fail — an empty map is returned when
@@ -135,7 +135,7 @@ class InventoryOverlayClient {
   // ── YAML parse ──────────────────────────────────────────────────
 
   /// Parse the overlay YAML into the canonical `id -> {quantity,
-  /// cabinet}` map shape. Silently drops entries with an empty id or a
+  /// storage}` map shape. Silently drops entries with an empty id or a
   /// non-map value so a malformed record can't crash the app.
   Map<String, Map<String, dynamic>> _parseYaml(String yamlStr) {
     final String trimmed = yamlStr.trim();
@@ -150,7 +150,7 @@ class InventoryOverlayClient {
       if (id.isEmpty || val is! YamlMap) continue;
       out[id] = {
         'quantity': (val['quantity'] as num?)?.toInt(),
-        'cabinet': val['cabinet'] as String?,
+        'storage': val['storage'] as String?,
       };
     }
     return out;
@@ -161,7 +161,7 @@ class InventoryOverlayClient {
   /// Update a single equipment entry in the overlay gist.
   ///
   /// Pass only the fields you want to change — nulls are left alone so
-  /// the caller can send a quantity update without wiping the cabinet,
+  /// the caller can send a quantity update without wiping the storage,
   /// and vice versa. A call with both arguments null does no write and
   /// just returns a fresh read, so callers don't end up with a stale
   /// view after a no-op.
@@ -172,10 +172,10 @@ class InventoryOverlayClient {
   Future<Map<String, Map<String, dynamic>>> updateEntry(
     String equipmentId, {
     int? quantity,
-    String? cabinet,
+    String? storage,
     required String token, // GitHub PAT with gist scope
   }) async {
-    if (quantity == null && cabinet == null) {
+    if (quantity == null && storage == null) {
       // Nothing to change — hand back current state via a fresh API
       // read so the caller doesn't end up with a stale view.
       return _readViaApi(token);
@@ -191,7 +191,7 @@ class InventoryOverlayClient {
     // brand-new entry for an id that had no overlay record yet).
     final entry = Map<String, dynamic>.from(current[equipmentId] ?? const {});
     if (quantity != null) entry['quantity'] = quantity;
-    if (cabinet != null) entry['cabinet'] = cabinet;
+    if (storage != null) entry['storage'] = storage;
     current[equipmentId] = entry;
 
     // Serialize back to YAML and PATCH the gist file.
@@ -272,7 +272,7 @@ class InventoryOverlayClient {
   /// when nothing changed — this keeps diffs in the gist history
   /// meaningful rather than a churn of reordered entries.
   ///
-  /// Cabinet values are JSON-encoded to get proper string escaping
+  /// Storage values are JSON-encoded to get proper string escaping
   /// (quotes, unicode, etc.) without pulling in a YAML writer.
   String _overlayMapToYaml(Map<String, Map<String, dynamic>> m) {
     final ids = m.keys.toList()..sort();
@@ -281,8 +281,8 @@ class InventoryOverlayClient {
       final v = m[id] ?? const {};
       b.writeln('$id:');
       if (v['quantity'] != null) b.writeln('  quantity: ${v['quantity']}');
-      if (v['cabinet'] != null) {
-        b.writeln('  cabinet: ${jsonEncode(v['cabinet'])}');
+      if (v['storage'] != null) {
+        b.writeln('  storage: ${jsonEncode(v['storage'])}');
       }
     }
     return b.toString();

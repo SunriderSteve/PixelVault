@@ -5,3 +5,5 @@ gist:
   access_token: bck_bhnnazZf1OKLj9TmuXu2GqpldN8wsI0QBAGo
   caesar_shift: 99 # How many letters the access token is shifted by
   poll_seconds: 5 # optional, default to 5 if missing
+  shoots_file: production_shoots.yaml
+  shoots_raw_url: https://gist.githubusercontent.com/SunriderSteve/82d2701c4f64d1a8b21b7ce7b2588104/raw/production_shoots.yaml

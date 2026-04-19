@@ -4,7 +4,7 @@
 // icon on an equipment card. It presents a two-step flow:
 //
 //   1. Edit mode    — lets the user change quantity (via +/- buttons or a
-//                     text field) and cabinet location (free-text).
+//                     text field) and storage location (free-text).
 //   2. Confirm mode — shows a diff of what changed and requires the user
 //                     to confirm before the changes are returned.
 //
@@ -19,17 +19,17 @@ import 'package:flutter/services.dart'; // FilteringTextInputFormatter.
 
 /// Result returned by [showInventoryEditDialog] after the user confirms.
 ///
-/// [changed] is true if either [quantity] or [cabinet] differs from the
+/// [changed] is true if either [quantity] or [storage] differs from the
 /// initial values the dialog was opened with. Callers can short-circuit
 /// persistence when this flag is false.
 class InventoryEditResult {
   final int quantity;
-  final String cabinet;
+  final String storage;
   final bool changed;
 
   InventoryEditResult({
     required this.quantity,
-    required this.cabinet,
+    required this.storage,
     required this.changed,
   });
 }
@@ -44,7 +44,7 @@ Future<InventoryEditResult?> showInventoryEditDialog(
   BuildContext context, {
   required String equipmentName,
   required int initialQuantity,
-  required String initialCabinet,
+  required String initialStorage,
 }) {
   return showDialog<InventoryEditResult>(
     context: context,
@@ -53,7 +53,7 @@ Future<InventoryEditResult?> showInventoryEditDialog(
     builder: (context) => _InventoryEditDialog(
       equipmentName: equipmentName,
       initialQuantity: initialQuantity,
-      initialCabinet: initialCabinet,
+      initialStorage: initialStorage,
     ),
   );
 }
@@ -64,12 +64,12 @@ enum _StepMode { edit, confirm }
 class _InventoryEditDialog extends StatefulWidget {
   final String equipmentName;
   final int initialQuantity;
-  final String initialCabinet;
+  final String initialStorage;
 
   const _InventoryEditDialog({
     required this.equipmentName,
     required this.initialQuantity,
-    required this.initialCabinet,
+    required this.initialStorage,
   });
 
   @override
@@ -77,10 +77,10 @@ class _InventoryEditDialog extends StatefulWidget {
 }
 
 class _InventoryEditDialogState extends State<_InventoryEditDialog> {
-  // Controllers keep the quantity and cabinet fields editable from both
+  // Controllers keep the quantity and storage fields editable from both
   // the text inputs and the helper buttons (+/-, reset).
   late final TextEditingController _qtyCtrl;
-  late final TextEditingController _cabinetCtrl;
+  late final TextEditingController _storageCtrl;
 
   _StepMode _mode = _StepMode.edit;
 
@@ -88,13 +88,13 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
   void initState() {
     super.initState();
     _qtyCtrl = TextEditingController(text: '${widget.initialQuantity}');
-    _cabinetCtrl = TextEditingController(text: widget.initialCabinet);
+    _storageCtrl = TextEditingController(text: widget.initialStorage);
   }
 
   @override
   void dispose() {
     _qtyCtrl.dispose();
-    _cabinetCtrl.dispose();
+    _storageCtrl.dispose();
     super.dispose();
   }
 
@@ -120,16 +120,16 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
     // prevent this in practice.
     final int currentQty =
         int.tryParse(_qtyCtrl.text) ?? widget.initialQuantity;
-    final String currentCab = _cabinetCtrl.text.trim();
+    final String currentStorage = _storageCtrl.text.trim();
 
     final bool changed =
         (currentQty != widget.initialQuantity) ||
-        (currentCab != widget.initialCabinet);
+        (currentStorage != widget.initialStorage);
 
     Navigator.of(context).pop(
       InventoryEditResult(
         quantity: currentQty,
-        cabinet: currentCab,
+        storage: currentStorage,
         changed: changed,
       ),
     );
@@ -152,8 +152,8 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
   /// Reset the quantity input back to the value the dialog opened with.
   void _resetQuantity() => _qtyCtrl.text = '${widget.initialQuantity}';
 
-  /// Reset the cabinet input back to the value the dialog opened with.
-  void _resetCabinet() => _cabinetCtrl.text = widget.initialCabinet;
+  /// Reset the storage input back to the value the dialog opened with.
+  void _resetStorage() => _storageCtrl.text = widget.initialStorage;
 
   // ── Build ─────────────────────────────────────────────────────────────
 
@@ -277,7 +277,7 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
     );
   }
 
-  /// Edit-mode body: quantity stepper + cabinet text field, each with a
+  /// Edit-mode body: quantity stepper + storage text field, each with a
   /// "reset to initial value" button for quick undo.
   Widget _buildEditForm() {
     return Column(
@@ -350,12 +350,12 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
         ),
         const SizedBox(height: 16),
 
-        // ── Cabinet label + reset ──
+        // ── Storage label + reset ──
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
-              'Cabinet Location',
+              'Storage Location',
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
@@ -363,8 +363,8 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
             ),
             IconButton(
               icon: const Icon(Icons.refresh, size: 18, color: Colors.white70),
-              onPressed: _resetCabinet,
-              tooltip: 'Reset Cabinet',
+              onPressed: _resetStorage,
+              tooltip: 'Reset Storage',
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
             ),
@@ -372,9 +372,9 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
         ),
         const SizedBox(height: 8),
 
-        // ── Cabinet free-text input ──
+        // ── Storage free-text input ──
         TextField(
-          controller: _cabinetCtrl,
+          controller: _storageCtrl,
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             hintText: 'e.g. A1, Shelf B...',
@@ -401,7 +401,7 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
   Widget _buildConfirmView() {
     final int currentQty =
         int.tryParse(_qtyCtrl.text) ?? widget.initialQuantity;
-    final String currentCab = _cabinetCtrl.text.trim();
+    final String currentStorage = _storageCtrl.text.trim();
 
     final List<Widget> changes = [];
 
@@ -415,14 +415,14 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
       );
     }
 
-    if (currentCab != widget.initialCabinet) {
+    if (currentStorage != widget.initialStorage) {
       changes.add(
         _DiffRow(
-          label: 'Cabinet',
-          oldValue: widget.initialCabinet.isEmpty
+          label: 'Storage',
+          oldValue: widget.initialStorage.isEmpty
               ? '(none)'
-              : widget.initialCabinet,
-          newValue: currentCab.isEmpty ? '(none)' : currentCab,
+              : widget.initialStorage,
+          newValue: currentStorage.isEmpty ? '(none)' : currentStorage,
         ),
       );
     }

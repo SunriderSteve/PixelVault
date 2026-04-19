@@ -38,6 +38,3 @@ jobs:
 
       # 6. Deploy to GitHub Pages
       - uses: actions/deploy-pages@v5
-        with:
-          # optional: wait for the Pages deployment to complete
-          wait-for-deployment: true

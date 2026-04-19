@@ -9,7 +9,7 @@
 //     many as fit at a ~420 px target tile width.
 //   • Hidden admin mode (tap the title or the person icon, enter a
 //     password) that persists across reloads via localStorage and unlocks
-//     in-place editing of quantity + cabinet for each item.
+//     in-place editing of quantity + storage for each item.
 //
 // Inventory edits are routed through [DataRepository.applyInventoryChanges]
 // which pushes to the remote gist; the page subscribes to
@@ -25,24 +25,14 @@ import 'dart:ui'; // For ImageFilter used by BackdropFilter.
 import 'package:flutter/material.dart';
 import 'package:flutter_avif/flutter_avif.dart';
 import 'package:go_router/go_router.dart';
-import 'package:web/web.dart' as web;
 
 import '../models/equipment_model.dart'; // Equipment
 import '../services/data_repository.dart';
+import '../widgets/admin_auth.dart';
 import 'inventory_edit_dialog.dart';
 
 // ─── Constants ────────────────────────────────────────────────────────────
 
-/// localStorage key used to remember the admin flag across reloads.
-const String _adminStorageKey = 'pv_admin_mode';
-
-/// Admin password.
-///
-/// This is a client-side gate only — the source is visible in the shipped
-/// bundle and any determined user can read it. It exists purely to keep
-/// casual visitors out of the edit UI; real authorisation must still be
-/// enforced server-side on the gist endpoint.
-const String _adminPassword = 'admin123';
 
 class InventoryListPage extends StatefulWidget {
   const InventoryListPage({super.key});
@@ -66,9 +56,9 @@ class _InventoryListPageState extends State<InventoryListPage> {
   final Set<String> _selectedBrands = {};
 
   // ── Admin mode ────────────────────────────────────────────────────────
-  // Restored from localStorage so admin sessions persist across reloads
-  // and full browser restarts.
-  bool _isAdmin = web.window.localStorage.getItem(_adminStorageKey) == '1';
+  // Driven by the global [adminNotifier] so logging in here unlocks
+  // admin features on every other page too.
+  bool _isAdmin = adminNotifier.value;
 
   // ── Data ──────────────────────────────────────────────────────────────
   late final List<Equipment> _all; // Source list straight from the repo.
@@ -84,7 +74,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
 
     // Pre-compute the unique category / brand universes for the filter
     // panel once — the inventory edit flow only mutates quantity and
-    // cabinet, so these sets never change for the life of this page.
+    // storage, so these sets never change for the life of this page.
     _allCategories = _all.map((e) => e.category).toSet().toList()..sort();
     _allBrands = _all.map((e) => e.brand).toSet().toList()..sort();
 
@@ -94,13 +84,20 @@ class _InventoryListPageState extends State<InventoryListPage> {
 
     _search.addListener(_applyFilters);
     repo.overlayEpoch.addListener(_onOverlayChanged);
+    adminNotifier.addListener(_onAdminChanged);
   }
 
   @override
   void dispose() {
+    adminNotifier.removeListener(_onAdminChanged);
     DataRepository().overlayEpoch.removeListener(_onOverlayChanged);
     _search.dispose();
     super.dispose();
+  }
+
+  void _onAdminChanged() {
+    if (!mounted) return;
+    setState(() => _isAdmin = adminNotifier.value);
   }
 
   /// Called when [DataRepository] signals that the overlay (edits) changed
@@ -196,8 +193,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
 
       if (!mounted) return;
       if (shouldExit == true) {
-        setState(() => _isAdmin = false);
-        web.window.localStorage.removeItem(_adminStorageKey);
+        setAdminPersisted(false);
       }
       return;
     }
@@ -205,12 +201,11 @@ class _InventoryListPageState extends State<InventoryListPage> {
     // Not admin yet — ask for the password.
     final bool? success = await showDialog<bool>(
       context: context,
-      builder: (context) => const _AdminPasswordDialog(),
+      builder: (context) => const AdminPasswordDialog(),
     );
     if (!mounted) return;
     if (success == true) {
-      setState(() => _isAdmin = true);
-      web.window.localStorage.setItem(_adminStorageKey, '1');
+      setAdminPersisted(true);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Admin Mode Enabled')));
@@ -219,12 +214,12 @@ class _InventoryListPageState extends State<InventoryListPage> {
 
   /// Persists an inventory edit through the repository, then shows a
   /// snackbar reporting success or failure.
-  Future<void> _onSavePatch(String id, int? newQty, String? newCab) async {
+  Future<void> _onSavePatch(String id, int? newQty, String? newStorage) async {
     try {
       await DataRepository().applyInventoryChanges(
         id,
         quantity: newQty,
-        cabinet: newCab,
+        storage: newStorage,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -247,18 +242,18 @@ class _InventoryListPageState extends State<InventoryListPage> {
       context,
       equipmentName: item.name,
       initialQuantity: item.quantity ?? 0,
-      initialCabinet: item.cabinet ?? '',
+      initialStorage: item.storage ?? '',
     );
     if (!mounted || res == null || !res.changed) return;
 
     final int? newQty = (res.quantity != item.quantity) ? res.quantity : null;
-    final String? newCab = (res.cabinet != item.cabinet) ? res.cabinet : null;
+    final String? newStorage = (res.storage != item.storage) ? res.storage : null;
 
     // Shouldn't happen given res.changed, but guard anyway so we never
     // fire a no-op network request.
-    if (newQty == null && newCab == null) return;
+    if (newQty == null && newStorage == null) return;
 
-    await _onSavePatch(item.id, newQty, newCab);
+    await _onSavePatch(item.id, newQty, newStorage);
   }
 
   // ── Build ─────────────────────────────────────────────────────────────
@@ -684,74 +679,6 @@ class _InventoryListPageState extends State<InventoryListPage> {
   }
 }
 
-/// Password prompt dialog used when unlocking admin mode. Pops `true` on
-/// a correct password, `false` on cancel. The password itself lives in
-/// the top-level [_adminPassword] constant.
-class _AdminPasswordDialog extends StatefulWidget {
-  const _AdminPasswordDialog();
-
-  @override
-  State<_AdminPasswordDialog> createState() => _AdminPasswordDialogState();
-}
-
-class _AdminPasswordDialogState extends State<_AdminPasswordDialog> {
-  final TextEditingController _controller = TextEditingController();
-  String? _errorText;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  /// Validate the entered password and pop the dialog with the result.
-  /// On a wrong password we keep the dialog open and surface an inline
-  /// error below the field.
-  void _submit() {
-    if (_controller.text == _adminPassword) {
-      Navigator.of(context).pop(true);
-    } else {
-      setState(() => _errorText = 'Incorrect Password');
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: Colors.grey.shade900,
-      title: const Text('Admin Access', style: TextStyle(color: Colors.white)),
-      content: TextField(
-        controller: _controller,
-        obscureText: true,
-        style: const TextStyle(color: Colors.white),
-        decoration: InputDecoration(
-          hintText: 'Enter Password',
-          hintStyle: const TextStyle(color: Colors.white54),
-          errorText: _errorText,
-          errorStyle: const TextStyle(color: Colors.redAccent),
-          enabledBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.white),
-          ),
-          focusedBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: Color(0xFF0047BB)),
-          ),
-        ),
-        onSubmitted: (_) => _submit(),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
-        ),
-        TextButton(
-          onPressed: _submit,
-          child: const Text('Enter', style: TextStyle(color: Colors.white)),
-        ),
-      ],
-    );
-  }
-}
-
 /// Pill-shaped tab used inside the filter panel. Highlights when
 /// [selected] is true and calls [onTap] when pressed.
 class _GlassTabButton extends StatelessWidget {
@@ -828,7 +755,7 @@ class _GlassFilterChip extends StatelessWidget {
 /// A single equipment tile in the inventory grid.
 ///
 /// Shows the item image (or a blank placeholder), the name, a stock /
-/// out-of-stock badge, and — for admins only — a cabinet location badge
+/// out-of-stock badge, and — for admins only — a storage location badge
 /// plus an edit button in the top-right corner.
 class _GlassInventoryCard extends StatelessWidget {
   final Equipment item;
@@ -879,7 +806,7 @@ class _GlassInventoryCard extends StatelessWidget {
             ),
           ),
 
-          // 3. Bottom-left content: name, stock badge, (admin) cabinet.
+          // 3. Bottom-left content: name, stock badge, (admin) storage.
           Positioned(
             left: 12,
             right: 12,
@@ -931,9 +858,9 @@ class _GlassInventoryCard extends StatelessWidget {
                   ),
                 ),
 
-                // Cabinet location badge — only visible in admin mode so
+                // Storage location badge — only visible in admin mode so
                 // regular users don't see internal storage details.
-                if (isAdmin && item.cabinet != null) ...[
+                if (isAdmin && item.storage != null) ...[
                   const SizedBox(height: 4),
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -948,7 +875,7 @@ class _GlassInventoryCard extends StatelessWidget {
                       ),
                     ),
                     child: Text(
-                      'Cabinet: ${item.cabinet}',
+                      'Storage: ${item.storage}',
                       style: const TextStyle(
                         color: Colors.orangeAccent,
                         fontSize: 12,

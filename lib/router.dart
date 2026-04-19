@@ -16,6 +16,8 @@
 //   /scenarios                     → ScenarioListPage
 //   /scenarios/:id                 → ScenarioDetailPage
 //   /inventory                     → InventoryListPage
+//   /shoots                        → ProductionShootsPage
+//   /shoots/:name                  → ProductionShootDetailPage
 //
 // Hero tag contracts on the home page rely on these paths staying
 // stable — renaming a route also requires updating the matching
@@ -30,6 +32,8 @@ import 'pages/learn_equip_list_page.dart';
 import 'pages/learn_videography_detail_page.dart';
 import 'pages/learn_videography_list_page.dart';
 import 'pages/learning_list_page.dart';
+import 'pages/production_shoot_detail_page.dart';
+import 'pages/production_shoots_page.dart';
 import 'pages/scenario_detail_page.dart';
 import 'pages/scenario_list_page.dart';
 
@@ -78,6 +82,18 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/inventory',
       builder: (context, state) => const InventoryListPage(),
+    ),
+
+    // ── Production Shoots ────────────────────────────────────────
+    GoRoute(
+      path: '/shoots',
+      builder: (_, _) => const ProductionShootsPage(),
+    ),
+    GoRoute(
+      path: '/shoots/:name',
+      builder: (_, state) => ProductionShootDetailPage(
+        shootName: Uri.decodeComponent(state.pathParameters['name']!),
+      ),
     ),
   ],
 );

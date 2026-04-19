@@ -22,6 +22,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_avif/flutter_avif.dart';
 import 'package:go_router/go_router.dart';
 
+import '../widgets/admin_auth.dart';
+
 // NLB-derived brand palette used by the background gradient on this page.
 // These are kept file-private because the homepage is the only screen
 // that renders this specific 4-stop gradient.
@@ -32,10 +34,99 @@ const Color _kBrandRed = Color(0xFFE80029); // NLB red (gradient end)
 
 /// Landing page widget.
 ///
-/// Stateless because it owns no mutable state — navigation is delegated to
-/// go_router and the cards just call [BuildContext.push] when tapped.
-class HomePage extends StatelessWidget {
+/// Stateful so admin mode can be toggled at runtime. Admin state is
+/// persisted to localStorage via the shared [admin_auth] utilities so
+/// it survives page reloads.
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  bool _isAdmin = adminNotifier.value;
+
+  @override
+  void initState() {
+    super.initState();
+    adminNotifier.addListener(_onAdminChanged);
+  }
+
+  @override
+  void dispose() {
+    adminNotifier.removeListener(_onAdminChanged);
+    super.dispose();
+  }
+
+  void _onAdminChanged() {
+    if (!mounted) return;
+    setState(() => _isAdmin = adminNotifier.value);
+  }
+
+  Future<void> _handleAdminToggle() async {
+    if (_isAdmin) {
+      final bool? shouldExit = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: Colors.grey.shade900,
+          title: const Text(
+            'Exit Admin Mode?',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: const Text(
+            'Are you sure you want to return to user mode?',
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white54),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text(
+                'Exit',
+                style: TextStyle(color: Colors.redAccent),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (!mounted) return;
+      if (shouldExit == true) {
+        setAdminPersisted(false);
+      }
+      return;
+    }
+
+    final bool success = await showAdminPasswordDialog(context);
+    if (!mounted) return;
+    if (success) {
+      setAdminPersisted(true);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Admin Mode Enabled')));
+    }
+  }
+
+  Future<void> _onShootsTap() async {
+    if (_isAdmin) {
+      context.push('/shoots');
+      return;
+    }
+
+    final bool success = await showAdminPasswordDialog(context);
+    if (!mounted) return;
+    if (success) {
+      setAdminPersisted(true);
+      context.push('/shoots');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -128,16 +219,36 @@ class HomePage extends StatelessWidget {
                       alignment: Alignment.centerLeft,
                       // Top padding accounts for the OS status-bar area on
                       // mobile; left padding aligns with grid content.
-                      padding: const EdgeInsets.only(left: 24, top: 28),
-                      child: const Text(
-                        'PixelVault',
-                        style: TextStyle(
-                          fontFamily: 'Roboto',
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          letterSpacing: 1.0,
-                          fontSize: 28,
-                        ),
+                      padding: const EdgeInsets.only(
+                        left: 24,
+                        top: 28,
+                        right: 16,
+                      ),
+                      child: Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'PixelVault',
+                              style: TextStyle(
+                                fontFamily: 'Roboto',
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                letterSpacing: 1.0,
+                                fontSize: 28,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              _isAdmin
+                                  ? Icons.admin_panel_settings
+                                  : Icons.person,
+                              color: _isAdmin ? Colors.green : Colors.white,
+                            ),
+                            onPressed: _handleAdminToggle,
+                            tooltip: 'Admin Mode',
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -178,7 +289,7 @@ class HomePage extends StatelessWidget {
                           title: 'Equipment Guides',
                           subtitle: 'Cameras, lights, audio',
                           imagePath:
-                              'assets/images/homepage/learn/equipment_guides.avif',
+                              'assets/images/homepage/equipment_guides.avif',
                           icon: Icons.camera_alt_rounded,
                           onTap: () => context.push('/learn/equip-guides'),
                           accentColor: Colors.blueAccent,
@@ -188,7 +299,7 @@ class HomePage extends StatelessWidget {
                           title: 'Videography Basics',
                           subtitle: 'Lighting & composition',
                           imagePath:
-                              'assets/images/homepage/learn/videography_guides.avif',
+                              'assets/images/homepage/videography_guides.avif',
                           icon: Icons.movie_filter_rounded,
                           onTap: () =>
                               context.push('/learn/videography-guides'),
@@ -212,6 +323,17 @@ class HomePage extends StatelessWidget {
                           onTap: () => context.push('/inventory'),
                           accentColor: Colors.greenAccent,
                           heroTag: 'inventory_card',
+                        ),
+                        _GlassMenuCard(
+                          title: 'Production Shoots',
+                          subtitle: 'Live equipment lists',
+                          imagePath:
+                              'assets/images/homepage/production_shoots.avif',
+                          icon: Icons.videocam_rounded,
+                          onTap: _onShootsTap,
+                          accentColor: Colors.cyanAccent,
+                          heroTag: 'shoots_card',
+                          locked: !_isAdmin,
                         ),
                       ]),
                     );
@@ -245,6 +367,7 @@ class _GlassMenuCard extends StatelessWidget {
   final VoidCallback onTap;
   final Color accentColor;
   final String heroTag;
+  final bool locked;
 
   const _GlassMenuCard({
     required this.title,
@@ -254,6 +377,7 @@ class _GlassMenuCard extends StatelessWidget {
     required this.onTap,
     required this.accentColor,
     required this.heroTag,
+    this.locked = false,
   });
 
   @override
@@ -387,8 +511,12 @@ class _GlassMenuCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 8),
                             Icon(
-                              Icons.arrow_forward_rounded,
-                              color: accentColor,
+                              locked
+                                  ? Icons.lock_rounded
+                                  : Icons.arrow_forward_rounded,
+                              color: locked
+                                  ? Colors.white.withValues(alpha: 0.5)
+                                  : accentColor,
                               size: 20,
                             ),
                           ],
@@ -398,6 +526,18 @@ class _GlassMenuCard extends StatelessWidget {
                   ],
                 ),
               ),
+
+              // Layer 5 — Lock overlay for admin-only cards.
+              // IgnorePointer lets taps pass through to the InkWell
+              // so the onTap callback (which shows the login dialog) fires.
+              if (locked)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.45),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),

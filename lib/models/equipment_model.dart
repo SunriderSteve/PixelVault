@@ -31,7 +31,7 @@ class Equipment {
   final List<EquipSection> sections; // collapsible sections
   final List<String> related; // list of related equipment ids
 
-  final String? cabinet;
+  final String? storage;
   final int? quantity;
 
   Equipment({
@@ -43,7 +43,7 @@ class Equipment {
     required this.description,
     required this.sections,
     required this.related,
-    this.cabinet,
+    this.storage,
     this.quantity,
   });
 
@@ -66,12 +66,12 @@ class Equipment {
       description: (yaml['description'] as String?) ?? '',
       sections: secs,
       related: List<String>.from(yaml['related'] ?? const []),
-      cabinet: null,
+      storage: null,
       quantity: null,
     );
   }
 
-  Equipment copyWith({String? cabinet, int? quantity}) => Equipment(
+  Equipment copyWith({String? storage, int? quantity}) => Equipment(
     id: id,
     name: name,
     category: category,
@@ -80,9 +80,9 @@ class Equipment {
     description: description,
     sections: sections,
     related: related,
-    cabinet: cabinet ?? this.cabinet,
+    storage: storage ?? this.storage,
     quantity: quantity ?? this.quantity,
-    //cabinet: '',
+    //storage: '',
     //quantity: 0,
   );
 }
