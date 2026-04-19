@@ -66,9 +66,7 @@ class _ProductionShootsPageState extends State<ProductionShootsPage> {
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             hintText: 'Enter shoot name',
-            hintStyle: TextStyle(
-              color: Colors.white.withValues(alpha: 0.5),
-            ),
+            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
             enabledBorder: const UnderlineInputBorder(
               borderSide: BorderSide(color: Colors.white38),
             ),
@@ -106,9 +104,9 @@ class _ProductionShootsPageState extends State<ProductionShootsPage> {
       await DataRepository().createShoot(name);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to create shoot: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to create shoot: $e')));
     }
   }
 
@@ -128,9 +126,7 @@ class _ProductionShootsPageState extends State<ProductionShootsPage> {
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             hintText: 'Enter new name',
-            hintStyle: TextStyle(
-              color: Colors.white.withValues(alpha: 0.5),
-            ),
+            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
             enabledBorder: const UnderlineInputBorder(
               borderSide: BorderSide(color: Colors.white38),
             ),
@@ -157,8 +153,7 @@ class _ProductionShootsPageState extends State<ProductionShootsPage> {
               final v = controller.text.trim();
               if (v.isNotEmpty && v != oldName) Navigator.of(ctx).pop(v);
             },
-            child:
-                const Text('Rename', style: TextStyle(color: Colors.white)),
+            child: const Text('Rename', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -171,9 +166,9 @@ class _ProductionShootsPageState extends State<ProductionShootsPage> {
       await DataRepository().renameShoot(oldName, newName);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to rename: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to rename: $e')));
     }
   }
 
@@ -214,14 +209,14 @@ class _ProductionShootsPageState extends State<ProductionShootsPage> {
     try {
       await DataRepository().deleteShoot(name);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Shoot deleted')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Shoot deleted')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
     }
   }
 
@@ -356,12 +351,12 @@ class _ProductionShootsPageState extends State<ProductionShootsPage> {
                       for (final id in items.keys) {
                         if (coverImages.length >= 4) break;
                         final equip = repo.getEquipmentById(id);
-                        if (equip != null &&
-                            equip.coverImages.isNotEmpty) {
+                        if (equip != null && equip.coverImages.isNotEmpty) {
                           coverImages.add(equip.coverImages.first);
                         }
                       }
-                      final allChecked = items.isNotEmpty &&
+                      final allChecked =
+                          items.isNotEmpty &&
                           items.values.every((e) => e.checked);
                       return _ShootCard(
                         name: name,
@@ -412,16 +407,12 @@ class _ShootCard extends StatelessWidget {
         children: [
           // Photo collage background (up to 4 images in a 2x2 grid)
           if (coverImages.isNotEmpty)
-            Positioned.fill(
-              child: _PhotoCollage(images: coverImages),
-            )
+            Positioned.fill(child: _PhotoCollage(images: coverImages))
           else
             Positioned.fill(
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Container(
-                  color: Colors.white.withValues(alpha: 0.08),
-                ),
+                child: Container(color: Colors.white.withValues(alpha: 0.08)),
               ),
             ),
 
@@ -524,7 +515,7 @@ class _ShootCard extends StatelessWidget {
                             ),
                             SizedBox(width: 4),
                             Text(
-                              'Ready to go',
+                              'Ready',
                               style: TextStyle(
                                 color: Colors.greenAccent,
                                 fontSize: 12,
@@ -557,11 +548,12 @@ class _ShootCard extends StatelessWidget {
                           value: 'rename',
                           child: Row(
                             children: [
-                              Icon(Icons.edit, color: Colors.white70,
-                                  size: 20),
+                              Icon(Icons.edit, color: Colors.white70, size: 20),
                               SizedBox(width: 10),
-                              Text('Rename',
-                                  style: TextStyle(color: Colors.white)),
+                              Text(
+                                'Rename',
+                                style: TextStyle(color: Colors.white),
+                              ),
                             ],
                           ),
                         ),
@@ -569,11 +561,16 @@ class _ShootCard extends StatelessWidget {
                           value: 'delete',
                           child: Row(
                             children: [
-                              Icon(Icons.delete, color: Colors.redAccent,
-                                  size: 20),
+                              Icon(
+                                Icons.delete,
+                                color: Colors.redAccent,
+                                size: 20,
+                              ),
                               SizedBox(width: 10),
-                              Text('Delete',
-                                  style: TextStyle(color: Colors.redAccent)),
+                              Text(
+                                'Delete',
+                                style: TextStyle(color: Colors.redAccent),
+                              ),
                             ],
                           ),
                         ),

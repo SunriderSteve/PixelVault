@@ -90,6 +90,11 @@ class DataRepository {
   Map<String, Map<String, ShootEquip>>? _shootsSnapshot; // rollback
   bool _flushingShootOps = false;
 
+  // ── Shoot polling state ──────────────────────────────────────
+  Timer? _shootsTimer; // Periodic shoots refresher.
+  bool _fetchingShoots = false; // Reentrancy guard for fetchShootsOnce.
+  DateTime? _lastShootFlushAt; // Cooldown after flush to let CDN catch up.
+
   // ── Post-write stale-poll guard ─────────────────────────────────
   // After a successful write we record the expected post-write values
   // per equipment id here. On each subsequent poll, any id present in
@@ -132,7 +137,8 @@ class DataRepository {
     await _loadAllStaticAssets(); // Parse bundled YAMLs into memory.
     await fetchOverlayOnce(); // Apply the initial overlay.
     await fetchShootsOnce(); // Load production shoots.
-    _startOverlayPolling(); // Begin periodic refresh.
+    _startOverlayPolling(); // Begin periodic overlay refresh.
+    _startShootsPolling(); // Begin periodic shoots refresh.
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -292,6 +298,18 @@ class DataRepository {
     });
   }
 
+  /// (Re)start the periodic production shoots refresher. Safe to call
+  /// multiple times — the previous timer is cancelled first.
+  void _startShootsPolling() {
+    _shootsTimer?.cancel();
+    final int secs = _admin?.pollSeconds ?? 2;
+    if (secs <= 0 || _shootsClient == null) return;
+
+    _shootsTimer = Timer.periodic(Duration(seconds: secs), (_) {
+      fetchShootsOnce(); // Fire and forget — errors are logged inside.
+    });
+  }
+
   /// Overlay the mutable fields onto the in-memory equipment cache by
   /// id. Equipment ids present in the overlay but absent from
   /// [_equipment] are silently ignored so orphan gist entries don't
@@ -407,18 +425,39 @@ class DataRepository {
   // Production shoots: fetch + mutate
   // ══════════════════════════════════════════════════════════════
 
-  /// Fetch production shoots once from the gist.
+  /// Fetch production shoots once from the gist. Skips when a local
+  /// flush is pending/in-flight or the CDN hasn't had time to catch up
+  /// after a recent write, to avoid clobbering optimistic local state.
   Future<bool> fetchShootsOnce() async {
+    if (_fetchingShoots) return false;
     if (_shootsClient == null) return false;
+
+    _fetchingShoots = true;
     try {
       final map = await _shootsClient!.fetch();
       if (map == null) return false;
+
+      // After the await, check whether local edits happened while we
+      // were fetching. If so, discard the (potentially stale) result
+      // so we don't clobber optimistic state.
+      if (_flushingShootOps || _pendingShootOps.isNotEmpty) return false;
+
+      // After a successful flush the raw CDN may still serve pre-write
+      // content for a few seconds. Skip this poll to let it catch up.
+      if (_lastShootFlushAt != null &&
+          DateTime.now().difference(_lastShootFlushAt!) <
+              const Duration(seconds: 10)) {
+        return false;
+      }
+
       _shoots = map;
       shootsEpoch.value++;
       return true;
     } catch (e) {
       debugPrint('shoots fetch error: $e');
       return false;
+    } finally {
+      _fetchingShoots = false;
     }
   }
 
@@ -456,6 +495,7 @@ class DataRepository {
       }
       final ground = await client.writeAll(fresh, token: token);
       _shoots = ground;
+      _lastShootFlushAt = DateTime.now();
       // Re-apply any ops that were queued while the flush was
       // in-flight so their optimistic changes aren't lost, and
       // update the rollback snapshot to confirmed ground truth.
@@ -753,6 +793,8 @@ class DataRepository {
   void dispose() {
     _overlayTimer?.cancel();
     _overlayTimer = null;
+    _shootsTimer?.cancel();
+    _shootsTimer = null;
     _shootsDebounce?.cancel();
     _shootsDebounce = null;
   }

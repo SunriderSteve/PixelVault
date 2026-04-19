@@ -733,148 +733,148 @@ class _ReviewRow extends StatelessWidget {
                 children: [
                   // Main content (left side)
                   Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Equipment name
-                      Text(
-                        equipment.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Equipment name
+                        Text(
+                          equipment.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 6),
+                        const SizedBox(height: 6),
 
-                      // Tags row
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
-                        children: [
-                          _ReviewTag(
-                            label: equipment.category,
-                            color: Colors.deepPurple,
-                          ),
-                          _ReviewTag(
-                            label: 'Stock: $stock',
-                            color: stock > 0 ? Colors.green : Colors.red,
-                          ),
-                          _ReviewTag(
-                            label: equipment.brand,
-                            color: Colors.lightBlueAccent,
-                          ),
-                          if (equipment.storage != null &&
-                              equipment.storage!.isNotEmpty)
+                        // Tags row
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
                             _ReviewTag(
-                              label: 'Storage: ${equipment.storage}',
-                              color: Colors.orange,
+                              label: equipment.category,
+                              color: Colors.deepPurple,
                             ),
-                        ],
+                            _ReviewTag(
+                              label: 'Stock: $stock',
+                              color: stock > 0 ? Colors.green : Colors.red,
+                            ),
+                            _ReviewTag(
+                              label: equipment.brand,
+                              color: Colors.lightBlueAccent,
+                            ),
+                            if (equipment.storage != null &&
+                                equipment.storage!.isNotEmpty)
+                              _ReviewTag(
+                                label: 'Storage: ${equipment.storage}',
+                                color: Colors.orange,
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Qty controls row
+                        Row(
+                          children: [
+                            const Text(
+                              'Bring:',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            _CircleQtyButton(
+                              icon: Icons.remove,
+                              onTap: () => _adjust(-1),
+                            ),
+                            const SizedBox(width: 8),
+                            SizedBox(
+                              width: 48,
+                              height: 32,
+                              child: TextField(
+                                controller: TextEditingController(text: '$qty'),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.black87,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                keyboardType: TextInputType.number,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
+                                decoration: InputDecoration(
+                                  contentPadding: EdgeInsets.zero,
+                                  filled: true,
+                                  fillColor: Colors.grey.shade300,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(6),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
+                                onSubmitted: (v) {
+                                  final parsed = int.tryParse(v) ?? 1;
+                                  onQtyChanged(parsed.clamp(1, maxQty));
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            _CircleQtyButton(
+                              icon: Icons.add,
+                              onTap: () => _adjust(1),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Info button (vertically centered)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.info_outline_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                      onPressed: onInfoTap,
+                      tooltip: 'View details',
+                    ),
+                  ),
+
+                  // Right column: remove button (top) + max qty (bottom)
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.redAccent,
+                          size: 20,
+                        ),
+                        onPressed: onRemove,
+                        tooltip: 'Remove',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                       ),
                       const SizedBox(height: 8),
-
-                      // Qty controls row
-                      Row(
-                        children: [
-                          const Text(
-                            'Bring:',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          _CircleQtyButton(
-                            icon: Icons.remove,
-                            onTap: () => _adjust(-1),
-                          ),
-                          const SizedBox(width: 8),
-                          SizedBox(
-                            width: 48,
-                            height: 32,
-                            child: TextField(
-                              controller: TextEditingController(text: '$qty'),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.black87,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                              ],
-                              decoration: InputDecoration(
-                                contentPadding: EdgeInsets.zero,
-                                filled: true,
-                                fillColor: Colors.grey.shade300,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                  borderSide: BorderSide.none,
-                                ),
-                              ),
-                              onSubmitted: (v) {
-                                final parsed = int.tryParse(v) ?? 1;
-                                onQtyChanged(parsed.clamp(1, maxQty));
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          _CircleQtyButton(
-                            icon: Icons.add,
-                            onTap: () => _adjust(1),
-                          ),
-                        ],
+                      Text(
+                        'max $maxQty',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.4),
+                          fontSize: 11,
+                        ),
                       ),
                     ],
                   ),
-                ),
-
-                // Info button (vertically centered)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.info_outline_rounded,
-                      color: Colors.white,
-                      size: 22,
-                    ),
-                    onPressed: onInfoTap,
-                    tooltip: 'View details',
-                  ),
-                ),
-
-                // Right column: remove button (top) + max qty (bottom)
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.close,
-                        color: Colors.redAccent,
-                        size: 20,
-                      ),
-                      onPressed: onRemove,
-                      tooltip: 'Remove',
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'max $maxQty',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.4),
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1431,9 +1431,7 @@ class _ReadOnlyEquipmentInfoPopup extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.grey.shade900.withValues(alpha: 0.95),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.15),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1479,8 +1477,8 @@ class _ReadOnlyEquipmentInfoPopup extends StatelessWidget {
                       'Press to view full image',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.35),
-                        fontSize: 11,
+                        color: Colors.white.withValues(alpha: 1),
+                        fontSize: 13,
                       ),
                     ),
                   ),
@@ -1520,10 +1518,7 @@ class _ReadOnlyEquipmentInfoPopup extends StatelessWidget {
                         label: 'Category',
                         value: equipment.category,
                       ),
-                      _ReadOnlyInfoRow(
-                        label: 'Brand',
-                        value: equipment.brand,
-                      ),
+                      _ReadOnlyInfoRow(label: 'Brand', value: equipment.brand),
                       _ReadOnlyInfoRow(
                         label: 'Stock',
                         value: qty > 0 ? '$qty' : 'Out of Stock',
