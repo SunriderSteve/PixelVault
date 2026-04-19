@@ -92,8 +92,7 @@ class DataRepository {
 
   // ── Shoot polling state ──────────────────────────────────────
   Timer? _shootsTimer; // Periodic shoots refresher.
-  bool _fetchingShoots = false; // Reentrancy guard for fetchShootsOnce.
-  DateTime? _lastShootFlushAt; // Cooldown after flush to let CDN catch up.
+  bool _pollingShoots = false; // Reentrancy guard for _pollShootsOnce.
 
   // ── Post-write stale-poll guard ─────────────────────────────────
   // After a successful write we record the expected post-write values
@@ -306,7 +305,7 @@ class DataRepository {
     if (secs <= 0 || _shootsClient == null) return;
 
     _shootsTimer = Timer.periodic(Duration(seconds: secs), (_) {
-      fetchShootsOnce(); // Fire and forget — errors are logged inside.
+      _pollShootsOnce(); // Fire and forget — errors are logged inside.
     });
   }
 
@@ -425,39 +424,47 @@ class DataRepository {
   // Production shoots: fetch + mutate
   // ══════════════════════════════════════════════════════════════
 
-  /// Fetch production shoots once from the gist. Skips when a local
-  /// flush is pending/in-flight or the CDN hasn't had time to catch up
-  /// after a recent write, to avoid clobbering optimistic local state.
+  /// Fetch production shoots once from the gist (CDN then API fallback).
+  /// Used for the initial load at boot. Polling uses [_pollShootsOnce]
+  /// instead, which hits the authenticated API for fresh data.
   Future<bool> fetchShootsOnce() async {
-    if (_fetchingShoots) return false;
     if (_shootsClient == null) return false;
-
-    _fetchingShoots = true;
     try {
       final map = await _shootsClient!.fetch();
       if (map == null) return false;
-
-      // After the await, check whether local edits happened while we
-      // were fetching. If so, discard the (potentially stale) result
-      // so we don't clobber optimistic state.
-      if (_flushingShootOps || _pendingShootOps.isNotEmpty) return false;
-
-      // After a successful flush the raw CDN may still serve pre-write
-      // content for a few seconds. Skip this poll to let it catch up.
-      if (_lastShootFlushAt != null &&
-          DateTime.now().difference(_lastShootFlushAt!) <
-              const Duration(seconds: 10)) {
-        return false;
-      }
-
       _shoots = map;
       shootsEpoch.value++;
       return true;
     } catch (e) {
       debugPrint('shoots fetch error: $e');
       return false;
+    }
+  }
+
+  /// Poll production shoots via the authenticated GitHub API so every
+  /// tick returns the latest data (no CDN staleness). Skipped when
+  /// local writes are pending or in-flight to avoid clobbering
+  /// optimistic state.
+  Future<void> _pollShootsOnce() async {
+    if (_pollingShoots) return;
+    if (_shootsClient == null) return;
+    final String token = _admin?.accessToken ?? '';
+    if (token.isEmpty) return;
+
+    _pollingShoots = true;
+    try {
+      final map = await _shootsClient!.readViaApi(token);
+
+      // After the await, discard if local edits started while we were
+      // fetching — the optimistic state is more current.
+      if (_flushingShootOps || _pendingShootOps.isNotEmpty) return;
+
+      _shoots = map;
+      shootsEpoch.value++;
+    } catch (e) {
+      debugPrint('shoots poll error: $e');
     } finally {
-      _fetchingShoots = false;
+      _pollingShoots = false;
     }
   }
 
@@ -495,7 +502,6 @@ class DataRepository {
       }
       final ground = await client.writeAll(fresh, token: token);
       _shoots = ground;
-      _lastShootFlushAt = DateTime.now();
       // Re-apply any ops that were queued while the flush was
       // in-flight so their optimistic changes aren't lost, and
       // update the rollback snapshot to confirmed ground truth.
