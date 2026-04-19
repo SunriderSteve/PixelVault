@@ -33,6 +33,7 @@ class ProductionShootDetailPage extends StatefulWidget {
 class _ProductionShootDetailPageState extends State<ProductionShootDetailPage> {
   Map<String, ShootEquip> _items = {}; // equipId -> ShootEquip
   final Set<String> _collapsedCategories = {};
+  bool _exiting = false; // Guard against double-pop on rapid epoch ticks.
 
   @override
   void initState() {
@@ -50,11 +51,21 @@ class _ProductionShootDetailPageState extends State<ProductionShootDetailPage> {
   }
 
   void _onChanged() {
-    if (!mounted) return;
-    setState(() {
-      _items = Map.from(
-        DataRepository().getShoot(widget.shootName) ?? {},
+    if (!mounted || _exiting) return;
+    final shoot = DataRepository().getShoot(widget.shootName);
+    if (shoot == null) {
+      // Shoot was renamed or deleted by another user — go back.
+      _exiting = true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This shoot was renamed or deleted by another user.'),
+        ),
       );
+      context.pop();
+      return;
+    }
+    setState(() {
+      _items = Map.from(shoot);
     });
   }
 
