@@ -93,6 +93,7 @@ class DataRepository {
   // ── Shoot polling state ──────────────────────────────────────
   Timer? _shootsTimer; // Periodic shoots refresher.
   bool _pollingShoots = false; // Reentrancy guard for _pollShootsOnce.
+  String? _shootsEtag; // ETag for conditional polling (304 = free).
 
   // ── Post-write stale-poll guard ─────────────────────────────────
   // After a successful write we record the expected post-write values
@@ -298,13 +299,13 @@ class DataRepository {
   }
 
   /// (Re)start the periodic production shoots refresher. Safe to call
-  /// multiple times — the previous timer is cancelled first.
+  /// multiple times — the previous timer is cancelled first. Uses a
+  /// fixed 1-second interval for near-real-time live list updates.
   void _startShootsPolling() {
     _shootsTimer?.cancel();
-    final int secs = _admin?.pollSeconds ?? 2;
-    if (secs <= 0 || _shootsClient == null) return;
+    if (_shootsClient == null) return;
 
-    _shootsTimer = Timer.periodic(Duration(seconds: secs), (_) {
+    _shootsTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       _pollShootsOnce(); // Fire and forget — errors are logged inside.
     });
   }
@@ -441,9 +442,11 @@ class DataRepository {
     }
   }
 
-  /// Poll production shoots via the authenticated GitHub API so every
-  /// tick returns the latest data (no CDN staleness). Skipped when
-  /// local writes are pending or in-flight to avoid clobbering
+  /// Poll production shoots via the authenticated GitHub API using
+  /// conditional requests (ETag). A 304 response means nothing
+  /// changed and does NOT count against GitHub's rate limit, making
+  /// 1-second polling safe even with many concurrent users. Skipped
+  /// when local writes are pending or in-flight to avoid clobbering
   /// optimistic state.
   Future<void> _pollShootsOnce() async {
     if (_pollingShoots) return;
@@ -453,13 +456,21 @@ class DataRepository {
 
     _pollingShoots = true;
     try {
-      final map = await _shootsClient!.readViaApi(token);
+      final result = await _shootsClient!.pollViaApi(
+        token,
+        etag: _shootsEtag,
+      );
+
+      // null → 304 Not Modified, nothing to do.
+      if (result == null) return;
+
+      _shootsEtag = result.etag;
 
       // After the await, discard if local edits started while we were
       // fetching — the optimistic state is more current.
       if (_flushingShootOps || _pendingShootOps.isNotEmpty) return;
 
-      _shoots = map;
+      _shoots = result.data;
       shootsEpoch.value++;
     } catch (e) {
       debugPrint('shoots poll error: $e');
@@ -502,6 +513,7 @@ class DataRepository {
       }
       final ground = await client.writeAll(fresh, token: token);
       _shoots = ground;
+      _shootsEtag = null; // Invalidate so the next poll fetches fresh.
       // Re-apply any ops that were queued while the flush was
       // in-flight so their optimistic changes aren't lost, and
       // update the rollback snapshot to confirmed ground truth.

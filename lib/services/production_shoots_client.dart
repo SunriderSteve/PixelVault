@@ -228,6 +228,44 @@ class ProductionShootsClient {
     return _parseYaml(content);
   }
 
+  /// Poll via authenticated API with conditional request (ETag).
+  /// Returns `null` when the data hasn't changed (HTTP 304), which
+  /// does NOT count against GitHub's rate limit. Otherwise returns
+  /// the fresh data together with the new ETag for the next poll.
+  Future<({Map<String, Map<String, ShootEquip>> data, String etag})?>
+      pollViaApi(String token, {String? etag}) async {
+    final String id = admin.gistId.trim();
+    final String file = admin.shootsFile.trim();
+    if (id.isEmpty) throw Exception('gistId missing in admin config');
+
+    final uri = Uri.parse('https://api.github.com/gists/$id');
+    final headers = <String, String>{
+      'Authorization': 'token $token',
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+    };
+    if (etag != null) headers['If-None-Match'] = etag;
+
+    final resp = await http.get(uri, headers: headers);
+
+    // 304 Not Modified — data unchanged, doesn't consume rate limit.
+    if (resp.statusCode == 304) return null;
+
+    if (resp.statusCode ~/ 100 != 2) {
+      throw Exception('shoots poll failed: ${resp.statusCode}');
+    }
+
+    final newEtag = resp.headers['etag'] ?? '';
+    final body = jsonDecode(resp.body) as Map<String, dynamic>;
+    final files = body['files'] as Map<String, dynamic>?;
+    final f = files?[file] as Map<String, dynamic>?;
+    final content = f?['content'] as String?;
+    final data = content == null
+        ? <String, Map<String, ShootEquip>>{}
+        : _parseYaml(content);
+    return (data: data, etag: newEtag);
+  }
+
   // ── YAML serialize ──────────────────────────────────────────────
 
   String _shootsToYaml(Map<String, Map<String, ShootEquip>> shoots) {
