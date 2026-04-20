@@ -1,37 +1,40 @@
 import 'package:yaml/yaml.dart';
 
 class AdminConfigModel {
-  final String gistId;
-  final String gistFile;
-  final String gistRawUrl;
+  final String owner;
+  final String repo;
+  final String branch;
   final int pollSeconds;
   final String accessToken;
-  final String shootsFile;
-  final String shootsRawUrl;
 
-  // Guide files (multi-document YAML, fetched from the same gist)
-  final String equipmentGuidesFile;
-  final String equipmentGuidesRawUrl;
-  final String videographyGuidesFile;
-  final String videographyGuidesRawUrl;
-  final String scenarioGuidesFile;
-  final String scenarioGuidesRawUrl;
+  // File paths relative to the repo root.
+  final String equipmentFile;
+  final String videographyFile;
+  final String scenarioFile;
+  final String shootsFile;
 
   const AdminConfigModel({
-    required this.gistId,
-    required this.gistFile,
-    required this.gistRawUrl,
+    required this.owner,
+    required this.repo,
+    required this.branch,
     required this.pollSeconds,
     required this.accessToken,
+    required this.equipmentFile,
+    required this.videographyFile,
+    required this.scenarioFile,
     required this.shootsFile,
-    required this.shootsRawUrl,
-    required this.equipmentGuidesFile,
-    required this.equipmentGuidesRawUrl,
-    required this.videographyGuidesFile,
-    required this.videographyGuidesRawUrl,
-    required this.scenarioGuidesFile,
-    required this.scenarioGuidesRawUrl,
   });
+
+  /// Base URL for raw file access via the GitHub CDN.
+  String get rawBaseUrl =>
+      'https://raw.githubusercontent.com/$owner/$repo/$branch';
+
+  /// Construct a raw CDN URL for any repo-relative path.
+  String rawUrl(String path) => '$rawBaseUrl/$path';
+
+  /// Base URL for the GitHub Contents API.
+  String get apiBaseUrl =>
+      'https://api.github.com/repos/$owner/$repo/contents';
 
   // Rotates all printable ASCII (space ' ' = 32 .. '~' = 126)
   static String caesarCipherDecode(String text, int shift) {
@@ -65,31 +68,24 @@ class AdminConfigModel {
 
   factory AdminConfigModel.fromYaml(String yamlString) {
     final y = loadYaml(yamlString) as YamlMap;
-    final g = (y['gist'] as YamlMap?) ?? YamlMap();
+    final g = (y['github'] as YamlMap?) ?? YamlMap();
 
     return AdminConfigModel(
-      gistId: (g['id'] as String?) ?? '',
-      gistFile: (g['file'] as String?) ?? 'inventory_mutable.yaml',
-      gistRawUrl: (g['raw_url'] as String?) ?? '',
+      owner: (g['owner'] as String?) ?? '',
+      repo: (g['repo'] as String?) ?? '',
+      branch: (g['branch'] as String?) ?? 'main',
       pollSeconds: (g['poll_seconds'] as int?) ?? 5,
       accessToken: caesarCipherDecode(
         (g['access_token'] as String?) ?? '',
         g['caesar_shift'] is int ? -(g['caesar_shift'] as int) : 0,
       ),
-      shootsFile: (g['shoots_file'] as String?) ?? 'production_shoots.yaml',
-      shootsRawUrl: (g['shoots_raw_url'] as String?) ?? '',
-      equipmentGuidesFile:
-          (g['equipment_guides_file'] as String?) ?? 'equipment_guides.yaml',
-      equipmentGuidesRawUrl:
-          (g['equipment_guides_raw_url'] as String?) ?? '',
-      videographyGuidesFile:
-          (g['videography_guides_file'] as String?) ?? 'videography_guides.yaml',
-      videographyGuidesRawUrl:
-          (g['videography_guides_raw_url'] as String?) ?? '',
-      scenarioGuidesFile:
-          (g['scenario_guides_file'] as String?) ?? 'scenario_guides.yaml',
-      scenarioGuidesRawUrl:
-          (g['scenario_guides_raw_url'] as String?) ?? '',
+      equipmentFile: (g['equipment_file'] as String?) ?? 'data/equipment.yaml',
+      videographyFile:
+          (g['videography_file'] as String?) ?? 'data/videography_guides.yaml',
+      scenarioFile:
+          (g['scenario_file'] as String?) ?? 'data/scenario_guides.yaml',
+      shootsFile:
+          (g['shoots_file'] as String?) ?? 'data/production_shoots.yaml',
     );
   }
 }

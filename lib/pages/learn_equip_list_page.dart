@@ -18,6 +18,8 @@ import 'package:go_router/go_router.dart';
 
 import '../models/equipment_model.dart';
 import '../services/data_repository.dart';
+import '../widgets/admin_auth.dart';
+import 'guide_creator_page.dart';
 
 class LearnEquipListPage extends StatefulWidget {
   const LearnEquipListPage({super.key});
@@ -74,11 +76,11 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
 
   // ── Filter logic ────────────────────────────────────────────────────
 
-  /// Guides without either a description or any sections are considered
-  /// "empty" and hidden from the list — this keeps placeholder YAML
-  /// files from cluttering the grid.
+  /// Items marked with no_guide, or without a description and sections,
+  /// are hidden from the list.
   bool _hasContent(Equipment item) =>
-      item.description.trim().isNotEmpty || item.sections.isNotEmpty;
+      !item.noGuide &&
+      (item.description.trim().isNotEmpty || item.sections.isNotEmpty);
 
   /// Recomputes [_filteredItems] from the current search text plus the
   /// selected category/brand filters, and triggers a rebuild. Every
@@ -126,13 +128,10 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
     final int totalFilters =
         _selectedCategories.length + _selectedBrands.length;
 
-    // Root Hero matches the home page's "Equipment Guides" card.
-    return Hero(
-      tag: 'equip_guides_card',
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        body: Stack(
-          children: [
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
             // ── 1. Background gradient ──────────────────────────────
             Container(
               decoration: const BoxDecoration(
@@ -197,6 +196,32 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
                     icon: const Icon(Icons.arrow_back, color: Colors.white),
                     onPressed: () => context.pop(),
                   ),
+                  actions: [
+                    ValueListenableBuilder<bool>(
+                      valueListenable: adminNotifier,
+                      builder: (_, isAdmin, _) => isAdmin
+                          ? IconButton(
+                              icon: const Icon(Icons.add, color: Colors.white),
+                              tooltip: 'Create Equipment Guide',
+                              onPressed: () => showGuideCreator(
+                                  context, GuideType.equipment),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                    ValueListenableBuilder<bool>(
+                      valueListenable: adminNotifier,
+                      builder: (_, isAdmin, _) => IconButton(
+                        icon: Icon(
+                          isAdmin
+                              ? Icons.admin_panel_settings
+                              : Icons.person,
+                          color: isAdmin ? Colors.green : Colors.white,
+                        ),
+                        onPressed: _handleAdminToggle,
+                        tooltip: 'Admin Mode',
+                      ),
+                    ),
+                  ],
                   backgroundColor: Colors.transparent,
                   pinned: true,
                   flexibleSpace: ClipRRect(
@@ -465,8 +490,47 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
             ),
           ],
         ),
-      ),
     );
+  }
+
+  Future<void> _handleAdminToggle() async {
+    final isAdmin = adminNotifier.value;
+    if (isAdmin) {
+      final bool? shouldExit = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: Colors.grey.shade900,
+          title: const Text('Exit Admin Mode?',
+              style: TextStyle(color: Colors.white)),
+          content: const Text('Are you sure you want to return to user mode?',
+              style: TextStyle(color: Colors.white70)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel',
+                  style: TextStyle(color: Colors.white54)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Exit',
+                  style: TextStyle(color: Colors.redAccent)),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      if (shouldExit == true) setAdminPersisted(false);
+      return;
+    }
+
+    final bool success = await showAdminPasswordDialog(context);
+    if (!mounted) return;
+    if (success) {
+      setAdminPersisted(true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Admin Mode Enabled')),
+      );
+    }
   }
 }
 
@@ -572,7 +636,7 @@ class _GlassEquipmentCard extends StatelessWidget {
           // Cover image or a translucent fallback when empty.
           Positioned.fill(
             child: imagePath.isNotEmpty
-                ? AvifImage.asset(imagePath, fit: BoxFit.cover)
+                ? AvifImage.network(DataRepository().imageUrl(imagePath), fit: BoxFit.cover)
                 : Container(color: Colors.white.withValues(alpha: 0.1)),
           ),
           // Darkening gradient for title legibility.

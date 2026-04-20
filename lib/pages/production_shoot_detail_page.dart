@@ -726,8 +726,8 @@ class _EquipmentInfoPopupState extends State<_EquipmentInfoPopup> {
           onTap: () => Navigator.of(context).pop(),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: AvifImage.asset(
-              imagePath,
+            child: AvifImage.network(
+              DataRepository().imageUrl(imagePath),
               fit: BoxFit.contain,
               errorBuilder: (_, _, _) => Container(
                 color: Colors.grey.shade800,
@@ -803,8 +803,8 @@ class _EquipmentInfoPopupState extends State<_EquipmentInfoPopup> {
                         borderRadius: BorderRadius.circular(12),
                         child: AspectRatio(
                           aspectRatio: 4 / 3,
-                          child: AvifImage.asset(
-                            imagePath,
+                          child: AvifImage.network(
+                            DataRepository().imageUrl(imagePath),
                             fit: BoxFit.cover,
                             errorBuilder: (_, _, _) => Container(
                               color: Colors.grey.shade800,

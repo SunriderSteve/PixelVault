@@ -33,6 +33,7 @@ class Equipment {
 
   final String? storage;
   final int? quantity;
+  final bool noGuide;
 
   Equipment({
     required this.id,
@@ -45,6 +46,7 @@ class Equipment {
     required this.related,
     this.storage,
     this.quantity,
+    this.noGuide = false,
   });
 
   factory Equipment.fromYaml(YamlMap yaml) {
@@ -66,23 +68,24 @@ class Equipment {
       description: (yaml['description'] as String?) ?? '',
       sections: secs,
       related: List<String>.from(yaml['related'] ?? const []),
-      storage: null,
-      quantity: null,
+      storage: yaml['storage'] as String?,
+      quantity: (yaml['quantity'] as num?)?.toInt(),
+      noGuide: yaml['no_guide'] == true,
     );
   }
 
-  Equipment copyWith({String? storage, int? quantity}) => Equipment(
-    id: id,
-    name: name,
-    category: category,
-    brand: brand,
-    coverImages: coverImages,
-    description: description,
-    sections: sections,
-    related: related,
-    storage: storage ?? this.storage,
-    quantity: quantity ?? this.quantity,
-    //storage: '',
-    //quantity: 0,
-  );
+  Equipment copyWith({String? storage, int? quantity, bool? noGuide}) =>
+      Equipment(
+        id: id,
+        name: name,
+        category: category,
+        brand: brand,
+        coverImages: coverImages,
+        description: description,
+        sections: sections,
+        related: related,
+        storage: storage ?? this.storage,
+        quantity: quantity ?? this.quantity,
+        noGuide: noGuide ?? this.noGuide,
+      );
 }

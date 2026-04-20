@@ -18,6 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_avif/flutter_avif.dart';
 
+
 import '../models/equipment_model.dart';
 import '../services/data_repository.dart';
 
@@ -992,8 +993,8 @@ class _EquipGridTile extends StatelessWidget {
             children: [
               // Equipment image
               if (imagePath.isNotEmpty)
-                AvifImage.asset(
-                  imagePath,
+                AvifImage.network(
+                  DataRepository().imageUrl(imagePath),
                   fit: BoxFit.cover,
                   errorBuilder: (_, _, _) =>
                       Container(color: Colors.grey.shade800),
@@ -1395,8 +1396,8 @@ class _ReadOnlyEquipmentInfoPopup extends StatelessWidget {
           onTap: () => Navigator.of(context).pop(),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: AvifImage.asset(
-              imagePath,
+            child: AvifImage.network(
+              DataRepository().imageUrl(imagePath),
               fit: BoxFit.contain,
               errorBuilder: (_, _, _) => Container(
                 color: Colors.grey.shade800,
@@ -1455,8 +1456,8 @@ class _ReadOnlyEquipmentInfoPopup extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                         child: AspectRatio(
                           aspectRatio: 4 / 3,
-                          child: AvifImage.asset(
-                            imagePath,
+                          child: AvifImage.network(
+                            DataRepository().imageUrl(imagePath),
                             fit: BoxFit.cover,
                             errorBuilder: (_, _, _) => Container(
                               color: Colors.grey.shade800,

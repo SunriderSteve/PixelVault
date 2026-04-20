@@ -23,6 +23,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/equipment_model.dart';
 import '../models/scenario_model.dart';
 import '../services/data_repository.dart';
+import '../widgets/admin_auth.dart';
+import 'guide_creator_page.dart';
 
 class ScenarioDetailPage extends StatefulWidget {
   final String id;
@@ -48,6 +50,46 @@ class _ScenarioDetailPageState extends State<ScenarioDetailPage> {
       throw Exception('Scenario not found: ${widget.id}');
     }
     _scenario = s;
+  }
+
+  Future<void> _handleAdminToggle() async {
+    final isAdmin = adminNotifier.value;
+    if (isAdmin) {
+      final bool? shouldExit = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: Colors.grey.shade900,
+          title: const Text('Exit Admin Mode?',
+              style: TextStyle(color: Colors.white)),
+          content: const Text('Are you sure you want to return to user mode?',
+              style: TextStyle(color: Colors.white70)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel',
+                  style: TextStyle(color: Colors.white54)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Exit',
+                  style: TextStyle(color: Colors.redAccent)),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      if (shouldExit == true) setAdminPersisted(false);
+      return;
+    }
+
+    final bool success = await showAdminPasswordDialog(context);
+    if (!mounted) return;
+    if (success) {
+      setAdminPersisted(true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Admin Mode Enabled')),
+      );
+    }
   }
 
   @override
@@ -108,6 +150,46 @@ class _ScenarioDetailPageState extends State<ScenarioDetailPage> {
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: () => context.pop(),
                 ),
+                actions: [
+                  ValueListenableBuilder<bool>(
+                    valueListenable: adminNotifier,
+                    builder: (_, isAdmin, _) => Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isAdmin)
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.white),
+                            onPressed: () => showGuideEditor(
+                              context,
+                              GuideType.scenario,
+                              GuideEditData(
+                                name: _scenario.name,
+                                coverImages: _scenario.coverImages,
+                                sections: _scenario.sections
+                                    .map((s) => (
+                                          title: s.title,
+                                          body: s.body,
+                                          images: s.images,
+                                        ))
+                                    .toList(),
+                              ),
+                            ),
+                            tooltip: 'Edit Guide',
+                          ),
+                        IconButton(
+                          icon: Icon(
+                            isAdmin
+                                ? Icons.admin_panel_settings
+                                : Icons.person,
+                            color: isAdmin ? Colors.green : Colors.white,
+                          ),
+                          onPressed: _handleAdminToggle,
+                          tooltip: 'Admin Mode',
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 backgroundColor: Colors.transparent,
                 pinned: true,
                 flexibleSpace: ClipRRect(
@@ -168,8 +250,8 @@ class _ScenarioDetailPageState extends State<ScenarioDetailPage> {
                                   maxHeight: coverMaxHeight,
                                 ),
                                 child: Center(
-                                  child: AvifImage.asset(
-                                    _scenario.coverImages.first,
+                                  child: AvifImage.network(
+                                    DataRepository().imageUrl(_scenario.coverImages.first),
                                     fit: BoxFit.scaleDown,
                                   ),
                                 ),
@@ -339,8 +421,8 @@ class _ScenarioSectionTile extends StatelessWidget {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: _maxImageHeight),
                 child: Center(
-                  child: AvifImage.asset(
-                    section.images.first,
+                  child: AvifImage.network(
+                    DataRepository().imageUrl(section.images.first),
                     fit: BoxFit.scaleDown,
                   ),
                 ),
@@ -429,8 +511,8 @@ class _ImageCarouselState extends State<_ImageCarousel> {
                   return Center(
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: AvifImage.asset(
-                        widget.images[index],
+                      child: AvifImage.network(
+                        DataRepository().imageUrl(widget.images[index]),
                         fit: BoxFit.scaleDown,
                       ),
                     ),
@@ -546,7 +628,7 @@ class _RelatedGrid extends StatelessWidget {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: cover.isNotEmpty
-                      ? AvifImage.asset(cover, fit: BoxFit.cover)
+                      ? AvifImage.network(DataRepository().imageUrl(cover), fit: BoxFit.cover)
                       : Container(color: Colors.white10),
                 ),
               ),

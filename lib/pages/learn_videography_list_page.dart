@@ -15,6 +15,8 @@ import 'package:go_router/go_router.dart';
 
 import '../models/videography_model.dart';
 import '../services/data_repository.dart';
+import '../widgets/admin_auth.dart';
+import 'guide_creator_page.dart';
 
 class LearnVideographyListPage extends StatefulWidget {
   const LearnVideographyListPage({super.key});
@@ -56,6 +58,46 @@ class _LearnVideographyListPageState extends State<LearnVideographyListPage> {
     super.dispose();
   }
 
+  Future<void> _handleAdminToggle() async {
+    final isAdmin = adminNotifier.value;
+    if (isAdmin) {
+      final bool? shouldExit = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: Colors.grey.shade900,
+          title: const Text('Exit Admin Mode?',
+              style: TextStyle(color: Colors.white)),
+          content: const Text('Are you sure you want to return to user mode?',
+              style: TextStyle(color: Colors.white70)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel',
+                  style: TextStyle(color: Colors.white54)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Exit',
+                  style: TextStyle(color: Colors.redAccent)),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      if (shouldExit == true) setAdminPersisted(false);
+      return;
+    }
+
+    final bool success = await showAdminPasswordDialog(context);
+    if (!mounted) return;
+    if (success) {
+      setAdminPersisted(true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Admin Mode Enabled')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     const brandBlue = Color(0xFF0047BB);
@@ -67,10 +109,7 @@ class _LearnVideographyListPageState extends State<LearnVideographyListPage> {
       (MediaQuery.of(context).size.width / maxTileWidth).floor(),
     );
 
-    // Root Hero matches the home page's "Videography Basics" card.
-    return Hero(
-      tag: 'video_guides_card',
-      child: Scaffold(
+    return Scaffold(
         backgroundColor: Colors.black,
         body: Stack(
           children: [
@@ -119,6 +158,32 @@ class _LearnVideographyListPageState extends State<LearnVideographyListPage> {
                     icon: const Icon(Icons.arrow_back, color: Colors.white),
                     onPressed: () => context.pop(),
                   ),
+                  actions: [
+                    ValueListenableBuilder<bool>(
+                      valueListenable: adminNotifier,
+                      builder: (_, isAdmin, _) => isAdmin
+                          ? IconButton(
+                              icon: const Icon(Icons.add, color: Colors.white),
+                              tooltip: 'Create Videography Guide',
+                              onPressed: () => showGuideCreator(
+                                  context, GuideType.videography),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                    ValueListenableBuilder<bool>(
+                      valueListenable: adminNotifier,
+                      builder: (_, isAdmin, _) => IconButton(
+                        icon: Icon(
+                          isAdmin
+                              ? Icons.admin_panel_settings
+                              : Icons.person,
+                          color: isAdmin ? Colors.green : Colors.white,
+                        ),
+                        onPressed: _handleAdminToggle,
+                        tooltip: 'Admin Mode',
+                      ),
+                    ),
+                  ],
                   backgroundColor: Colors.transparent,
                   pinned: true,
                   flexibleSpace: ClipRRect(
@@ -210,7 +275,6 @@ class _LearnVideographyListPageState extends State<LearnVideographyListPage> {
             ),
           ],
         ),
-      ),
     );
   }
 }
@@ -239,7 +303,7 @@ class _GlassGuideCard extends StatelessWidget {
           // Cover image or a translucent fallback when empty.
           Positioned.fill(
             child: imagePath.isNotEmpty
-                ? AvifImage.asset(imagePath, fit: BoxFit.cover)
+                ? AvifImage.network(DataRepository().imageUrl(imagePath), fit: BoxFit.cover)
                 : Container(color: Colors.white.withValues(alpha: 0.1)),
           ),
           // Darkening gradient for title legibility.

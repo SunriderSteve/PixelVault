@@ -12,31 +12,70 @@ import 'package:go_router/go_router.dart';
 
 import '../models/scenario_model.dart';
 import '../services/data_repository.dart';
+import '../widgets/admin_auth.dart';
+import 'guide_creator_page.dart';
 
 /// Grid page listing every production scenario loaded by
-/// [DataRepository]. Stateless because the catalogue is static — if
-/// search/filter is ever added, convert to StatefulWidget and model it
-/// on [LearnVideographyListPage].
-class ScenarioListPage extends StatelessWidget {
+/// [DataRepository].
+class ScenarioListPage extends StatefulWidget {
   const ScenarioListPage({super.key});
+
+  @override
+  State<ScenarioListPage> createState() => _ScenarioListPageState();
+}
+
+class _ScenarioListPageState extends State<ScenarioListPage> {
+  Future<void> _handleAdminToggle() async {
+    final isAdmin = adminNotifier.value;
+    if (isAdmin) {
+      final bool? shouldExit = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: Colors.grey.shade900,
+          title: const Text('Exit Admin Mode?',
+              style: TextStyle(color: Colors.white)),
+          content: const Text('Are you sure you want to return to user mode?',
+              style: TextStyle(color: Colors.white70)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel',
+                  style: TextStyle(color: Colors.white54)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Exit',
+                  style: TextStyle(color: Colors.redAccent)),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      if (shouldExit == true) setAdminPersisted(false);
+      return;
+    }
+
+    final bool success = await showAdminPasswordDialog(context);
+    if (!mounted) return;
+    if (success) {
+      setAdminPersisted(true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Admin Mode Enabled')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final List<ScenarioGuide> items = DataRepository().getAllScenarios();
 
-    // Responsive column count: one column per ~420 px of screen width,
-    // never fewer than 2 so the layout doesn't collapse to a list.
     const double maxTileWidth = 420.0;
     final int cols = math.max(
       2,
       (MediaQuery.of(context).size.width / maxTileWidth).floor(),
     );
 
-    // Root Hero matches the home page's "Production Scenarios" card so
-    // the tile image animates into this screen on navigation.
-    return Hero(
-      tag: 'scenarios_card',
-      child: Scaffold(
+    return Scaffold(
         backgroundColor: Colors.black,
         body: Stack(
           children: [
@@ -87,6 +126,32 @@ class ScenarioListPage extends StatelessWidget {
                     icon: const Icon(Icons.arrow_back, color: Colors.white),
                     onPressed: () => context.pop(),
                   ),
+                  actions: [
+                    ValueListenableBuilder<bool>(
+                      valueListenable: adminNotifier,
+                      builder: (_, isAdmin, _) => isAdmin
+                          ? IconButton(
+                              icon: const Icon(Icons.add, color: Colors.white),
+                              tooltip: 'Create Production Scenario',
+                              onPressed: () => showGuideCreator(
+                                  context, GuideType.scenario),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                    ValueListenableBuilder<bool>(
+                      valueListenable: adminNotifier,
+                      builder: (_, isAdmin, _) => IconButton(
+                        icon: Icon(
+                          isAdmin
+                              ? Icons.admin_panel_settings
+                              : Icons.person,
+                          color: isAdmin ? Colors.green : Colors.white,
+                        ),
+                        onPressed: _handleAdminToggle,
+                        tooltip: 'Admin Mode',
+                      ),
+                    ),
+                  ],
                   backgroundColor: Colors.transparent,
                   pinned: true,
                   flexibleSpace: ClipRRect(
@@ -135,7 +200,6 @@ class ScenarioListPage extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 }
@@ -164,7 +228,7 @@ class _GlassScenarioCard extends StatelessWidget {
           // scenario has no cover art.
           Positioned.fill(
             child: imagePath.isNotEmpty
-                ? AvifImage.asset(imagePath, fit: BoxFit.cover)
+                ? AvifImage.network(DataRepository().imageUrl(imagePath), fit: BoxFit.cover)
                 : Container(color: Colors.white.withValues(alpha: 0.1)),
           ),
           // Darkening gradient so the title stays legible over any image.

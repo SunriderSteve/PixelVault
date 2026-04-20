@@ -29,6 +29,7 @@ import 'package:go_router/go_router.dart';
 import '../models/equipment_model.dart'; // Equipment
 import '../services/data_repository.dart';
 import '../widgets/admin_auth.dart';
+import 'inventory_create_dialog.dart';
 import 'inventory_edit_dialog.dart';
 
 // ─── Constants ────────────────────────────────────────────────────────────
@@ -369,6 +370,12 @@ class _InventoryListPageState extends State<InventoryListPage> {
                   ),
                 ),
                 actions: [
+                  if (_isAdmin)
+                    IconButton(
+                      icon: const Icon(Icons.add, color: Colors.white),
+                      onPressed: () => showInventoryCreator(context),
+                      tooltip: 'Add Equipment',
+                    ),
                   // Visible admin toggle — green while enabled.
                   IconButton(
                     icon: Icon(
@@ -784,7 +791,7 @@ class _GlassInventoryCard extends StatelessWidget {
           //    item has no cover image.
           Positioned.fill(
             child: imagePath.isNotEmpty
-                ? AvifImage.asset(imagePath, fit: BoxFit.cover)
+                ? AvifImage.network(DataRepository().imageUrl(imagePath), fit: BoxFit.cover)
                 : Container(color: Colors.white.withValues(alpha: 0.1)),
           ),
 

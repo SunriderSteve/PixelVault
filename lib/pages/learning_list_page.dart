@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_avif/flutter_avif.dart';
+import 'package:go_router/go_router.dart';
 
 import '../services/data_repository.dart';
 
@@ -36,13 +36,13 @@ class _LearningListPageState extends State<LearningListPage> {
     _staticNavItems = const [
       _GuideItem(
         title: 'Equipment Guides',
-        imagePath: 'assets/images/homepage/learn/equipment_guides.avif',
+        imagePath: 'images/homepage/learn/equipment_guides.avif',
         route: '/learn/equip-guides',
         type: 'Type: Equipment Guides',
       ),
       _GuideItem(
         title: 'Videography Guides',
-        imagePath: 'assets/images/homepage/learn/videography_guides.avif',
+        imagePath: 'images/homepage/learn/videography_guides.avif',
         route: '/learn/videography-guides',
         type: 'Type: Videography Guides',
       ),
@@ -395,7 +395,7 @@ class _GuideCard extends StatelessWidget {
           children: [
             Expanded(
               child: imagePath.isNotEmpty
-                  ? AvifImage.asset(imagePath, fit: BoxFit.cover)
+                  ? AvifImage.network(DataRepository().imageUrl(imagePath), fit: BoxFit.cover)
                   : const SizedBox.shrink(),
             ),
             Padding(

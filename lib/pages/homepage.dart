@@ -22,6 +22,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_avif/flutter_avif.dart';
 import 'package:go_router/go_router.dart';
 
+import '../services/data_repository.dart';
 import '../widgets/admin_auth.dart';
 
 // NLB-derived brand palette used by the background gradient on this page.
@@ -289,7 +290,7 @@ class _HomePageState extends State<HomePage> {
                           title: 'Equipment Guides',
                           subtitle: 'Cameras, lights, audio',
                           imagePath:
-                              'assets/images/homepage/equipment_guides.avif',
+                              'images/homepage/equipment_guides.avif',
                           icon: Icons.camera_alt_rounded,
                           onTap: () => context.push('/learn/equip-guides'),
                           accentColor: Colors.blueAccent,
@@ -299,7 +300,7 @@ class _HomePageState extends State<HomePage> {
                           title: 'Videography Basics',
                           subtitle: 'Lighting & composition',
                           imagePath:
-                              'assets/images/homepage/videography_guides.avif',
+                              'images/homepage/videography_guides.avif',
                           icon: Icons.movie_filter_rounded,
                           onTap: () =>
                               context.push('/learn/videography-guides'),
@@ -309,7 +310,7 @@ class _HomePageState extends State<HomePage> {
                         _GlassMenuCard(
                           title: 'Production Scenarios',
                           subtitle: 'Setup guides & tips',
-                          imagePath: 'assets/images/homepage/scenarios.avif',
+                          imagePath: 'images/homepage/scenarios.avif',
                           icon: Icons.movie_creation_rounded,
                           onTap: () => context.push('/scenarios'),
                           accentColor: Colors.purpleAccent,
@@ -318,7 +319,7 @@ class _HomePageState extends State<HomePage> {
                         _GlassMenuCard(
                           title: 'Inventory List',
                           subtitle: 'Stock & availability',
-                          imagePath: 'assets/images/homepage/inventory.avif',
+                          imagePath: 'images/homepage/inventory.avif',
                           icon: Icons.inventory_2_rounded,
                           onTap: () => context.push('/inventory'),
                           accentColor: Colors.greenAccent,
@@ -328,7 +329,7 @@ class _HomePageState extends State<HomePage> {
                           title: 'Production Shoots',
                           subtitle: 'Live equipment lists',
                           imagePath:
-                              'assets/images/homepage/production_shoots.avif',
+                              'images/homepage/production_shoots.avif',
                           icon: Icons.videocam_rounded,
                           onTap: _onShootsTap,
                           accentColor: Colors.cyanAccent,
@@ -402,12 +403,12 @@ class _GlassMenuCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           child: Stack(
             children: [
-              // Layer 1 — Background image (AVIF for small size + alpha).
+              // Layer 1 — Background image from repo.
               Positioned.fill(
-                child: AvifImage.asset(
-                  imagePath,
+                child: AvifImage.network(
+                  DataRepository().imageUrl(imagePath),
                   fit: BoxFit.cover,
-                  // Graceful fallback if the asset is missing/corrupt so
+                  // Graceful fallback if the image is missing/corrupt so
                   // the tile still renders instead of throwing.
                   errorBuilder: (context, error, stackTrace) {
                     return Container(color: Colors.grey.shade900);

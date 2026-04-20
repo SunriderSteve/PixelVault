@@ -1,10 +1,10 @@
-// PixelVault — Production shoots Gist client.
+// PixelVault — Production shoots client (GitHub repo).
 //
-// Manages production shoot lists stored as a YAML file inside the same
-// GitHub Gist used by the inventory overlay. Each shoot is a named map
-// of equipment IDs to their checked-off state and bring-quantity.
+// Manages production shoot lists stored as a YAML file inside the
+// PixelVault-Data GitHub repository. Each shoot is a named map of
+// equipment IDs to their checked-off state and bring-quantity.
 //
-// YAML shape (production_shoots.yaml):
+// YAML shape (data/production_shoots.yaml):
 //
 //     "My Shoot":
 //       canon_c200:
@@ -13,21 +13,13 @@
 //       rode_ntg5:
 //         c: true
 //         q: 1
-//     "Another Shoot":
-//       aputure_300d:
-//         c: false
-//         q: 3
-//
-// Read and write paths mirror [InventoryOverlayClient] — raw CDN first,
-// API fallback, authenticated PATCH for writes.
 
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:yaml/yaml.dart';
 
 import '../models/admin_config_model.dart';
+import 'github_repo_client.dart';
 
 /// A single equipment entry inside a production shoot.
 ///
@@ -42,80 +34,84 @@ class ShootEquip {
   ShootEquip({this.checked = false, this.qty = 1, this.name});
 }
 
-/// CRUD client for production shoot lists stored in a GitHub Gist.
+/// CRUD client for production shoot lists stored in a GitHub repo.
 class ProductionShootsClient {
   final AdminConfigModel admin;
+  final GitHubRepoClient repo;
 
-  const ProductionShootsClient(this.admin);
+  /// Tracks the SHA of the shoots file for write operations.
+  String? _currentSha;
+
+  ProductionShootsClient(this.admin, this.repo);
 
   // ── Public read API ─────────────────────────────────────────────
 
-  /// Fetch all shoots: `shootName -> { equipId -> ShootEquip }`.
+  /// Fetch all shoots via raw CDN (fast, can be stale).
   Future<Map<String, Map<String, ShootEquip>>?> fetch() async {
-    final raw = await _tryRaw();
-    if (raw != null) return raw;
-
-    final api = await _tryApi();
-    if (api != null) return api;
-
+    final raw = await repo.readRaw(admin.shootsFile);
+    if (raw != null) return _parseYaml(raw);
+    // Fallback: API read.
+    final token = admin.accessToken;
+    if (token.isEmpty) return null;
+    final result = await repo.readViaApi(admin.shootsFile, token);
+    if (result != null) {
+      _currentSha = result.sha;
+      return _parseYaml(result.content);
+    }
     return null;
   }
 
-  // ── Read: raw CDN ───────────────────────────────────────────────
-
-  Future<Map<String, Map<String, ShootEquip>>?> _tryRaw() async {
-    final String rawUrl = admin.shootsRawUrl.trim();
-    if (rawUrl.isEmpty || !rawUrl.contains('gist.githubusercontent.com')) {
-      return null;
-    }
-
-    try {
-      final base = Uri.parse(rawUrl);
-      final uri = base.replace(
-        queryParameters: {
-          ...base.queryParameters,
-          't': DateTime.now().millisecondsSinceEpoch.toString(),
-        },
-      );
-
-      final resp = await http.get(uri);
-      if (resp.statusCode == 200 && resp.body.isNotEmpty) {
-        return _parseYaml(resp.body);
-      }
-      debugPrint('shoots raw non-OK ${resp.statusCode}: ${resp.reasonPhrase}');
-      return null;
-    } catch (e) {
-      debugPrint('shoots raw exception $e');
-      return null;
-    }
+  /// Read via authenticated API (always fresh). Updates _currentSha.
+  Future<Map<String, Map<String, ShootEquip>>> readViaApi(String token) async {
+    final result = await repo.readViaApi(admin.shootsFile, token);
+    if (result == null) return {};
+    _currentSha = result.sha;
+    return _parseYaml(result.content);
   }
 
-  // ── Read: GitHub API fallback ───────────────────────────────────
+  /// Poll via the API with ETag support. Returns null on 304.
+  Future<({Map<String, Map<String, ShootEquip>> data, String etag})?>
+      pollViaApi(String token, {String? etag}) async {
+    final result = await repo.pollViaApi(
+      admin.shootsFile,
+      token,
+      etag: etag,
+    );
+    if (result == null) return null;
+    return (data: _parseYaml(result.content), etag: result.etag ?? '');
+  }
 
-  Future<Map<String, Map<String, ShootEquip>>?> _tryApi() async {
-    final String id = admin.gistId.trim();
-    final String file = admin.shootsFile.trim();
-    if (id.isEmpty) return null;
+  // ── Write ───────────────────────────────────────────────────────
 
-    try {
-      final uri = Uri.parse('https://api.github.com/gists/$id');
-      final resp = await http.get(uri);
-      if (resp.statusCode == 200 && resp.body.isNotEmpty) {
-        final body = jsonDecode(resp.body) as Map<String, dynamic>;
-        final files = body['files'] as Map<String, dynamic>?;
-        final f = files?[file] as Map<String, dynamic>?;
-        final content = f?['content'] as String?;
-        if (content != null) return _parseYaml(content);
-
-        // File doesn't exist yet — return empty.
-        return {};
-      }
-      debugPrint('shoots api non-OK ${resp.statusCode}: ${resp.reasonPhrase}');
-      return null;
-    } catch (e) {
-      debugPrint('shoots api exception $e');
-      return null;
+  /// Write the entire shoots map to the repo. Returns the parsed
+  /// ground-truth after the commit.
+  Future<Map<String, Map<String, ShootEquip>>> writeAll(
+    Map<String, Map<String, ShootEquip>> shoots, {
+    required String token,
+  }) async {
+    // Ensure we have the current SHA.
+    if (_currentSha == null) {
+      final result = await repo.readViaApi(admin.shootsFile, token);
+      _currentSha = result?.sha ?? '';
     }
+
+    final yaml = _shootsToYaml(shoots);
+    final newSha = await repo.writeFile(
+      admin.shootsFile,
+      yaml.isEmpty ? ' ' : yaml,
+      sha: _currentSha!,
+      token: token,
+      message: 'Update production shoots via PixelVault',
+    );
+    _currentSha = newSha;
+
+    // Re-read to get ground truth.
+    final fresh = await repo.readViaApi(admin.shootsFile, token);
+    if (fresh != null) {
+      _currentSha = fresh.sha;
+      return _parseYaml(fresh.content);
+    }
+    return shoots;
   }
 
   // ── YAML parse ──────────────────────────────────────────────────
@@ -140,7 +136,6 @@ class ProductionShootsClient {
         final String equipId = ie.key?.toString() ?? '';
         if (equipId.isEmpty) continue;
 
-        // Handle both old format (bool) and new format (map with c/q/n).
         if (ie.value is bool) {
           items[equipId] = ShootEquip(checked: ie.value as bool, qty: 1);
         } else if (ie.value is YamlMap) {
@@ -157,113 +152,6 @@ class ProductionShootsClient {
       out[shootName] = items;
     }
     return out;
-  }
-
-  // ── Write: full replace ─────────────────────────────────────────
-
-  /// Write the entire shoots map to the gist. Returns the parsed
-  /// ground-truth from the PATCH response.
-  Future<Map<String, Map<String, ShootEquip>>> writeAll(
-    Map<String, Map<String, ShootEquip>> shoots, {
-    required String token,
-  }) async {
-    final String yaml = _shootsToYaml(shoots);
-    final patchUri = Uri.parse('https://api.github.com/gists/${admin.gistId}');
-    final body = jsonEncode({
-      'files': {
-        admin.shootsFile: {'content': yaml.isEmpty ? ' ' : yaml},
-      },
-    });
-
-    final headers = {
-      'Authorization': 'token $token',
-      'Accept': 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-      'Content-Type': 'application/json',
-    };
-
-    final patchResp = await http.patch(patchUri, headers: headers, body: body);
-    if (patchResp.statusCode ~/ 100 != 2) {
-      throw Exception(
-        'shoots write failed: ${patchResp.statusCode} ${patchResp.body}',
-      );
-    }
-
-    try {
-      final respJson = jsonDecode(patchResp.body) as Map<String, dynamic>;
-      final files = respJson['files'] as Map<String, dynamic>?;
-      final f = files?[admin.shootsFile] as Map<String, dynamic>?;
-      final content = f?['content'] as String?;
-      if (content != null) return _parseYaml(content);
-    } catch (e) {
-      debugPrint('shoots patch response parse failed: $e');
-    }
-
-    return shoots;
-  }
-
-  /// Read via authenticated API (fresh, no CDN lag).
-  Future<Map<String, Map<String, ShootEquip>>> readViaApi(String token) async {
-    final String id = admin.gistId.trim();
-    final String file = admin.shootsFile.trim();
-    if (id.isEmpty) throw Exception('gistId missing in admin config');
-
-    final uri = Uri.parse('https://api.github.com/gists/$id');
-    final resp = await http.get(
-      uri,
-      headers: {
-        'Authorization': 'token $token',
-        'Accept': 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
-    );
-    if (resp.statusCode ~/ 100 != 2) {
-      throw Exception('shoots read failed: ${resp.statusCode}');
-    }
-    final body = jsonDecode(resp.body) as Map<String, dynamic>;
-    final files = body['files'] as Map<String, dynamic>?;
-    final f = files?[file] as Map<String, dynamic>?;
-    final content = f?['content'] as String?;
-    if (content == null) return {};
-    return _parseYaml(content);
-  }
-
-  /// Poll via authenticated API with conditional request (ETag).
-  /// Returns `null` when the data hasn't changed (HTTP 304), which
-  /// does NOT count against GitHub's rate limit. Otherwise returns
-  /// the fresh data together with the new ETag for the next poll.
-  Future<({Map<String, Map<String, ShootEquip>> data, String etag})?>
-      pollViaApi(String token, {String? etag}) async {
-    final String id = admin.gistId.trim();
-    final String file = admin.shootsFile.trim();
-    if (id.isEmpty) throw Exception('gistId missing in admin config');
-
-    final uri = Uri.parse('https://api.github.com/gists/$id');
-    final headers = <String, String>{
-      'Authorization': 'token $token',
-      'Accept': 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-    };
-    if (etag != null) headers['If-None-Match'] = etag;
-
-    final resp = await http.get(uri, headers: headers);
-
-    // 304 Not Modified — data unchanged, doesn't consume rate limit.
-    if (resp.statusCode == 304) return null;
-
-    if (resp.statusCode ~/ 100 != 2) {
-      throw Exception('shoots poll failed: ${resp.statusCode}');
-    }
-
-    final newEtag = resp.headers['etag'] ?? '';
-    final body = jsonDecode(resp.body) as Map<String, dynamic>;
-    final files = body['files'] as Map<String, dynamic>?;
-    final f = files?[file] as Map<String, dynamic>?;
-    final content = f?['content'] as String?;
-    final data = content == null
-        ? <String, Map<String, ShootEquip>>{}
-        : _parseYaml(content);
-    return (data: data, etag: newEtag);
   }
 
   // ── YAML serialize ──────────────────────────────────────────────

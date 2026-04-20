@@ -1,15 +1,11 @@
-gist:
-  id: 82d2701c4f64d1a8b21b7ce7b2588104
-  file: inventory_mutable_fields.yaml
-  raw_url: https://gist.githubusercontent.com/SunriderSteve/82d2701c4f64d1a8b21b7ce7b2588104/raw/inventory_mutable_fields.yaml
-  access_token: bck_bhnnazZf1OKLj9TmuXu2GqpldN8wsI0QBAGo
+github:
+  owner: SunriderSteve
+  repo: PixelVault-Data
+  branch: main
+  access_token: bck_i9LuVTIWvPkvtkgBYT5OPQefyEr8hH0Lge59
   caesar_shift: 99 # How many letters the access token is shifted by
   poll_seconds: 5 # optional, default to 5 if missing
-  shoots_file: production_shoots.yaml
-  shoots_raw_url: https://gist.githubusercontent.com/SunriderSteve/82d2701c4f64d1a8b21b7ce7b2588104/raw/production_shoots.yaml
-  equipment_guides_file: equipment_guides.yaml
-  equipment_guides_raw_url: https://gist.githubusercontent.com/SunriderSteve/82d2701c4f64d1a8b21b7ce7b2588104/raw/equipment_guides.yaml
-  videography_guides_file: videography_guides.yaml
-  videography_guides_raw_url: https://gist.githubusercontent.com/SunriderSteve/82d2701c4f64d1a8b21b7ce7b2588104/raw/videography_guides.yaml
-  scenario_guides_file: scenario_guides.yaml
-  scenario_guides_raw_url: https://gist.githubusercontent.com/SunriderSteve/82d2701c4f64d1a8b21b7ce7b2588104/raw/scenario_guides.yaml
+  equipment_file: data/equipment.yaml
+  videography_file: data/videography_guides.yaml
+  scenario_file: data/scenario_guides.yaml
+  shoots_file: data/production_shoots.yaml

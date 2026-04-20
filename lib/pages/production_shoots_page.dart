@@ -597,8 +597,8 @@ class _PhotoCollage extends StatelessWidget {
   const _PhotoCollage({required this.images});
 
   Widget _tile(String path) {
-    return AvifImage.asset(
-      path,
+    return AvifImage.network(
+      DataRepository().imageUrl(path),
       fit: BoxFit.cover,
       errorBuilder: (_, _, _) => Container(color: Colors.grey.shade800),
     );
