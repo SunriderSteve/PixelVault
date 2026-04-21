@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter_avif/flutter_avif.dart';
+import '../widgets/smart_image.dart';
 import 'package:go_router/go_router.dart';
 
 import '../services/data_repository.dart';
@@ -16,6 +16,7 @@ class _LearningListPageState extends State<LearningListPage> {
   final TextEditingController _searchController = TextEditingController();
   bool _showFilters = false;
   int _activeTab = 0; // 0:Type,1:Category,2:Brand
+  bool _sortAsc = true; // Alphabetical A→Z by default.
 
   // Filter selections
   final Set<String> _selectedTypes = {};
@@ -89,7 +90,12 @@ class _LearningListPageState extends State<LearningListPage> {
           final matchesB =
               _selectedBrands.isEmpty || _selectedBrands.contains(item.brand);
           return matchesQ && matchesT && matchesC && matchesB;
-        }).toList();
+        }).toList()
+          ..sort((a, b) {
+            final int cmp =
+                a.title.toLowerCase().compareTo(b.title.toLowerCase());
+            return _sortAsc ? cmp : -cmp;
+          });
       }
     });
   }
@@ -162,6 +168,16 @@ class _LearningListPageState extends State<LearningListPage> {
                       ),
                     ),
                   ),
+                ),
+                IconButton(
+                  icon: Icon(
+                    _sortAsc ? Icons.arrow_upward : Icons.arrow_downward,
+                  ),
+                  tooltip: _sortAsc ? 'Sort Z-A' : 'Sort A-Z',
+                  onPressed: () {
+                    _sortAsc = !_sortAsc;
+                    _updateDisplayItems();
+                  },
                 ),
                 GestureDetector(
                   onTap: () => setState(() => _showFilters = !_showFilters),
@@ -395,7 +411,7 @@ class _GuideCard extends StatelessWidget {
           children: [
             Expanded(
               child: imagePath.isNotEmpty
-                  ? AvifImage.network(DataRepository().imageUrl(imagePath), fit: BoxFit.cover)
+                  ? SmartImage.network(DataRepository().imageUrl(imagePath), fit: BoxFit.cover)
                   : const SizedBox.shrink(),
             ),
             Padding(

@@ -7,7 +7,7 @@ import 'dart:math' as math;
 import 'dart:ui'; // For ImageFilter used by BackdropFilter.
 
 import 'package:flutter/material.dart';
-import 'package:flutter_avif/flutter_avif.dart';
+import '../widgets/smart_image.dart';
 import 'package:go_router/go_router.dart';
 
 import '../models/scenario_model.dart';
@@ -228,7 +228,7 @@ class _GlassScenarioCard extends StatelessWidget {
           // scenario has no cover art.
           Positioned.fill(
             child: imagePath.isNotEmpty
-                ? AvifImage.network(DataRepository().imageUrl(imagePath), fit: BoxFit.cover)
+                ? SmartImage.network(DataRepository().imageUrl(imagePath), fit: BoxFit.cover)
                 : Container(color: Colors.white.withValues(alpha: 0.1)),
           ),
           // Darkening gradient so the title stays legible over any image.

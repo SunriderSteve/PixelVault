@@ -12,15 +12,18 @@
 // the form, optionally asks for inventory details (equipment only),
 // and closes with a success message.
 
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_avif/flutter_avif.dart';
+import '../widgets/smart_image.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/equipment_model.dart';
+import '../services/avif_converter.dart' as avif;
+import '../services/clipboard_image_service.dart' as clipboard;
 import '../services/data_repository.dart';
 
 // ══════════════════════════════════════════════════════════════════
@@ -60,6 +63,41 @@ class _SectionData {
   }
 }
 
+/// Immutable snapshot of a single image entry for undo/redo.
+class _ImageEntrySnapshot {
+  final Uint8List? bytes;
+  final String? assetPath;
+  const _ImageEntrySnapshot({this.bytes, this.assetPath});
+}
+
+/// Immutable snapshot of a section for undo/redo.
+class _SectionSnapshot {
+  final String title;
+  final String body;
+  final List<_ImageEntrySnapshot> images;
+  const _SectionSnapshot({
+    required this.title,
+    required this.body,
+    required this.images,
+  });
+}
+
+/// Immutable snapshot of the entire form state for undo/redo.
+class _FormSnapshot {
+  final String name;
+  final String brand;
+  final String category;
+  final List<_ImageEntrySnapshot> coverImages;
+  final List<_SectionSnapshot> sections;
+  const _FormSnapshot({
+    required this.name,
+    required this.brand,
+    required this.category,
+    required this.coverImages,
+    required this.sections,
+  });
+}
+
 /// Data bundle used to pre-populate the form when editing an existing guide.
 class GuideEditData {
   final String name;
@@ -89,8 +127,10 @@ void showGuideCreator(BuildContext context, GuideType type) {
     barrierColor: Colors.black87,
     transitionDuration: const Duration(milliseconds: 300),
     transitionBuilder: (ctx, a1, a2, child) => SlideTransition(
-      position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
-          .animate(CurvedAnimation(parent: a1, curve: Curves.easeOutCubic)),
+      position: Tween<Offset>(
+        begin: const Offset(0, 1),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(parent: a1, curve: Curves.easeOutCubic)),
       child: child,
     ),
     pageBuilder: (ctx, _, _) => _GuideCreatorPage(type: type),
@@ -105,8 +145,10 @@ void showGuideEditor(BuildContext context, GuideType type, GuideEditData data) {
     barrierColor: Colors.black87,
     transitionDuration: const Duration(milliseconds: 300),
     transitionBuilder: (ctx, a1, a2, child) => SlideTransition(
-      position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
-          .animate(CurvedAnimation(parent: a1, curve: Curves.easeOutCubic)),
+      position: Tween<Offset>(
+        begin: const Offset(0, 1),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(parent: a1, curve: Curves.easeOutCubic)),
       child: child,
     ),
     pageBuilder: (ctx, _, _) => _GuideCreatorPage(type: type, editData: data),
@@ -126,7 +168,8 @@ class _GuideCreatorPage extends StatefulWidget {
   State<_GuideCreatorPage> createState() => _GuideCreatorPageState();
 }
 
-class _GuideCreatorPageState extends State<_GuideCreatorPage> {
+class _GuideCreatorPageState extends State<_GuideCreatorPage>
+    with SingleTickerProviderStateMixin {
   // ── Edit mode ─────────────────────────────────────────────────
   bool get _isEditMode => widget.editData != null;
 
@@ -163,27 +206,49 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
 
   final _imagePicker = ImagePicker();
 
+  // ── Submit state ────────────────────────────────────────────────
+  bool _submitting = false;
+  Set<String> _originalImagePaths = {};
+
+  // ── Background animation ─────────────────────────────────────
+  late final AnimationController _bgAnim;
+
+  // ── Undo / redo ────────────────────────────────────────────────
+  final List<_FormSnapshot> _undoStack = [];
+  final List<_FormSnapshot> _redoStack = [];
+  Timer? _textDebounce;
+  bool _restoringSnapshot = false;
+
   // ── Lifecycle ──────────────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
 
+    // Slow, continuous phase loop (no reverse — gives a smooth wave
+    // that flows forever instead of ping-ponging).
+    _bgAnim = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 24),
+    )..repeat();
+
     if (widget.type != GuideType.equipment || _isEditMode) _showForm = true;
 
     final allEquip = DataRepository().getAllEquipment();
-    _allBrands = allEquip
-        .map((e) => e.brand)
-        .where((b) => b.isNotEmpty && b != 'Unknown')
-        .toSet()
-        .toList()
-      ..sort();
-    _allCategories = allEquip
-        .map((e) => e.category)
-        .where((c) => c.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
+    _allBrands =
+        allEquip
+            .map((e) => e.brand)
+            .where((b) => b.isNotEmpty && b != 'Unknown')
+            .toSet()
+            .toList()
+          ..sort();
+    _allCategories =
+        allEquip
+            .map((e) => e.category)
+            .where((c) => c.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
 
     // Pre-populate form when editing an existing guide.
     final edit = widget.editData;
@@ -205,6 +270,24 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
       }
     } else {
       _sections.add(_SectionData());
+    }
+
+    // Track original image paths for edit-mode diffing.
+    if (_isEditMode) {
+      final edit = widget.editData!;
+      _originalImagePaths = {
+        ...edit.coverImages,
+        for (final sec in edit.sections) ...sec.images,
+      };
+    }
+
+    // Attach undo-snapshot listeners to all text controllers.
+    _nameCtl.addListener(_onTextChanged);
+    _brandCtl.addListener(_onTextChanged);
+    _categoryCtl.addListener(_onTextChanged);
+    for (final s in _sections) {
+      s.titleCtl.addListener(_onTextChanged);
+      s.bodyCtl.addListener(_onTextChanged);
     }
 
     _nameFocus.addListener(() {
@@ -238,6 +321,7 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
 
   @override
   void dispose() {
+    _bgAnim.dispose();
     _nameCtl.dispose();
     _brandCtl.dispose();
     _categoryCtl.dispose();
@@ -245,6 +329,7 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
     _brandFocus.dispose();
     _categoryFocus.dispose();
     _pickerSearchCtl.dispose();
+    _textDebounce?.cancel();
     for (final s in _sections) {
       s.dispose();
     }
@@ -266,18 +351,111 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
     }
   }
 
+  // ── Undo / redo helpers ─────────────────────────────────────────
+
+  _FormSnapshot _captureSnapshot() {
+    return _FormSnapshot(
+      name: _nameCtl.text,
+      brand: _brandCtl.text,
+      category: _categoryCtl.text,
+      coverImages: _coverImages
+          .map(
+            (e) => _ImageEntrySnapshot(bytes: e.bytes, assetPath: e.assetPath),
+          )
+          .toList(),
+      sections: _sections
+          .map(
+            (s) => _SectionSnapshot(
+              title: s.titleCtl.text,
+              body: s.bodyCtl.text,
+              images: s.images
+                  .map(
+                    (e) => _ImageEntrySnapshot(
+                      bytes: e.bytes,
+                      assetPath: e.assetPath,
+                    ),
+                  )
+                  .toList(),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  void _pushSnapshot() {
+    if (_restoringSnapshot) return;
+    final snap = _captureSnapshot();
+    _undoStack.add(snap);
+    _redoStack.clear();
+    if (_undoStack.length > 50) _undoStack.removeAt(0);
+    setState(() {}); // refresh button states
+  }
+
+  void _restoreSnapshot(_FormSnapshot snap) {
+    _restoringSnapshot = true;
+
+    _nameCtl.text = snap.name;
+    _brandCtl.text = snap.brand;
+    _categoryCtl.text = snap.category;
+
+    // Rebuild cover images.
+    _coverImages.clear();
+    for (final img in snap.coverImages) {
+      _coverImages.add(
+        _ImageEntry(assetPath: img.assetPath)..bytes = img.bytes,
+      );
+    }
+
+    // Rebuild sections — dispose old controllers first.
+    for (final s in _sections) {
+      s.dispose();
+    }
+    _sections.clear();
+    for (final ss in snap.sections) {
+      final sd = _SectionData();
+      sd.titleCtl.text = ss.title;
+      sd.bodyCtl.text = ss.body;
+      sd.titleCtl.addListener(_onTextChanged);
+      sd.bodyCtl.addListener(_onTextChanged);
+      for (final img in ss.images) {
+        sd.images.add(_ImageEntry(assetPath: img.assetPath)..bytes = img.bytes);
+      }
+      _sections.add(sd);
+    }
+
+    _restoringSnapshot = false;
+    setState(() {});
+  }
+
+  void _undo() {
+    if (_undoStack.isEmpty) return;
+    _redoStack.add(_captureSnapshot());
+    _restoreSnapshot(_undoStack.removeLast());
+  }
+
+  void _redo() {
+    if (_redoStack.isEmpty) return;
+    _undoStack.add(_captureSnapshot());
+    _restoreSnapshot(_redoStack.removeLast());
+  }
+
+  void _onTextChanged() {
+    if (_restoringSnapshot) return;
+    _textDebounce?.cancel();
+    _textDebounce = Timer(const Duration(milliseconds: 500), _pushSnapshot);
+  }
+
   // ── Image helpers ──────────────────────────────────────────────
 
   Future<void> _pickImages(List<_ImageEntry> target) async {
     final files = await _imagePicker.pickMultiImage();
     if (files.isEmpty) return;
+    _pushSnapshot();
     for (final file in files) {
       final entry = _ImageEntry(loading: true);
       setState(() => target.add(entry));
       try {
         final bytes = await file.readAsBytes();
-        // Simulate AVIF conversion delay.
-        await Future.delayed(const Duration(milliseconds: 400));
         if (!mounted) return;
         setState(() {
           entry.bytes = bytes;
@@ -287,6 +465,20 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
         if (!mounted) return;
         setState(() => target.remove(entry));
       }
+    }
+  }
+
+  Future<void> _pasteImages(List<_ImageEntry> target) async {
+    final images = await clipboard.getClipboardImages();
+    if (images.isEmpty) {
+      if (mounted) {
+        _showError('No image found on clipboard');
+      }
+      return;
+    }
+    _pushSnapshot();
+    for (final bytes in images) {
+      setState(() => target.add(_ImageEntry()..bytes = bytes));
     }
   }
 
@@ -310,11 +502,13 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
   }
 
   void _removeImage(List<_ImageEntry> list, int index) {
+    _pushSnapshot();
     setState(() => list.removeAt(index));
   }
 
   void _reorderImage(List<_ImageEntry> list, int from, int to) {
     if (to < 0 || to >= list.length) return;
+    _pushSnapshot();
     setState(() {
       final item = list.removeAt(from);
       list.insert(to, item);
@@ -329,7 +523,8 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
     if (!sel.isValid) return;
 
     if (sel.isCollapsed) {
-      final newText = text.substring(0, sel.start) +
+      final newText =
+          text.substring(0, sel.start) +
           prefix +
           suffix +
           text.substring(sel.start);
@@ -339,7 +534,8 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
       );
     } else {
       final selected = text.substring(sel.start, sel.end);
-      final newText = text.substring(0, sel.start) +
+      final newText =
+          text.substring(0, sel.start) +
           prefix +
           selected +
           suffix +
@@ -423,31 +619,142 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
   }
 
   void _showError(String msg) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
   }
 
   Future<void> _submit() async {
     if (!_validate()) return;
+    if (_submitting) return;
 
     // Equipment not linked to inventory → ask for quantity + storage.
+    int? invQuantity;
+    String? invStorage;
     if (!_isEditMode &&
         widget.type == GuideType.equipment &&
         _selectedEquipment == null) {
       final result = await _showInventoryDialog();
       if (result == null) return; // User cancelled.
+      invQuantity = result['quantity'] as int?;
+      invStorage = result['storage'] as String?;
     }
 
-    if (!mounted) return;
-    Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_isEditMode
-            ? 'Guide updated successfully.'
-            : 'Guide created successfully.'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    setState(() => _submitting = true);
+
+    try {
+      final repo = DataRepository();
+      final name = _nameCtl.text.trim();
+      final id = _isEditMode
+          ? DataRepository.generateId(widget.editData!.name)
+          : DataRepository.generateId(name);
+
+      // Convert new images to AVIF and build image descriptors.
+      final coverDescs = <({Uint8List? bytes, String repoPath})>[];
+      for (var i = 0; i < _coverImages.length; i++) {
+        final entry = _coverImages[i];
+        if (entry.isAsset) {
+          coverDescs.add((bytes: null, repoPath: entry.assetPath!));
+        } else if (entry.bytes != null) {
+          final result = await avif.convertToAvif(entry.bytes!);
+          final path = DataRepository.coverImagePath(
+            widget.type,
+            id,
+            i,
+            result.ext,
+          );
+          coverDescs.add((bytes: result.bytes, repoPath: path));
+        }
+      }
+
+      final sectionDescs =
+          <
+            ({
+              String title,
+              String body,
+              List<({Uint8List? bytes, String repoPath})> images,
+            })
+          >[];
+      for (var si = 0; si < _sections.length; si++) {
+        final sec = _sections[si];
+        final imgDescs = <({Uint8List? bytes, String repoPath})>[];
+        for (var ii = 0; ii < sec.images.length; ii++) {
+          final entry = sec.images[ii];
+          if (entry.isAsset) {
+            imgDescs.add((bytes: null, repoPath: entry.assetPath!));
+          } else if (entry.bytes != null) {
+            final result = await avif.convertToAvif(entry.bytes!);
+            final path = DataRepository.sectionImagePath(
+              widget.type,
+              id,
+              si,
+              ii,
+              result.ext,
+            );
+            imgDescs.add((bytes: result.bytes, repoPath: path));
+          }
+        }
+        sectionDescs.add((
+          title: sec.titleCtl.text.trim(),
+          body: sec.bodyCtl.text.trimRight(),
+          images: imgDescs,
+        ));
+      }
+
+      if (_isEditMode) {
+        // Compute removed images.
+        final currentPaths = <String>{
+          for (final c in coverDescs)
+            if (c.bytes == null) c.repoPath,
+          for (final s in sectionDescs)
+            for (final i in s.images)
+              if (i.bytes == null) i.repoPath,
+        };
+        final removed = _originalImagePaths.difference(currentPaths).toList();
+
+        await repo.updateGuide(
+          type: widget.type,
+          id: id,
+          name: name,
+          brand: _brandCtl.text.trim(),
+          category: _categoryCtl.text.trim(),
+          coverImages: coverDescs,
+          sections: sectionDescs,
+          removedImagePaths: removed,
+        );
+      } else {
+        await repo.createGuide(
+          type: widget.type,
+          id: id,
+          name: name,
+          brand: _brandCtl.text.trim(),
+          category: _categoryCtl.text.trim(),
+          coverImages: coverDescs,
+          sections: sectionDescs,
+          quantity: _selectedEquipment?.quantity ?? invQuantity,
+          storage: _selectedEquipment?.storage ?? invStorage,
+          existingEquipId: _selectedEquipment?.id,
+        );
+      }
+
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isEditMode
+                ? 'Guide updated successfully.'
+                : 'Guide created successfully.',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Guide submit error: $e');
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      _showError('Failed to save guide: $e');
+    }
   }
 
   Future<Map<String, dynamic>?> _showInventoryDialog() {
@@ -460,8 +767,10 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.grey.shade900,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Add to Inventory',
-            style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'Add to Inventory',
+          style: TextStyle(color: Colors.white),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -482,16 +791,20 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
             TextField(
               controller: storCtl,
               style: const TextStyle(color: Colors.white),
-              decoration: _fieldDecoration('Storage Location',
-                  hint: 'e.g. A1, Shelf B'),
+              decoration: _fieldDecoration(
+                'Storage Location',
+                hint: 'e.g. A1, Shelf B',
+              ),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child:
-                const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white54),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, {
@@ -519,21 +832,33 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Background gradient.
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF001F54),
-                  Color(0xFF0047BB),
-                  Color(0xFFFF8200),
-                  Color(0xFFE80029),
-                ],
-                stops: [0.0, 0.3, 0.7, 1.0],
-              ),
-            ),
+          // Background gradient — fixed diagonal direction with gently
+          // breathing stops so the colour bands wave without rotating.
+          AnimatedBuilder(
+            animation: _bgAnim,
+            builder: (context, child) {
+              final phase = _bgAnim.value * 2 * math.pi;
+              // Two middle stops each oscillate by ±0.04 around their
+              // anchor, out of phase so the bands swell and contract
+              // like a slow tide.
+              final s1 = 0.33 + 0.04 * math.sin(phase);
+              final s2 = 0.67 + 0.04 * math.sin(phase + math.pi / 2);
+              return Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: const [
+                      Color(0xFF001F54),
+                      Color(0xFF0047BB),
+                      Color(0xFFFF8200),
+                      Color(0xFFE80029),
+                    ],
+                    stops: [0.0, s1, s2, 1.0],
+                  ),
+                ),
+              );
+            },
           ),
           // Blob glow.
           Positioned(
@@ -595,9 +920,19 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
     }).toList();
 
     final pickerCategories =
-        unguidedAll.map((e) => e.category).where((c) => c.isNotEmpty).toSet().toList()..sort();
+        unguidedAll
+            .map((e) => e.category)
+            .where((c) => c.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
     final pickerBrands =
-        unguidedAll.map((e) => e.brand).where((b) => b.isNotEmpty).toSet().toList()..sort();
+        unguidedAll
+            .map((e) => e.brand)
+            .where((b) => b.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
 
     final totalFilters =
         _pickerSelectedCategories.length + _pickerSelectedBrands.length;
@@ -630,8 +965,9 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                background:
-                    Container(color: Colors.black.withValues(alpha: 0.2)),
+                background: Container(
+                  color: Colors.black.withValues(alpha: 0.2),
+                ),
               ),
             ),
           ),
@@ -644,14 +980,19 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
             child: OutlinedButton.icon(
               onPressed: _createNew,
               icon: const Icon(Icons.add, color: Colors.white),
-              label: const Text('Create New Equipment Guide',
-                  style: TextStyle(color: Colors.white, fontSize: 16)),
+              label: const Text(
+                'Create New Equipment Guide',
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: Colors.white54),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
@@ -666,13 +1007,16 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.15)),
+                      color: Colors.white.withValues(alpha: 0.15),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -684,14 +1028,19 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
                           decoration: InputDecoration(
                             hintText: 'Search Inventory',
                             hintStyle: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.6)),
-                            prefixIcon:
-                                const Icon(Icons.search, color: Colors.white),
+                              color: Colors.white.withValues(alpha: 0.6),
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.search,
+                              color: Colors.white,
+                            ),
                             suffixIcon: _pickerSearchCtl.text.isEmpty
                                 ? null
                                 : IconButton(
-                                    icon: const Icon(Icons.clear,
-                                        color: Colors.white),
+                                    icon: const Icon(
+                                      Icons.clear,
+                                      color: Colors.white,
+                                    ),
                                     onPressed: () {
                                       _pickerSearchCtl.clear();
                                       setState(() {});
@@ -703,13 +1052,17 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
                       ),
                       GestureDetector(
                         onTap: () => setState(
-                            () => _pickerShowFilters = !_pickerShowFilters),
+                          () => _pickerShowFilters = !_pickerShowFilters,
+                        ),
                         child: Stack(
                           children: [
                             const Padding(
                               padding: EdgeInsets.all(8.0),
-                              child: Icon(Icons.filter_alt,
-                                  color: Colors.white, size: 28),
+                              child: Icon(
+                                Icons.filter_alt,
+                                color: Colors.white,
+                                size: 28,
+                              ),
                             ),
                             if (totalFilters > 0)
                               Positioned(
@@ -718,9 +1071,13 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
                                 child: CircleAvatar(
                                   radius: 8,
                                   backgroundColor: Colors.red,
-                                  child: Text('$totalFilters',
-                                      style: const TextStyle(
-                                          color: Colors.white, fontSize: 10)),
+                                  child: Text(
+                                    '$totalFilters',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                    ),
+                                  ),
                                 ),
                               ),
                           ],
@@ -760,37 +1117,44 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
-                          children: (_pickerActiveTab == 0
-                                  ? pickerCategories
-                                  : pickerBrands)
-                              .map((label) {
-                            final sel = _pickerActiveTab == 0
-                                ? _pickerSelectedCategories
-                                : _pickerSelectedBrands;
-                            final isSelected = sel.contains(label);
-                            return FilterChip(
-                              label: Text(label),
-                              selected: isSelected,
-                              onSelected: (v) {
-                                setState(() {
-                                  v ? sel.add(label) : sel.remove(label);
-                                });
-                              },
-                              backgroundColor:
-                                  Colors.black.withValues(alpha: 0.3),
-                              selectedColor: _kBrandBlue,
-                              checkmarkColor: Colors.white,
-                              labelStyle:
-                                  const TextStyle(color: Colors.white),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                                side: BorderSide(
-                                    color: isSelected
-                                        ? Colors.transparent
-                                        : Colors.white38),
-                              ),
-                            );
-                          }).toList(),
+                          children:
+                              (_pickerActiveTab == 0
+                                      ? pickerCategories
+                                      : pickerBrands)
+                                  .map((label) {
+                                    final sel = _pickerActiveTab == 0
+                                        ? _pickerSelectedCategories
+                                        : _pickerSelectedBrands;
+                                    final isSelected = sel.contains(label);
+                                    return FilterChip(
+                                      label: Text(label),
+                                      selected: isSelected,
+                                      onSelected: (v) {
+                                        setState(() {
+                                          v
+                                              ? sel.add(label)
+                                              : sel.remove(label);
+                                        });
+                                      },
+                                      backgroundColor: Colors.black.withValues(
+                                        alpha: 0.3,
+                                      ),
+                                      selectedColor: _kBrandBlue,
+                                      checkmarkColor: Colors.white,
+                                      labelStyle: const TextStyle(
+                                        color: Colors.white,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20),
+                                        side: BorderSide(
+                                          color: isSelected
+                                              ? Colors.transparent
+                                              : Colors.white38,
+                                        ),
+                                      ),
+                                    );
+                                  })
+                                  .toList(),
                         ),
                         const Divider(color: Colors.white24, height: 32),
                         Row(
@@ -801,8 +1165,10 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
                                 _pickerSelectedCategories.clear();
                                 _pickerSelectedBrands.clear();
                               }),
-                              child: const Text('Clear All',
-                                  style: TextStyle(color: Colors.white)),
+                              child: const Text(
+                                'Clear All',
+                                style: TextStyle(color: Colors.white),
+                              ),
                             ),
                             const SizedBox(width: 16),
                             ElevatedButton(
@@ -834,13 +1200,14 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
                 child: Text(
                   unguidedAll.isEmpty
                       ? 'All inventory items already have guides.\n'
-                        'Use the button above to create a new one.'
+                            'Use the button above to create a new one.'
                       : 'No items match your search.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.6),
-                      fontSize: 16,
-                      height: 1.5),
+                    color: Colors.white.withValues(alpha: 0.6),
+                    fontSize: 16,
+                    height: 1.5,
+                  ),
                 ),
               ),
             ),
@@ -857,8 +1224,9 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
               ),
               delegate: SliverChildBuilderDelegate((context, index) {
                 final eq = unguided[index];
-                final img =
-                    eq.coverImages.isNotEmpty ? eq.coverImages.first : '';
+                final img = eq.coverImages.isNotEmpty
+                    ? eq.coverImages.first
+                    : '';
                 return _buildPickerCard(eq, img);
               }, childCount: unguided.length),
             ),
@@ -879,11 +1247,17 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
               : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-              color: selected ? Colors.white : Colors.white54, width: 1),
+            color: selected ? Colors.white : Colors.white54,
+            width: 1,
+          ),
         ),
-        child: Text(label,
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold)),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }
@@ -895,7 +1269,10 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
         children: [
           Positioned.fill(
             child: imagePath.isNotEmpty
-                ? AvifImage.network(DataRepository().imageUrl(imagePath), fit: BoxFit.cover)
+                ? SmartImage.network(
+                    DataRepository().imageUrl(imagePath),
+                    fit: BoxFit.cover,
+                  )
                 : Container(color: Colors.white.withValues(alpha: 0.1)),
           ),
           Positioned.fill(
@@ -923,26 +1300,32 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(eq.name,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        shadows: [
-                          Shadow(
-                              blurRadius: 4,
-                              color: Colors.black,
-                              offset: Offset(0, 1)),
-                        ],
-                      )),
+                  Text(
+                    eq.name,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      shadows: [
+                        Shadow(
+                          blurRadius: 4,
+                          color: Colors.black,
+                          offset: Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text('${eq.brand} · ${eq.category}',
-                      style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.7),
-                          fontSize: 12)),
+                  Text(
+                    '${eq.brand} · ${eq.category}',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      fontSize: 12,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -996,7 +1379,9 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
         SliverAppBar(
           leading: IconButton(
             icon: Icon(
-              _isEditMode || (isEquipment && (_isNewEquipment || _selectedEquipment != null))
+              _isEditMode ||
+                      (isEquipment &&
+                          (_isNewEquipment || _selectedEquipment != null))
                   ? Icons.arrow_back
                   : Icons.close,
               color: Colors.white,
@@ -1006,7 +1391,9 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
                 Navigator.of(context).pop();
                 return;
               }
-              if (isEquipment && _showForm && (_isNewEquipment || _selectedEquipment != null)) {
+              if (isEquipment &&
+                  _showForm &&
+                  (_isNewEquipment || _selectedEquipment != null)) {
                 // Go back to picker.
                 setState(() {
                   _showForm = false;
@@ -1033,11 +1420,56 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
               child: FlexibleSpaceBar(
-                title: Text(title,
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold)),
-                background:
-                    Container(color: Colors.black.withValues(alpha: 0.2)),
+                title: Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                background: Container(
+                  color: Colors.black.withValues(alpha: 0.2),
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // ── Undo / redo bar ──────────────────────────────────────
+        SliverToBoxAdapter(
+          child: ClipRRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.3),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 2,
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        Icons.undo,
+                        color: _undoStack.isEmpty
+                            ? Colors.white24
+                            : Colors.white,
+                      ),
+                      onPressed: _undoStack.isEmpty ? null : _undo,
+                      tooltip: 'Undo',
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        Icons.redo,
+                        color: _redoStack.isEmpty
+                            ? Colors.white24
+                            : Colors.white,
+                      ),
+                      onPressed: _redoStack.isEmpty ? null : _redo,
+                      tooltip: 'Redo',
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1077,7 +1509,8 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
                       onSelect: (v) {
                         _brandCtl.text = v;
                         _brandCtl.selection = TextSelection.collapsed(
-                            offset: v.length);
+                          offset: v.length,
+                        );
                         setState(() => _brandSuggestions = []);
                       },
                     ),
@@ -1092,7 +1525,8 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
                       onSelect: (v) {
                         _categoryCtl.text = v;
                         _categoryCtl.selection = TextSelection.collapsed(
-                            offset: v.length);
+                          offset: v.length,
+                        );
                         setState(() => _categorySuggestions = []);
                       },
                     ),
@@ -1109,38 +1543,61 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
 
                   // Add section button.
                   OutlinedButton.icon(
-                    onPressed: () =>
-                        setState(() => _sections.add(_SectionData())),
+                    onPressed: () {
+                      _pushSnapshot();
+                      final sd = _SectionData();
+                      sd.titleCtl.addListener(_onTextChanged);
+                      sd.bodyCtl.addListener(_onTextChanged);
+                      setState(() => _sections.add(sd));
+                    },
                     icon: const Icon(Icons.add, color: Colors.white70),
-                    label: const Text('Add Section',
-                        style: TextStyle(color: Colors.white70)),
+                    label: const Text(
+                      'Add Section',
+                      style: TextStyle(color: Colors.white70),
+                    ),
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(
-                          color: Colors.white.withValues(alpha: 0.35)),
+                        color: Colors.white.withValues(alpha: 0.35),
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 32),
 
                   // ── Submit button ─────────────────────────────────
                   ElevatedButton(
-                    onPressed: _submit,
+                    onPressed: _submitting ? null : _submit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _kBrandBlue,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       textStyle: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    child: Text(_isEditMode
-                        ? 'Save'
-                        : isEquipment
-                            ? 'Next'
-                            : 'Create'),
+                    child: _submitting
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            _isEditMode
+                                ? 'Save'
+                                : isEquipment
+                                ? 'Next'
+                                : 'Create',
+                          ),
                   ),
                   const SizedBox(height: 32),
                 ],
@@ -1165,8 +1622,7 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(16),
-            border:
-                Border.all(color: Colors.white.withValues(alpha: 0.2)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
           ),
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -1175,17 +1631,24 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
               // Header row: label + delete.
               Row(
                 children: [
-                  Text('Section ${index + 1}',
-                      style: const TextStyle(
-                          color: Colors.white70,
-                          fontWeight: FontWeight.bold)),
+                  Text(
+                    'Section ${index + 1}',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const Spacer(),
                   if (_sections.length > 1)
                     IconButton(
-                      icon: const Icon(Icons.delete_outline,
-                          color: Colors.redAccent, size: 28),
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        color: Colors.redAccent,
+                        size: 28,
+                      ),
                       iconSize: 32,
                       onPressed: () {
+                        _pushSnapshot();
                         setState(() {
                           _sections[index].dispose();
                           _sections.removeAt(index);
@@ -1223,8 +1686,9 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
                 maxLines: 8,
                 minLines: 4,
                 style: const TextStyle(color: Colors.white, height: 1.5),
-                decoration: _fieldDecoration('Section Body')
-                    .copyWith(alignLabelWithHint: true),
+                decoration: _fieldDecoration(
+                  'Section Body',
+                ).copyWith(alignLabelWithHint: true),
               ),
             ],
           ),
@@ -1257,40 +1721,85 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
             physics: const ClampingScrollPhysics(),
             padding: const EdgeInsets.only(bottom: 12),
             children: [
-          for (int i = 0; i < images.length; i++)
-            _buildImageThumb(images, i),
-          // Add button.
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: GestureDetector(
-              onTap: () => _pickImages(images),
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.4),
-                      style: BorderStyle.solid),
-                  color: Colors.white.withValues(alpha: 0.1),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.add_photo_alternate,
-                        color: Colors.white.withValues(alpha: 0.7),
-                        size: 28),
-                    const SizedBox(height: 4),
-                    Text('Upload',
-                        style: TextStyle(
+              for (int i = 0; i < images.length; i++)
+                _buildImageThumb(images, i),
+              // Add button.
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: GestureDetector(
+                  onTap: () => _pickImages(images),
+                  child: Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.4),
+                        style: BorderStyle.solid,
+                      ),
+                      color: Colors.white.withValues(alpha: 0.1),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.add_photo_alternate,
+                          color: Colors.white.withValues(alpha: 0.7),
+                          size: 28,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Upload from\ndevice',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.7),
-                            fontSize: 11)),
-                  ],
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-        ],
+              // Paste button.
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: GestureDetector(
+                  onTap: () => _pasteImages(images),
+                  child: Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.4),
+                        style: BorderStyle.solid,
+                      ),
+                      color: Colors.white.withValues(alpha: 0.1),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.content_paste,
+                          color: Colors.white.withValues(alpha: 0.7),
+                          size: 28,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Paste from\nclipboard',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.7),
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -1317,18 +1826,20 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
                           width: 28,
                           height: 28,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     )
                   : entry.bytes != null
-                      ? Image.memory(entry.bytes!, fit: BoxFit.cover)
-                      : entry.isAsset
-                          ? AvifImage.network(
-                              DataRepository().imageUrl(entry.assetPath!),
-                              fit: BoxFit.cover)
-                          : Container(
-                              color: Colors.white.withValues(alpha: 0.1)),
+                  ? Image.memory(entry.bytes!, fit: BoxFit.cover)
+                  : entry.isAsset
+                  ? SmartImage.network(
+                      DataRepository().imageUrl(entry.assetPath!),
+                      fit: BoxFit.cover,
+                    )
+                  : Container(color: Colors.white.withValues(alpha: 0.1)),
             ),
           ),
           // Remove button.
@@ -1344,8 +1855,7 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
                     color: Colors.black.withValues(alpha: 0.7),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.close,
-                      color: Colors.white, size: 14),
+                  child: const Icon(Icons.close, color: Colors.white, size: 14),
                 ),
               ),
             ),
@@ -1359,13 +1869,17 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   if (index > 0)
-                    _reorderArrow(Icons.chevron_left,
-                        () => _reorderImage(list, index, index - 1))
+                    _reorderArrow(
+                      Icons.chevron_left,
+                      () => _reorderImage(list, index, index - 1),
+                    )
                   else
                     const SizedBox(width: 22),
                   if (index < list.length - 1)
-                    _reorderArrow(Icons.chevron_right,
-                        () => _reorderImage(list, index, index + 1))
+                    _reorderArrow(
+                      Icons.chevron_right,
+                      () => _reorderImage(list, index, index + 1),
+                    )
                   else
                     const SizedBox(width: 22),
                 ],
@@ -1392,8 +1906,7 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
 
   // ── Formatting toolbar ─────────────────────────────────────────
 
-  Widget _buildFormattingToolbar(
-      TextEditingController ctl, FocusNode focus) {
+  Widget _buildFormattingToolbar(TextEditingController ctl, FocusNode focus) {
     Widget btn(String label, VoidCallback onTap, {IconData? icon}) {
       return Padding(
         padding: const EdgeInsets.only(right: 6),
@@ -1404,20 +1917,21 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
             focus.requestFocus();
           },
           child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.2)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
               borderRadius: BorderRadius.circular(6),
             ),
             child: icon != null
                 ? Icon(icon, color: Colors.white70, size: 16)
-                : Text(label,
+                : Text(
+                    label,
                     style: const TextStyle(
-                        color: Colors.white70,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13)),
+                      color: Colors.white70,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
           ),
         ),
       );
@@ -1458,8 +1972,7 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
             decoration: BoxDecoration(
               color: Colors.grey.shade900,
               borderRadius: BorderRadius.circular(8),
-              border:
-                  Border.all(color: Colors.white.withValues(alpha: 0.15)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
             ),
             child: ListView.builder(
               shrinkWrap: true,
@@ -1468,8 +1981,10 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
               itemBuilder: (ctx, i) {
                 return ListTile(
                   dense: true,
-                  title: Text(suggestions[i],
-                      style: const TextStyle(color: Colors.white)),
+                  title: Text(
+                    suggestions[i],
+                    style: const TextStyle(color: Colors.white),
+                  ),
                   onTap: () => onSelect(suggestions[i]),
                 );
               },
@@ -1482,11 +1997,14 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage> {
   // ── Shared helpers ─────────────────────────────────────────────
 
   Widget _buildSectionLabel(String text) {
-    return Text(text,
-        style: const TextStyle(
-            color: Colors.white,
-            fontSize: 14,
-            fontWeight: FontWeight.w600));
+    return Text(
+      text,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+      ),
+    );
   }
 }
 
@@ -1529,8 +2047,7 @@ class _CapitalizeFirstFormatter extends TextInputFormatter {
     TextEditingValue newValue,
   ) {
     if (newValue.text.isEmpty) return newValue;
-    final cap =
-        newValue.text[0].toUpperCase() + newValue.text.substring(1);
+    final cap = newValue.text[0].toUpperCase() + newValue.text.substring(1);
     if (cap == newValue.text) return newValue;
     return newValue.copyWith(text: cap);
   }

@@ -39,6 +39,29 @@ class RepoPollResult {
   const RepoPollResult({required this.content, this.etag});
 }
 
+/// A single file change to include in a batch commit. Either a text
+/// write, a binary write, or a delete.
+class BatchFileChange {
+  final String path;
+  final Uint8List? bytes; // binary writes
+  final String? text;     // text writes
+  final bool delete;
+
+  const BatchFileChange.write({required this.path, required String content})
+      : bytes = null,
+        text = content,
+        delete = false;
+
+  const BatchFileChange.writeBinary({required this.path, required this.bytes})
+      : text = null,
+        delete = false;
+
+  const BatchFileChange.delete({required this.path})
+      : bytes = null,
+        text = null,
+        delete = true;
+}
+
 /// Low-level GitHub repo file operations. One instance shared across
 /// all higher-level clients via [DataRepository].
 class GitHubRepoClient {
@@ -188,6 +211,223 @@ class GitHubRepoClient {
     final respBody = jsonDecode(resp.body) as Map<String, dynamic>;
     final contentMap = respBody['content'] as Map<String, dynamic>?;
     return (contentMap?['sha'] as String?) ?? '';
+  }
+
+  /// Write (create or update) a binary file in the repo. Unlike
+  /// [writeFile], this takes raw bytes and base64-encodes them directly
+  /// without UTF-8 wrapping, so binary data (images) is not corrupted.
+  Future<String> writeBinaryFile(
+    String path,
+    Uint8List bytes, {
+    required String sha,
+    required String token,
+    String message = 'Upload via PixelVault',
+  }) async {
+    final uri = Uri.parse('${admin.apiBaseUrl}/$path');
+    final payload = <String, dynamic>{
+      'message': message,
+      'content': base64Encode(bytes),
+      'branch': admin.branch,
+    };
+    if (sha.isNotEmpty) payload['sha'] = sha;
+
+    final resp = await http.put(
+      uri,
+      headers: {
+        ..._authHeaders(token),
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(payload),
+    );
+
+    if (resp.statusCode ~/ 100 != 2) {
+      throw Exception(
+        'repo binary write failed ($path): ${resp.statusCode} ${resp.body}',
+      );
+    }
+
+    final respBody = jsonDecode(resp.body) as Map<String, dynamic>;
+    final contentMap = respBody['content'] as Map<String, dynamic>?;
+    return (contentMap?['sha'] as String?) ?? '';
+  }
+
+  /// Delete a file from the repo. Requires the file's current SHA.
+  Future<void> deleteFile(
+    String path, {
+    required String sha,
+    required String token,
+    String message = 'Delete via PixelVault',
+  }) async {
+    final uri = Uri.parse('${admin.apiBaseUrl}/$path');
+    final request = http.Request('DELETE', uri);
+    request.headers.addAll({
+      ..._authHeaders(token),
+      'Content-Type': 'application/json',
+    });
+    request.body = jsonEncode({
+      'message': message,
+      'sha': sha,
+      'branch': admin.branch,
+    });
+
+    final streamed = await http.Client().send(request);
+    if (streamed.statusCode ~/ 100 != 2) {
+      final body = await streamed.stream.bytesToString();
+      throw Exception(
+        'repo delete failed ($path): ${streamed.statusCode} $body',
+      );
+    }
+  }
+
+  /// Get just the SHA of a file (convenience for delete operations).
+  Future<String?> getFileSha(String path, String token) async {
+    final result = await readViaApi(path, token);
+    return result?.sha;
+  }
+
+  // ── Batched commits via Git Data API ───────────────────────────
+
+  /// Commit multiple file changes (writes + deletes) in a single Git
+  /// commit. This is atomic — callers see either all changes or none.
+  ///
+  /// Workflow: GET ref → GET commit (for base tree) → POST blobs
+  /// (parallel) → POST tree (with base_tree) → POST commit → PATCH ref.
+  ///
+  /// Returns the new commit SHA.
+  Future<String> commitBatch(
+    List<BatchFileChange> changes, {
+    required String token,
+    required String message,
+  }) async {
+    if (changes.isEmpty) throw ArgumentError('commitBatch: no changes');
+
+    final gitApi = admin.gitApiBaseUrl;
+    final headers = _authHeaders(token);
+    final jsonHeaders = {
+      ...headers,
+      'Content-Type': 'application/json',
+    };
+
+    // 1. Resolve the current branch head.
+    final refResp = await http.get(
+      Uri.parse('$gitApi/ref/heads/${admin.branch}'),
+      headers: headers,
+    );
+    if (refResp.statusCode != 200) {
+      throw Exception(
+        'batch ref read failed: ${refResp.statusCode} ${refResp.body}',
+      );
+    }
+    final refBody = jsonDecode(refResp.body) as Map<String, dynamic>;
+    final parentCommitSha =
+        (refBody['object'] as Map<String, dynamic>)['sha'] as String;
+
+    // 2. Fetch the commit so we can base the new tree on its tree.
+    final commitResp = await http.get(
+      Uri.parse('$gitApi/commits/$parentCommitSha'),
+      headers: headers,
+    );
+    if (commitResp.statusCode != 200) {
+      throw Exception(
+        'batch commit read failed: ${commitResp.statusCode} ${commitResp.body}',
+      );
+    }
+    final commitBody = jsonDecode(commitResp.body) as Map<String, dynamic>;
+    final baseTreeSha =
+        (commitBody['tree'] as Map<String, dynamic>)['sha'] as String;
+
+    // 3. Create a blob for every non-delete change, in parallel.
+    final writes = changes.where((c) => !c.delete).toList();
+    final blobShas = await Future.wait(
+      writes.map((c) => _createBlob(c, jsonHeaders)),
+    );
+    final blobShaByPath = <String, String>{
+      for (int i = 0; i < writes.length; i++) writes[i].path: blobShas[i],
+    };
+
+    // 4. Build the tree. For deletes, omit the sha (null) so the path
+    // is removed from the new tree.
+    final treeEntries = <Map<String, dynamic>>[];
+    for (final change in changes) {
+      treeEntries.add({
+        'path': change.path,
+        'mode': '100644',
+        'type': 'blob',
+        'sha': change.delete ? null : blobShaByPath[change.path],
+      });
+    }
+
+    final treeResp = await http.post(
+      Uri.parse('$gitApi/trees'),
+      headers: jsonHeaders,
+      body: jsonEncode({
+        'base_tree': baseTreeSha,
+        'tree': treeEntries,
+      }),
+    );
+    if (treeResp.statusCode ~/ 100 != 2) {
+      throw Exception(
+        'batch tree create failed: ${treeResp.statusCode} ${treeResp.body}',
+      );
+    }
+    final newTreeSha =
+        (jsonDecode(treeResp.body) as Map<String, dynamic>)['sha'] as String;
+
+    // 5. Create the commit.
+    final newCommitResp = await http.post(
+      Uri.parse('$gitApi/commits'),
+      headers: jsonHeaders,
+      body: jsonEncode({
+        'message': message,
+        'tree': newTreeSha,
+        'parents': [parentCommitSha],
+      }),
+    );
+    if (newCommitResp.statusCode ~/ 100 != 2) {
+      throw Exception(
+        'batch commit create failed: '
+        '${newCommitResp.statusCode} ${newCommitResp.body}',
+      );
+    }
+    final newCommitSha =
+        (jsonDecode(newCommitResp.body) as Map<String, dynamic>)['sha']
+            as String;
+
+    // 6. Fast-forward the branch ref.
+    final updateResp = await http.patch(
+      Uri.parse('$gitApi/refs/heads/${admin.branch}'),
+      headers: jsonHeaders,
+      body: jsonEncode({'sha': newCommitSha}),
+    );
+    if (updateResp.statusCode ~/ 100 != 2) {
+      throw Exception(
+        'batch ref update failed: '
+        '${updateResp.statusCode} ${updateResp.body}',
+      );
+    }
+
+    return newCommitSha;
+  }
+
+  /// Create a blob from a BatchFileChange. Returns the blob SHA.
+  Future<String> _createBlob(
+    BatchFileChange change,
+    Map<String, String> jsonHeaders,
+  ) async {
+    final encoded = change.bytes != null
+        ? base64Encode(change.bytes!)
+        : base64Encode(utf8.encode(change.text ?? ''));
+    final resp = await http.post(
+      Uri.parse('${admin.gitApiBaseUrl}/blobs'),
+      headers: jsonHeaders,
+      body: jsonEncode({'content': encoded, 'encoding': 'base64'}),
+    );
+    if (resp.statusCode ~/ 100 != 2) {
+      throw Exception(
+        'blob create failed (${change.path}): ${resp.statusCode} ${resp.body}',
+      );
+    }
+    return (jsonDecode(resp.body) as Map<String, dynamic>)['sha'] as String;
   }
 
   // ── Helpers ────────────────────────────────────────────────────

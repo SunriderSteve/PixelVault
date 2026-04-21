@@ -36,6 +36,14 @@ class GuidesClient {
   Future<RepoFileResult?> readEquipmentViaApi(String token) =>
       repo.readViaApi(admin.equipmentFile, token);
 
+  /// Read the videography file via API (fresh content + SHA for writes).
+  Future<RepoFileResult?> readVideographyViaApi(String token) =>
+      repo.readViaApi(admin.videographyFile, token);
+
+  /// Read the scenario file via API (fresh content + SHA for writes).
+  Future<RepoFileResult?> readScenarioViaApi(String token) =>
+      repo.readViaApi(admin.scenarioFile, token);
+
   /// Read the shoots file via API.
   Future<RepoFileResult?> readShootsViaApi(String token) =>
       repo.readViaApi(admin.shootsFile, token);
@@ -51,6 +59,36 @@ class GuidesClient {
   }) =>
       repo.writeFile(
         admin.equipmentFile,
+        content,
+        sha: sha,
+        token: token,
+        message: message,
+      );
+
+  /// Write the videography YAML file back to the repo.
+  Future<String> writeVideographyYaml(
+    String content, {
+    required String sha,
+    required String token,
+    String message = 'Update videography via PixelVault',
+  }) =>
+      repo.writeFile(
+        admin.videographyFile,
+        content,
+        sha: sha,
+        token: token,
+        message: message,
+      );
+
+  /// Write the scenario YAML file back to the repo.
+  Future<String> writeScenarioYaml(
+    String content, {
+    required String sha,
+    required String token,
+    String message = 'Update scenarios via PixelVault',
+  }) =>
+      repo.writeFile(
+        admin.scenarioFile,
         content,
         sha: sha,
         token: token,

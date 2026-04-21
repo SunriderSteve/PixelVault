@@ -11,7 +11,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_avif/flutter_avif.dart';
+import '../widgets/smart_image.dart';
 import 'package:go_router/go_router.dart';
 
 import '../models/equipment_model.dart';
@@ -726,7 +726,7 @@ class _EquipmentInfoPopupState extends State<_EquipmentInfoPopup> {
           onTap: () => Navigator.of(context).pop(),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: AvifImage.network(
+            child: SmartImage.network(
               DataRepository().imageUrl(imagePath),
               fit: BoxFit.contain,
               errorBuilder: (_, _, _) => Container(
@@ -803,7 +803,7 @@ class _EquipmentInfoPopupState extends State<_EquipmentInfoPopup> {
                         borderRadius: BorderRadius.circular(12),
                         child: AspectRatio(
                           aspectRatio: 4 / 3,
-                          child: AvifImage.network(
+                          child: SmartImage.network(
                             DataRepository().imageUrl(imagePath),
                             fit: BoxFit.cover,
                             errorBuilder: (_, _, _) => Container(

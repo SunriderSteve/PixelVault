@@ -13,7 +13,7 @@ import 'dart:math' as math;
 import 'dart:ui'; // For ImageFilter used by BackdropFilter.
 
 import 'package:flutter/material.dart';
-import 'package:flutter_avif/flutter_avif.dart';
+import '../widgets/smart_image.dart';
 import 'package:go_router/go_router.dart';
 
 import '../models/equipment_model.dart';
@@ -38,6 +38,9 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
   /// Tab index inside the filter panel: 0 = Category, 1 = Brand.
   int _activeTab = 0;
 
+  /// Alphabetical sort direction. A→Z by default.
+  bool _sortAsc = true;
+
   final Set<String> _selectedCategories = {};
   final Set<String> _selectedBrands = {};
 
@@ -58,7 +61,8 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
     // Seed `_filteredItems` with only guides that actually have content —
     // `_updateFilters` applies the same rule, but we populate up front so
     // the first paint doesn't flash all-items before the filter runs.
-    _filteredItems = _allItems.where(_hasContent).toList();
+    _filteredItems = _allItems.where(_hasContent).toList()
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
     // Build the filter option lists. Alphabetical so the chip order is
     // stable across sessions regardless of YAML load order.
@@ -100,7 +104,12 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
             matchesCategory &&
             matchesBrand &&
             _hasContent(item);
-      }).toList();
+      }).toList()
+        ..sort((a, b) {
+          final int cmp =
+              a.name.toLowerCase().compareTo(b.name.toLowerCase());
+          return _sortAsc ? cmp : -cmp;
+        });
     });
   }
 
@@ -299,6 +308,20 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
                                     border: InputBorder.none,
                                   ),
                                 ),
+                              ),
+                              // Sort direction toggle.
+                              IconButton(
+                                icon: Icon(
+                                  _sortAsc
+                                      ? Icons.arrow_upward
+                                      : Icons.arrow_downward,
+                                  color: Colors.white,
+                                ),
+                                tooltip: _sortAsc ? 'Sort Z-A' : 'Sort A-Z',
+                                onPressed: () {
+                                  _sortAsc = !_sortAsc;
+                                  _updateFilters();
+                                },
                               ),
                               // Filter panel toggle. Shows a small badge
                               // with the number of active filter chips.
@@ -636,7 +659,7 @@ class _GlassEquipmentCard extends StatelessWidget {
           // Cover image or a translucent fallback when empty.
           Positioned.fill(
             child: imagePath.isNotEmpty
-                ? AvifImage.network(DataRepository().imageUrl(imagePath), fit: BoxFit.cover)
+                ? SmartImage.network(DataRepository().imageUrl(imagePath), fit: BoxFit.cover)
                 : Container(color: Colors.white.withValues(alpha: 0.1)),
           ),
           // Darkening gradient for title legibility.

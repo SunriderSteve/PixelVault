@@ -32,6 +32,7 @@ import '../models/admin_config_model.dart';
 import '../models/equipment_model.dart';
 import '../models/scenario_model.dart';
 import '../models/videography_model.dart';
+import '../pages/guide_creator_page.dart' show GuideType;
 import 'github_repo_client.dart';
 import 'guides_client.dart';
 import 'production_shoots_client.dart';
@@ -61,8 +62,10 @@ class DataRepository {
   GuidesClient? _guidesClient;
   ProductionShootsClient? _shootsClient;
 
-  // ── Equipment write state ──────────────────────────────────────
-  /// Tracks the SHA of the equipment file for write operations.
+  // ── YAML file write state ──────────────────────────────────────
+  // Only equipment still uses per-file SHA (for applyInventoryChanges,
+  // which is a single-file write). Guide create/update use the Git
+  // Data API (batch commits) and don't need per-file SHAs.
   String? _equipmentSha;
 
   // ── Production shoots ──────────────────────────────────────────
@@ -74,10 +77,18 @@ class DataRepository {
   /// to rebuild on equipment updates listen to this notifier.
   final ValueNotifier<int> overlayEpoch = ValueNotifier<int>(0);
 
+  /// Increments whenever videography or scenario guide data changes.
+  final ValueNotifier<int> guidesEpoch = ValueNotifier<int>(0);
+
   // ── Polling state ───────────────────────────────────────────────
   Timer? _equipmentTimer;
   bool _fetchingEquipment = false;
   String? _equipmentEtag;
+  // Monotonic counter: incremented every time an equipment write completes.
+  // A poll captures this at start; if it changes before the response is
+  // applied, the poll result is discarded (the in-flight response could
+  // reflect pre-write state and would cause a visible revert).
+  int _equipmentWriteEpoch = 0;
 
   // ── Shoot write debounce ─────────────────────────────────────
   Timer? _shootsDebounce;
@@ -89,6 +100,9 @@ class DataRepository {
   Timer? _shootsTimer;
   bool _pollingShoots = false;
   String? _shootsEtag;
+  // Same purpose as [_equipmentWriteEpoch] — guards the shoots poll
+  // against stale responses that were issued before a write completed.
+  int _shootsWriteEpoch = 0;
 
   // ══════════════════════════════════════════════════════════════
   // Init pipeline
@@ -171,19 +185,31 @@ class DataRepository {
   // Equipment polling
   // ══════════════════════════════════════════════════════════════
 
-  /// Poll the equipment file for changes. Uses ETag-based conditional
+  /// Poll the equipment file for changes via the authenticated Contents
+  /// API (immediately consistent — unlike the raw CDN, which can serve
+  /// stale content for minutes after a write and was the root cause of
+  /// the inventory "permanent revert" bug). Uses ETag-based conditional
   /// requests so 304 responses are free against the rate limit.
   Future<bool> fetchEquipmentOnce() async {
     if (_fetchingEquipment) return false;
     if (_repoClient == null) return false;
+    final String token = _admin?.accessToken ?? '';
+    if (token.isEmpty) return false;
 
+    final int startEpoch = _equipmentWriteEpoch;
     _fetchingEquipment = true;
     try {
-      final result = await _repoClient!.pollRaw(
+      final result = await _repoClient!.pollViaApi(
         _admin!.equipmentFile,
+        token,
         etag: _equipmentEtag,
       );
       if (result == null) return false; // 304 — no change.
+
+      // A write completed while this request was in flight. The response
+      // may reflect the pre-write state; discarding it prevents a brief
+      // revert. A subsequent poll will pick up the post-write state.
+      if (_equipmentWriteEpoch != startEpoch) return false;
 
       _equipmentEtag = result.etag;
 
@@ -247,6 +273,7 @@ class DataRepository {
     final String token = _admin?.accessToken ?? '';
     if (token.isEmpty) return;
 
+    final int startEpoch = _shootsWriteEpoch;
     _pollingShoots = true;
     try {
       final result = await _shootsClient!.pollViaApi(
@@ -256,10 +283,14 @@ class DataRepository {
 
       if (result == null) return; // 304.
 
-      _shootsEtag = result.etag;
+      // A write completed while this poll was in flight — its response
+      // could reflect pre-write state (causing a brief UI revert). Drop
+      // it; the next poll picks up the true post-write state.
+      if (_shootsWriteEpoch != startEpoch) return;
 
       if (_flushingShootOps || _pendingShootOps.isNotEmpty) return;
 
+      _shootsEtag = result.etag;
       _shoots = result.data;
       shootsEpoch.value++;
     } catch (e) {
@@ -284,6 +315,7 @@ class DataRepository {
   Future<void> _executeShootFlush() async {
     if (_flushingShootOps) return;
     _flushingShootOps = true;
+    _shootsWriteEpoch++;
 
     final ops = List<_ShootOp>.from(_pendingShootOps);
     final snapshot = _shootsSnapshot;
@@ -300,7 +332,9 @@ class DataRepository {
       }
       final ground = await client.writeAll(fresh, token: token);
       _shoots = ground;
-      _shootsEtag = null;
+      // Keep the existing ETag: ground truth already matches _shoots,
+      // and clearing it would force a raw re-fetch that could briefly
+      // return stale content and cause a visible revert.
       if (_pendingShootOps.isNotEmpty) {
         _shootsSnapshot = _deepCopyShoots(_shoots);
         for (final pendingOp in _pendingShootOps) {
@@ -364,6 +398,7 @@ class DataRepository {
 
     await _flushPendingShootOps();
 
+    _shootsWriteEpoch++;
     _shoots[name] = {};
     shootsEpoch.value++;
 
@@ -388,6 +423,7 @@ class DataRepository {
 
     await _flushPendingShootOps();
 
+    _shootsWriteEpoch++;
     final items = _shoots.remove(oldName);
     if (items == null) throw StateError('shoot "$oldName" not found');
     _shoots[newName] = items;
@@ -416,6 +452,7 @@ class DataRepository {
 
     await _flushPendingShootOps();
 
+    _shootsWriteEpoch++;
     final prev = _shoots.remove(name);
     shootsEpoch.value++;
 
@@ -582,8 +619,10 @@ class DataRepository {
       overlayEpoch.value++;
     }
 
-    // Cancel equipment polling during the write.
+    // Cancel equipment polling during the write, and bump the write epoch
+    // so any in-flight poll's response is discarded (prevents revert).
     _equipmentTimer?.cancel();
+    _equipmentWriteEpoch++;
 
     try {
       // Read fresh equipment.yaml via API (gets content + SHA).
@@ -609,7 +648,10 @@ class DataRepository {
         message: 'Update inventory for $equipmentId via PixelVault',
       );
       _equipmentSha = newSha;
-      _equipmentEtag = null; // Invalidate so next poll fetches fresh.
+      // Keep the existing ETag: the optimistic local update already
+      // reflects the new state. Clearing it would force the next poll
+      // to fetch from the raw CDN, which may still serve the pre-write
+      // content for up to a few minutes and cause a visible revert.
 
       overlayEpoch.value++;
     } catch (e) {
@@ -654,6 +696,8 @@ class DataRepository {
       throw StateError('Equipment with id "$id" already exists');
     }
 
+    _equipmentWriteEpoch++;
+
     // Read current equipment.yaml via API for fresh SHA.
     final result = await client.readEquipmentViaApi(token);
     if (result == null) throw StateError('failed to read equipment.yaml');
@@ -689,7 +733,8 @@ class DataRepository {
       message: 'Create equipment "$name" via PixelVault',
     );
     _equipmentSha = newSha;
-    _equipmentEtag = null;
+    // Keep the existing ETag — optimistic local state below is the
+    // source of truth until the CDN's raw view catches up.
 
     // Update local state.
     final eq = Equipment(
@@ -707,6 +752,486 @@ class DataRepository {
     );
     _equipment[id] = eq;
     overlayEpoch.value++;
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // Guide CRUD (create / update for all guide types)
+  // ══════════════════════════════════════════════════════════════
+
+  /// Generate a slug-style ID from a display name.
+  static String generateId(String name) {
+    return name
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9\s]'), '')
+        .trim()
+        .replaceAll(RegExp(r'\s+'), '_');
+  }
+
+  /// Image type subfolder for a guide type.
+  static String _imageFolder(GuideType type) {
+    switch (type) {
+      case GuideType.equipment:
+        return 'equipment';
+      case GuideType.videography:
+        return 'videography';
+      case GuideType.scenario:
+        return 'scenarios';
+    }
+  }
+
+  /// Build a repo path for a cover image.
+  static String coverImagePath(
+          GuideType type, String id, int index, String ext) =>
+      'images/${_imageFolder(type)}/${id}_cover_${index + 1}.$ext';
+
+  /// Build a repo path for a section image.
+  static String sectionImagePath(
+          GuideType type, String id, int sectionIdx, int imgIdx, String ext) =>
+      'images/${_imageFolder(type)}/${id}_section${sectionIdx + 1}_${imgIdx + 1}.$ext';
+
+  /// Upload a binary image file to the repo. Returns the new SHA.
+  /// If the file already exists (e.g. retry after partial failure),
+  /// fetches the current SHA so the update succeeds.
+  Future<String> uploadImage(Uint8List bytes, String repoPath) async {
+    final repoClient = _repoClient;
+    if (repoClient == null) throw StateError('repo client not ready');
+    final String token = _admin?.accessToken ?? '';
+    if (token.isEmpty) throw StateError('missing access token');
+
+    // Check if the file already exists (handles retries / duplicates).
+    final existingSha = await repoClient.getFileSha(repoPath, token) ?? '';
+
+    return repoClient.writeBinaryFile(
+      repoPath,
+      bytes,
+      sha: existingSha,
+      token: token,
+      message: 'Upload image $repoPath via PixelVault',
+    );
+  }
+
+  /// Delete an image file from the repo.
+  Future<void> deleteImage(String repoPath) async {
+    final repoClient = _repoClient;
+    if (repoClient == null) throw StateError('repo client not ready');
+    final String token = _admin?.accessToken ?? '';
+    if (token.isEmpty) throw StateError('missing access token');
+
+    final sha = await repoClient.getFileSha(repoPath, token);
+    if (sha == null) return; // file doesn't exist
+    await repoClient.deleteFile(
+      repoPath,
+      sha: sha,
+      token: token,
+      message: 'Delete image $repoPath via PixelVault',
+    );
+  }
+
+  /// Create a new guide and persist it to the repo in a single atomic
+  /// commit (YAML + all images bundled together via the Git Data API).
+  ///
+  /// [coverImages] and [sections] carry the already-converted image
+  /// bytes alongside their target repo paths. Asset-only entries
+  /// (pre-existing images kept during edit) have null bytes.
+  Future<void> createGuide({
+    required GuideType type,
+    required String id,
+    required String name,
+    String brand = '',
+    String category = '',
+    String description = '',
+    required List<({Uint8List? bytes, String repoPath})> coverImages,
+    required List<
+            ({
+              String title,
+              String body,
+              List<({Uint8List? bytes, String repoPath})> images,
+            })>
+        sections,
+    List<String> related = const [],
+    int? quantity,
+    String? storage,
+    String? existingEquipId,
+  }) async {
+    final client = _guidesClient;
+    final repoClient = _repoClient;
+    if (client == null || repoClient == null) {
+      throw StateError('clients not ready');
+    }
+    final String token = _admin?.accessToken ?? '';
+    if (token.isEmpty) throw StateError('missing access token');
+
+    // 1. Build YAML document.
+    final coverPaths = coverImages.map((e) => e.repoPath).toList();
+    final sectionData = sections
+        .map((s) => (
+              title: s.title,
+              body: s.body,
+              images: s.images.map((i) => i.repoPath).toList(),
+            ))
+        .toList();
+
+    final yamlDoc = _buildGuideYaml(
+      type: type,
+      id: id,
+      name: name,
+      brand: brand,
+      category: category,
+      description: description,
+      coverImages: coverPaths,
+      sections: sectionData,
+      related: related,
+      quantity: quantity,
+      storage: storage,
+    );
+
+    // 2. Gather batched changes: image uploads (deduped) + YAML update.
+    final changes = <BatchFileChange>[];
+    final seenPaths = <String>{};
+
+    void addImageChange(({Uint8List? bytes, String repoPath}) img) {
+      if (img.bytes == null) return;
+      if (!seenPaths.add(img.repoPath)) return;
+      changes.add(BatchFileChange.writeBinary(
+        path: img.repoPath,
+        bytes: img.bytes!,
+      ));
+    }
+
+    for (final img in coverImages) {
+      addImageChange(img);
+    }
+    for (final sec in sections) {
+      for (final img in sec.images) {
+        addImageChange(img);
+      }
+    }
+
+    _equipmentTimer?.cancel();
+    if (type == GuideType.equipment) _equipmentWriteEpoch++;
+
+    try {
+      // Read current YAML so we can append/replace the document.
+      final (String yamlPath, String newContent, String commitMessage)
+          = await switch (type) {
+        GuideType.equipment => (() async {
+            final result = await client.readEquipmentViaApi(token);
+            if (result == null) {
+              throw StateError('failed to read equipment.yaml');
+            }
+            _equipmentSha = result.sha;
+            String content = result.content;
+            // If replacing an existing no_guide entry, remove it first.
+            if (existingEquipId != null) {
+              content = _removeDocumentById(content, existingEquipId);
+            }
+            content = _appendDocument(content, yamlDoc);
+            return (
+              _admin!.equipmentFile,
+              content,
+              'Create equipment guide "$name" via PixelVault',
+            );
+          })(),
+        GuideType.videography => (() async {
+            final result = await client.readVideographyViaApi(token);
+            if (result == null) {
+              throw StateError('failed to read videography.yaml');
+            }
+            return (
+              _admin!.videographyFile,
+              _appendDocument(result.content, yamlDoc),
+              'Create videography guide "$name" via PixelVault',
+            );
+          })(),
+        GuideType.scenario => (() async {
+            final result = await client.readScenarioViaApi(token);
+            if (result == null) {
+              throw StateError('failed to read scenarios.yaml');
+            }
+            return (
+              _admin!.scenarioFile,
+              _appendDocument(result.content, yamlDoc),
+              'Create scenario guide "$name" via PixelVault',
+            );
+          })(),
+      };
+
+      changes.add(BatchFileChange.write(path: yamlPath, content: newContent));
+
+      // 3. Atomic commit.
+      await repoClient.commitBatch(
+        changes,
+        token: token,
+        message: commitMessage,
+      );
+
+      // 4. Update local cache.
+      switch (type) {
+        case GuideType.equipment:
+          _equipment[id] = Equipment(
+            id: id,
+            name: name,
+            category: category,
+            brand: brand,
+            coverImages: coverPaths,
+            description: description,
+            sections: sectionData
+                .map((s) => EquipSection(
+                    title: s.title, images: s.images, body: s.body))
+                .toList(),
+            related: related,
+            storage: storage,
+            quantity: quantity,
+          );
+          overlayEpoch.value++;
+
+        case GuideType.videography:
+          _videography[id] = VideographyGuide(
+            id: id,
+            name: name,
+            coverImages: coverPaths,
+            sections: sectionData
+                .map((s) => GuideSection(
+                    title: s.title, images: s.images, body: s.body))
+                .toList(),
+          );
+          guidesEpoch.value++;
+
+        case GuideType.scenario:
+          _scenarios[id] = ScenarioGuide(
+            id: id,
+            name: name,
+            description: description,
+            coverImages: coverPaths,
+            sections: sectionData
+                .map((s) => ScenarioSection(
+                    title: s.title, images: s.images, body: s.body))
+                .toList(),
+            related: related,
+          );
+          guidesEpoch.value++;
+      }
+    } finally {
+      _startEquipmentPolling();
+    }
+  }
+
+  /// Update an existing guide. Handles image diffing (delete removed,
+  /// upload new) and replaces the YAML document — all in a single
+  /// atomic commit.
+  Future<void> updateGuide({
+    required GuideType type,
+    required String id,
+    required String name,
+    String brand = '',
+    String category = '',
+    String description = '',
+    required List<({Uint8List? bytes, String repoPath})> coverImages,
+    required List<
+            ({
+              String title,
+              String body,
+              List<({Uint8List? bytes, String repoPath})> images,
+            })>
+        sections,
+    List<String> related = const [],
+    List<String> removedImagePaths = const [],
+  }) async {
+    final client = _guidesClient;
+    final repoClient = _repoClient;
+    if (client == null || repoClient == null) {
+      throw StateError('clients not ready');
+    }
+    final String token = _admin?.accessToken ?? '';
+    if (token.isEmpty) throw StateError('missing access token');
+
+    // 1. Build updated YAML document.
+    final coverPaths = coverImages.map((e) => e.repoPath).toList();
+    final sectionData = sections
+        .map((s) => (
+              title: s.title,
+              body: s.body,
+              images: s.images.map((i) => i.repoPath).toList(),
+            ))
+        .toList();
+
+    // 2. Gather batched changes: image deletes + uploads (deduped) +
+    //    the YAML rewrite.
+    final changes = <BatchFileChange>[];
+    final seenPaths = <String>{};
+
+    for (final path in removedImagePaths) {
+      // A path that's being re-uploaded with new bytes isn't a true
+      // delete — skip here so the blob write below wins.
+      changes.add(BatchFileChange.delete(path: path));
+    }
+
+    void addImageChange(({Uint8List? bytes, String repoPath}) img) {
+      if (img.bytes == null) return;
+      if (!seenPaths.add(img.repoPath)) return;
+      changes.add(BatchFileChange.writeBinary(
+        path: img.repoPath,
+        bytes: img.bytes!,
+      ));
+    }
+
+    for (final img in coverImages) {
+      addImageChange(img);
+    }
+    for (final sec in sections) {
+      for (final img in sec.images) {
+        addImageChange(img);
+      }
+    }
+
+    _equipmentTimer?.cancel();
+    if (type == GuideType.equipment) _equipmentWriteEpoch++;
+
+    try {
+      final (String yamlPath, String newContent, String commitMessage)
+          = await switch (type) {
+        GuideType.equipment => (() async {
+            final result = await client.readEquipmentViaApi(token);
+            if (result == null) {
+              throw StateError('failed to read equipment.yaml');
+            }
+            _equipmentSha = result.sha;
+
+            // Preserve quantity/storage from the existing document.
+            final existing = _equipment[id];
+            final fullDoc = _buildGuideYaml(
+              type: type,
+              id: id,
+              name: name,
+              brand: brand,
+              category: category,
+              description: description,
+              coverImages: coverPaths,
+              sections: sectionData,
+              related: related,
+              quantity: existing?.quantity,
+              storage: existing?.storage,
+            );
+
+            var content = _removeDocumentById(result.content, id);
+            content = _appendDocument(content, fullDoc);
+            return (
+              _admin!.equipmentFile,
+              content,
+              'Update equipment guide "$name" via PixelVault',
+            );
+          })(),
+        GuideType.videography => (() async {
+            final result = await client.readVideographyViaApi(token);
+            if (result == null) {
+              throw StateError('failed to read videography.yaml');
+            }
+
+            final yamlDoc = _buildGuideYaml(
+              type: type,
+              id: id,
+              name: name,
+              brand: brand,
+              category: category,
+              description: description,
+              coverImages: coverPaths,
+              sections: sectionData,
+              related: related,
+            );
+            var content = _removeDocumentById(result.content, id);
+            content = _appendDocument(content, yamlDoc);
+            return (
+              _admin!.videographyFile,
+              content,
+              'Update videography guide "$name" via PixelVault',
+            );
+          })(),
+        GuideType.scenario => (() async {
+            final result = await client.readScenarioViaApi(token);
+            if (result == null) {
+              throw StateError('failed to read scenarios.yaml');
+            }
+
+            final yamlDoc = _buildGuideYaml(
+              type: type,
+              id: id,
+              name: name,
+              brand: brand,
+              category: category,
+              description: description,
+              coverImages: coverPaths,
+              sections: sectionData,
+              related: related,
+            );
+            var content = _removeDocumentById(result.content, id);
+            content = _appendDocument(content, yamlDoc);
+            return (
+              _admin!.scenarioFile,
+              content,
+              'Update scenario guide "$name" via PixelVault',
+            );
+          })(),
+      };
+
+      changes.add(BatchFileChange.write(path: yamlPath, content: newContent));
+
+      // 3. Atomic commit.
+      await repoClient.commitBatch(
+        changes,
+        token: token,
+        message: commitMessage,
+      );
+
+      // 4. Update local cache.
+      switch (type) {
+        case GuideType.equipment:
+          final existing = _equipment[id];
+          _equipment[id] = Equipment(
+            id: id,
+            name: name,
+            category: category,
+            brand: brand,
+            coverImages: coverPaths,
+            description: description,
+            sections: sectionData
+                .map((s) => EquipSection(
+                    title: s.title, images: s.images, body: s.body))
+                .toList(),
+            related: related,
+            storage: existing?.storage,
+            quantity: existing?.quantity,
+          );
+          overlayEpoch.value++;
+
+        case GuideType.videography:
+          _videography[id] = VideographyGuide(
+            id: id,
+            name: name,
+            coverImages: coverPaths,
+            sections: sectionData
+                .map((s) => GuideSection(
+                    title: s.title, images: s.images, body: s.body))
+                .toList(),
+          );
+          guidesEpoch.value++;
+
+        case GuideType.scenario:
+          _scenarios[id] = ScenarioGuide(
+            id: id,
+            name: name,
+            description: description,
+            coverImages: coverPaths,
+            sections: sectionData
+                .map((s) => ScenarioSection(
+                    title: s.title, images: s.images, body: s.body))
+                .toList(),
+            related: related,
+          );
+          guidesEpoch.value++;
+      }
+    } finally {
+      _startEquipmentPolling();
+    }
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -780,6 +1305,129 @@ class DataRepository {
       return '"${v.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"';
     }
     return v;
+  }
+
+  /// Remove a document with the given id from a multi-document YAML.
+  String _removeDocumentById(String yamlContent, String id) {
+    final docs = yamlContent.split(RegExp(r'^---\s*$', multiLine: true));
+    final result = StringBuffer();
+    bool first = true;
+
+    for (final doc in docs) {
+      final trimmed = doc.trim();
+      if (trimmed.isEmpty) continue;
+
+      final parsed = loadYaml(trimmed);
+      if (parsed is YamlMap && parsed['id'] == id) continue; // skip
+
+      if (!first) result.write('---\n');
+      result.writeln(trimmed);
+      first = false;
+    }
+    return result.toString();
+  }
+
+  /// Append a new YAML document to a multi-document YAML string.
+  String _appendDocument(String yamlContent, String newDocument) {
+    final trimmed = yamlContent.trimRight();
+    if (trimmed.isEmpty) return newDocument;
+    return '$trimmed\n---\n$newDocument';
+  }
+
+  /// Serialize guide data into a YAML document string.
+  String _buildGuideYaml({
+    required GuideType type,
+    required String id,
+    required String name,
+    String brand = '',
+    String category = '',
+    String description = '',
+    required List<String> coverImages,
+    required List<({String title, String body, List<String> images})> sections,
+    List<String> related = const [],
+    int? quantity,
+    String? storage,
+  }) {
+    final buf = StringBuffer();
+    buf.writeln('id: $id');
+    buf.writeln('name: ${_yamlQuote(name)}');
+
+    if (type == GuideType.equipment) {
+      buf.writeln('brand: ${_yamlQuote(brand)}');
+      buf.writeln('category: ${_yamlQuote(category)}');
+    }
+
+    // Cover images.
+    if (coverImages.isEmpty) {
+      buf.writeln('coverImages: []');
+    } else {
+      buf.writeln('coverImages:');
+      for (final img in coverImages) {
+        buf.writeln('  - $img');
+      }
+    }
+
+    // Description (equipment & scenario only).
+    if (type == GuideType.equipment || type == GuideType.scenario) {
+      if (description.isNotEmpty) {
+        buf.writeln('description: |');
+        for (final line in description.split('\n')) {
+          buf.writeln('  $line');
+        }
+      } else {
+        buf.writeln('description: ""');
+      }
+    }
+
+    // Sections.
+    if (sections.isEmpty) {
+      buf.writeln('sections: []');
+    } else {
+      buf.writeln('sections:');
+      for (final sec in sections) {
+        buf.writeln('  - title: ${_yamlQuote(sec.title)}');
+
+        if (sec.images.isEmpty) {
+          buf.writeln('    images: []');
+        } else {
+          buf.writeln('    images:');
+          for (final img in sec.images) {
+            buf.writeln('      - $img');
+          }
+        }
+
+        if (sec.body.isEmpty) {
+          buf.writeln('    body: ""');
+        } else {
+          buf.writeln('    body: |');
+          for (final line in sec.body.split('\n')) {
+            buf.writeln('      $line');
+          }
+        }
+      }
+    }
+
+    // Related (equipment & scenario only).
+    if (type == GuideType.equipment || type == GuideType.scenario) {
+      if (related.isEmpty) {
+        buf.writeln('related: []');
+      } else {
+        buf.writeln('related:');
+        for (final r in related) {
+          buf.writeln('  - $r');
+        }
+      }
+    }
+
+    // Inventory fields (equipment only).
+    if (type == GuideType.equipment) {
+      if (quantity != null) buf.writeln('quantity: $quantity');
+      if (storage != null && storage.isNotEmpty) {
+        buf.writeln('storage: ${_yamlQuote(storage)}');
+      }
+    }
+
+    return buf.toString();
   }
 
   /// Manual equipment refresh.

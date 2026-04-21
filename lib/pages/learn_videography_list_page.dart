@@ -10,7 +10,7 @@ import 'dart:math' as math;
 import 'dart:ui'; // For ImageFilter used by BackdropFilter.
 
 import 'package:flutter/material.dart';
-import 'package:flutter_avif/flutter_avif.dart';
+import '../widgets/smart_image.dart';
 import 'package:go_router/go_router.dart';
 
 import '../models/videography_model.dart';
@@ -28,6 +28,9 @@ class LearnVideographyListPage extends StatefulWidget {
 class _LearnVideographyListPageState extends State<LearnVideographyListPage> {
   final TextEditingController _searchCtrl = TextEditingController();
 
+  /// Alphabetical sort direction. A→Z by default.
+  bool _sortAsc = true;
+
   // Source list + search-filtered view. `_all` is immutable for the
   // life of this page; `_filtered` is recomputed on every search change.
   late final List<VideographyGuide> _all;
@@ -37,18 +40,24 @@ class _LearnVideographyListPageState extends State<LearnVideographyListPage> {
   void initState() {
     super.initState();
     _all = DataRepository().getAllVideographyGuides();
-    _filtered = List.of(_all);
+    _filtered = List.of(_all)
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     _searchCtrl.addListener(_onSearch);
   }
 
-  /// Case-insensitive `contains` filter on the guide name. An empty
-  /// query shows every guide in its original order.
+  /// Case-insensitive `contains` filter on the guide name plus the
+  /// current alphabetical sort direction.
   void _onSearch() {
     final String q = _searchCtrl.text.toLowerCase();
     setState(() {
-      _filtered = q.isEmpty
+      _filtered = (q.isEmpty
           ? List.of(_all)
-          : _all.where((g) => g.name.toLowerCase().contains(q)).toList();
+          : _all.where((g) => g.name.toLowerCase().contains(q)).toList())
+        ..sort((a, b) {
+          final int cmp =
+              a.name.toLowerCase().compareTo(b.name.toLowerCase());
+          return _sortAsc ? cmp : -cmp;
+        });
     });
   }
 
@@ -225,20 +234,41 @@ class _LearnVideographyListPageState extends State<LearnVideographyListPage> {
                               color: Colors.white.withValues(alpha: 0.15),
                             ),
                           ),
-                          child: TextField(
-                            controller: _searchCtrl,
-                            style: const TextStyle(color: Colors.white),
-                            decoration: InputDecoration(
-                              hintText: 'Search Guides',
-                              hintStyle: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.6),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _searchCtrl,
+                                  style: const TextStyle(color: Colors.white),
+                                  decoration: InputDecoration(
+                                    hintText: 'Search Guides',
+                                    hintStyle: TextStyle(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.6,
+                                      ),
+                                    ),
+                                    prefixIcon: const Icon(
+                                      Icons.search,
+                                      color: Colors.white,
+                                    ),
+                                    border: InputBorder.none,
+                                  ),
+                                ),
                               ),
-                              prefixIcon: const Icon(
-                                Icons.search,
-                                color: Colors.white,
+                              IconButton(
+                                icon: Icon(
+                                  _sortAsc
+                                      ? Icons.arrow_upward
+                                      : Icons.arrow_downward,
+                                  color: Colors.white,
+                                ),
+                                tooltip: _sortAsc ? 'Sort Z-A' : 'Sort A-Z',
+                                onPressed: () {
+                                  _sortAsc = !_sortAsc;
+                                  _onSearch();
+                                },
                               ),
-                              border: InputBorder.none,
-                            ),
+                            ],
                           ),
                         ),
                       ),
@@ -303,7 +333,7 @@ class _GlassGuideCard extends StatelessWidget {
           // Cover image or a translucent fallback when empty.
           Positioned.fill(
             child: imagePath.isNotEmpty
-                ? AvifImage.network(DataRepository().imageUrl(imagePath), fit: BoxFit.cover)
+                ? SmartImage.network(DataRepository().imageUrl(imagePath), fit: BoxFit.cover)
                 : Container(color: Colors.white.withValues(alpha: 0.1)),
           ),
           // Darkening gradient for title legibility.

@@ -18,7 +18,7 @@
 import 'dart:ui'; // For ImageFilter used by BackdropFilter.
 
 import 'package:flutter/material.dart';
-import 'package:flutter_avif/flutter_avif.dart';
+import '../widgets/smart_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -244,7 +244,7 @@ class _VideographyDetailPageState extends State<VideographyDetailPage> {
                           Center(
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(12),
-                              child: AvifImage.network(
+                              child: SmartImage.network(
                                 DataRepository().imageUrl(_guide.coverImages.first),
                                 fit: BoxFit.scaleDown,
                               ),
@@ -340,7 +340,7 @@ class _SectionTile extends StatelessWidget {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: _maxImageHeight),
                 child: Center(
-                  child: AvifImage.network(
+                  child: SmartImage.network(
                     DataRepository().imageUrl(section.images.first),
                     fit: BoxFit.scaleDown,
                   ),
@@ -433,7 +433,7 @@ class _ImageCarouselState extends State<_ImageCarousel> {
                   return Center(
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: AvifImage.network(
+                      child: SmartImage.network(
                         DataRepository().imageUrl(widget.images[index]),
                         fit: BoxFit.scaleDown,
                       ),

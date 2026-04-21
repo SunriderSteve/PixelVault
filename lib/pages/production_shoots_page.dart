@@ -12,7 +12,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_avif/flutter_avif.dart';
+import '../widgets/smart_image.dart';
 import 'package:go_router/go_router.dart';
 
 import '../services/data_repository.dart';
@@ -597,7 +597,7 @@ class _PhotoCollage extends StatelessWidget {
   const _PhotoCollage({required this.images});
 
   Widget _tile(String path) {
-    return AvifImage.network(
+    return SmartImage.network(
       DataRepository().imageUrl(path),
       fit: BoxFit.cover,
       errorBuilder: (_, _, _) => Container(color: Colors.grey.shade800),

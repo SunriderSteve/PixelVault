@@ -36,6 +36,11 @@ class AdminConfigModel {
   String get apiBaseUrl =>
       'https://api.github.com/repos/$owner/$repo/contents';
 
+  /// Base URL for the GitHub Git Data API (low-level blob/tree/commit/ref).
+  /// Used for atomic multi-file commits.
+  String get gitApiBaseUrl =>
+      'https://api.github.com/repos/$owner/$repo/git';
+
   // Rotates all printable ASCII (space ' ' = 32 .. '~' = 126)
   static String caesarCipherDecode(String text, int shift) {
     if (text.isEmpty || shift == 0) return text;

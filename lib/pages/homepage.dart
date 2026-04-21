@@ -19,7 +19,7 @@ import 'dart:math' as math;
 import 'dart:ui'; // For ImageFilter used by BackdropFilter (frosted glass).
 
 import 'package:flutter/material.dart';
-import 'package:flutter_avif/flutter_avif.dart';
+import '../widgets/smart_image.dart';
 import 'package:go_router/go_router.dart';
 
 import '../services/data_repository.dart';
@@ -405,7 +405,7 @@ class _GlassMenuCard extends StatelessWidget {
             children: [
               // Layer 1 — Background image from repo.
               Positioned.fill(
-                child: AvifImage.network(
+                child: SmartImage.network(
                   DataRepository().imageUrl(imagePath),
                   fit: BoxFit.cover,
                   // Graceful fallback if the image is missing/corrupt so

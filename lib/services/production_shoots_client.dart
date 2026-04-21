@@ -83,8 +83,15 @@ class ProductionShootsClient {
 
   // ── Write ───────────────────────────────────────────────────────
 
-  /// Write the entire shoots map to the repo. Returns the parsed
-  /// ground-truth after the commit.
+  /// Write the entire shoots map to the repo. Returns the input map as
+  /// the post-write ground truth.
+  ///
+  /// We intentionally do NOT re-read the file after the PUT. GitHub's
+  /// Contents API has brief replication lag (~1s) where a read right
+  /// after a write can return pre-write content. Feeding that stale
+  /// content back into [_shoots] caused the checkbox "revert for a few
+  /// seconds before correcting" bug. Since the PUT is linearizable and
+  /// we know exactly what we wrote, the input is authoritative.
   Future<Map<String, Map<String, ShootEquip>>> writeAll(
     Map<String, Map<String, ShootEquip>> shoots, {
     required String token,
@@ -104,13 +111,6 @@ class ProductionShootsClient {
       message: 'Update production shoots via PixelVault',
     );
     _currentSha = newSha;
-
-    // Re-read to get ground truth.
-    final fresh = await repo.readViaApi(admin.shootsFile, token);
-    if (fresh != null) {
-      _currentSha = fresh.sha;
-      return _parseYaml(fresh.content);
-    }
     return shoots;
   }
 

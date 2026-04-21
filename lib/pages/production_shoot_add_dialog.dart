@@ -16,7 +16,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_avif/flutter_avif.dart';
+import '../widgets/smart_image.dart';
 
 
 import '../models/equipment_model.dart';
@@ -993,7 +993,7 @@ class _EquipGridTile extends StatelessWidget {
             children: [
               // Equipment image
               if (imagePath.isNotEmpty)
-                AvifImage.network(
+                SmartImage.network(
                   DataRepository().imageUrl(imagePath),
                   fit: BoxFit.cover,
                   errorBuilder: (_, _, _) =>
@@ -1396,7 +1396,7 @@ class _ReadOnlyEquipmentInfoPopup extends StatelessWidget {
           onTap: () => Navigator.of(context).pop(),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: AvifImage.network(
+            child: SmartImage.network(
               DataRepository().imageUrl(imagePath),
               fit: BoxFit.contain,
               errorBuilder: (_, _, _) => Container(
@@ -1456,7 +1456,7 @@ class _ReadOnlyEquipmentInfoPopup extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                         child: AspectRatio(
                           aspectRatio: 4 / 3,
-                          child: AvifImage.network(
+                          child: SmartImage.network(
                             DataRepository().imageUrl(imagePath),
                             fit: BoxFit.cover,
                             errorBuilder: (_, _, _) => Container(
