@@ -90,6 +90,20 @@ class DataRepository {
   // reflect pre-write state and would cause a visible revert).
   int _equipmentWriteEpoch = 0;
 
+  // Same pattern for videography + scenario guides: per-file timer,
+  // in-flight guard, ETag for 304 short-circuiting, and a write epoch
+  // so polls that started before a write can't clobber post-write
+  // local state.
+  Timer? _videographyTimer;
+  bool _fetchingVideography = false;
+  String? _videographyEtag;
+  int _videographyWriteEpoch = 0;
+
+  Timer? _scenariosTimer;
+  bool _fetchingScenarios = false;
+  String? _scenariosEtag;
+  int _scenariosWriteEpoch = 0;
+
   // ── Shoot write debounce ─────────────────────────────────────
   Timer? _shootsDebounce;
   final List<_ShootOp> _pendingShootOps = [];
@@ -119,6 +133,8 @@ class DataRepository {
     await _loadGuidesFromRepo();
     await fetchShootsOnce();
     _startEquipmentPolling();
+    _startVideographyPolling();
+    _startScenariosPolling();
     _startShootsPolling();
   }
 
@@ -237,6 +253,108 @@ class DataRepository {
 
     _equipmentTimer = Timer.periodic(Duration(seconds: secs), (_) {
       fetchEquipmentOnce();
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // Videography polling
+  // ══════════════════════════════════════════════════════════════
+
+  /// Poll videography.yaml via the authenticated Contents API. Mirrors
+  /// [fetchEquipmentOnce] — same ETag + write-epoch guards, same poll
+  /// interval from admin config.
+  Future<bool> fetchVideographyOnce() async {
+    if (_fetchingVideography) return false;
+    if (_repoClient == null) return false;
+    final String token = _admin?.accessToken ?? '';
+    if (token.isEmpty) return false;
+
+    final int startEpoch = _videographyWriteEpoch;
+    _fetchingVideography = true;
+    try {
+      final result = await _repoClient!.pollViaApi(
+        _admin!.videographyFile,
+        token,
+        etag: _videographyEtag,
+      );
+      if (result == null) return false; // 304
+
+      if (_videographyWriteEpoch != startEpoch) return false;
+      _videographyEtag = result.etag;
+
+      _videography.clear();
+      for (final doc in loadYamlStream(result.content)) {
+        if (doc is! YamlMap) continue;
+        final v = VideographyGuide.fromYaml(doc);
+        _videography[v.id] = v;
+      }
+      guidesEpoch.value++;
+      return true;
+    } catch (e, st) {
+      debugPrint('videography poll error: $e\n$st');
+      return false;
+    } finally {
+      _fetchingVideography = false;
+    }
+  }
+
+  void _startVideographyPolling() {
+    _videographyTimer?.cancel();
+    final int secs = _admin?.pollSeconds ?? 5;
+    if (secs <= 0 || _repoClient == null) return;
+
+    _videographyTimer = Timer.periodic(Duration(seconds: secs), (_) {
+      fetchVideographyOnce();
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // Scenario polling
+  // ══════════════════════════════════════════════════════════════
+
+  /// Poll scenarios.yaml via the authenticated Contents API.
+  Future<bool> fetchScenariosOnce() async {
+    if (_fetchingScenarios) return false;
+    if (_repoClient == null) return false;
+    final String token = _admin?.accessToken ?? '';
+    if (token.isEmpty) return false;
+
+    final int startEpoch = _scenariosWriteEpoch;
+    _fetchingScenarios = true;
+    try {
+      final result = await _repoClient!.pollViaApi(
+        _admin!.scenarioFile,
+        token,
+        etag: _scenariosEtag,
+      );
+      if (result == null) return false; // 304
+
+      if (_scenariosWriteEpoch != startEpoch) return false;
+      _scenariosEtag = result.etag;
+
+      _scenarios.clear();
+      for (final doc in loadYamlStream(result.content)) {
+        if (doc is! YamlMap) continue;
+        final s = ScenarioGuide.fromYaml(doc);
+        _scenarios[s.id] = s;
+      }
+      guidesEpoch.value++;
+      return true;
+    } catch (e, st) {
+      debugPrint('scenarios poll error: $e\n$st');
+      return false;
+    } finally {
+      _fetchingScenarios = false;
+    }
+  }
+
+  void _startScenariosPolling() {
+    _scenariosTimer?.cancel();
+    final int secs = _admin?.pollSeconds ?? 5;
+    if (secs <= 0 || _repoClient == null) return;
+
+    _scenariosTimer = Timer.periodic(Duration(seconds: secs), (_) {
+      fetchScenariosOnce();
     });
   }
 
@@ -810,9 +928,23 @@ class DataRepository {
       final updatedYaml = _removeDocumentById(result.content, id);
 
       // Collect image paths from local model (guide images included).
-      final imagePaths = <String>{
+      final candidatePaths = <String>{
         ...eq.coverImages,
         for (final sec in eq.sections) ...sec.images,
+      };
+
+      // Pre-filter to only paths that actually exist in the repo.
+      // The tree API rejects the whole commit with GitRPC::BadObjectState
+      // if we ask it to delete a path that isn't in base_tree (e.g. an
+      // image left stale in the local model after a previous cover
+      // replace cleaned it up).
+      final existence = await Future.wait(
+        candidatePaths.map((p) async =>
+            (path: p, exists: (await repoClient.getFileSha(p, token)) != null)),
+      );
+      final imagePaths = <String>{
+        for (final r in existence)
+          if (r.exists) r.path,
       };
 
       final changes = <BatchFileChange>[
@@ -1059,8 +1191,19 @@ class DataRepository {
       }
     }
 
-    _equipmentTimer?.cancel();
-    if (type == GuideType.equipment) _equipmentWriteEpoch++;
+    // Cancel the relevant poll timer + bump its write epoch so an
+    // in-flight poll response can't overwrite the post-write cache.
+    switch (type) {
+      case GuideType.equipment:
+        _equipmentTimer?.cancel();
+        _equipmentWriteEpoch++;
+      case GuideType.videography:
+        _videographyTimer?.cancel();
+        _videographyWriteEpoch++;
+      case GuideType.scenario:
+        _scenariosTimer?.cancel();
+        _scenariosWriteEpoch++;
+    }
 
     try {
       // Read current YAML so we can append/replace the document.
@@ -1164,7 +1307,7 @@ class DataRepository {
           guidesEpoch.value++;
       }
     } finally {
-      _startEquipmentPolling();
+      _restartPollForType(type);
     }
   }
 
@@ -1236,8 +1379,19 @@ class DataRepository {
       }
     }
 
-    _equipmentTimer?.cancel();
-    if (type == GuideType.equipment) _equipmentWriteEpoch++;
+    // Cancel the relevant poll timer + bump its write epoch so an
+    // in-flight poll response can't overwrite the post-write cache.
+    switch (type) {
+      case GuideType.equipment:
+        _equipmentTimer?.cancel();
+        _equipmentWriteEpoch++;
+      case GuideType.videography:
+        _videographyTimer?.cancel();
+        _videographyWriteEpoch++;
+      case GuideType.scenario:
+        _scenariosTimer?.cancel();
+        _scenariosWriteEpoch++;
+    }
 
     try {
       final (String yamlPath, String newContent, String commitMessage)
@@ -1382,7 +1536,257 @@ class DataRepository {
           guidesEpoch.value++;
       }
     } finally {
-      _startEquipmentPolling();
+      _restartPollForType(type);
+    }
+  }
+
+  /// Delete a guide. Dispatches by [type]:
+  ///
+  ///  * equipment + [removeFromInventory] true  → delegates to
+  ///    [deleteEquipment], which wipes the doc + every image.
+  ///  * equipment + [removeFromInventory] false → replaces the doc with
+  ///    a minimal `no_guide: true` entry (name / brand / category /
+  ///    quantity / storage / first cover image) so the item still shows
+  ///    in the inventory list, and deletes only the section images plus
+  ///    any extra cover images.
+  ///  * videography / scenario → removes the doc and deletes every
+  ///    image it referenced.
+  ///
+  /// All writes are atomic (single Git commit via [GitHubRepoClient.commitBatch]).
+  Future<void> deleteGuide({
+    required GuideType type,
+    required String id,
+    bool removeFromInventory = false,
+  }) async {
+    if (type == GuideType.equipment && removeFromInventory) {
+      await deleteEquipment(id);
+      return;
+    }
+
+    final client = _guidesClient;
+    final repoClient = _repoClient;
+    if (client == null || repoClient == null) {
+      throw StateError('clients not ready');
+    }
+    final String token = _admin?.accessToken ?? '';
+    if (token.isEmpty) throw StateError('missing access token');
+
+    switch (type) {
+      case GuideType.equipment:
+        _equipmentTimer?.cancel();
+        _equipmentWriteEpoch++;
+      case GuideType.videography:
+        _videographyTimer?.cancel();
+        _videographyWriteEpoch++;
+      case GuideType.scenario:
+        _scenariosTimer?.cancel();
+        _scenariosWriteEpoch++;
+    }
+
+    try {
+      if (type == GuideType.equipment) {
+        // Strip the guide but keep the inventory entry.
+        final eq = _equipment[id];
+        if (eq == null) throw StateError('equipment "$id" not found');
+
+        final result = await client.readEquipmentViaApi(token);
+        if (result == null) throw StateError('failed to read equipment.yaml');
+
+        // Keep the first cover image (needed for inventory display);
+        // the rest + all section images are deleted.
+        final keptCovers = eq.coverImages.isEmpty
+            ? <String>[]
+            : [eq.coverImages.first];
+        final discardedCovers = eq.coverImages.length > 1
+            ? eq.coverImages.sublist(1)
+            : <String>[];
+
+        final noGuideDoc = _buildNoGuideEquipmentYaml(
+          id: id,
+          name: eq.name,
+          brand: eq.brand,
+          category: eq.category,
+          coverImages: keptCovers,
+          quantity: eq.quantity,
+          storage: eq.storage,
+        );
+
+        var yamlContent = _removeDocumentById(result.content, id);
+        yamlContent = _appendDocument(yamlContent, noGuideDoc);
+
+        final candidatePaths = <String>{
+          ...discardedCovers,
+          for (final sec in eq.sections) ...sec.images,
+        };
+
+        final existence = await Future.wait(
+          candidatePaths.map((p) async => (
+                path: p,
+                exists: (await repoClient.getFileSha(p, token)) != null,
+              )),
+        );
+        final imagePaths = <String>{
+          for (final r in existence)
+            if (r.exists) r.path,
+        };
+
+        final changes = <BatchFileChange>[
+          BatchFileChange.write(
+            path: _admin!.equipmentFile,
+            content: yamlContent,
+          ),
+          for (final p in imagePaths) BatchFileChange.delete(path: p),
+        ];
+
+        await repoClient.commitBatch(
+          changes,
+          token: token,
+          message: 'Strip equipment guide "${eq.name}" via PixelVault',
+        );
+        _equipmentSha = null;
+
+        _equipment[id] = Equipment(
+          id: eq.id,
+          name: eq.name,
+          category: eq.category,
+          brand: eq.brand,
+          coverImages: keptCovers,
+          description: '',
+          sections: [],
+          related: [],
+          storage: eq.storage,
+          quantity: eq.quantity,
+          noGuide: true,
+        );
+        overlayEpoch.value++;
+      } else {
+        // Videography / scenario: drop the doc + every image.
+        final (
+          String yamlPath,
+          String newContent,
+          Set<String> candidatePaths,
+          String commitMessage,
+        ) = await switch (type) {
+          GuideType.videography => (() async {
+              final result = await client.readVideographyViaApi(token);
+              if (result == null) {
+                throw StateError('failed to read videography.yaml');
+              }
+              final guide = _videography[id];
+              final paths = <String>{
+                if (guide != null) ...guide.coverImages,
+                if (guide != null)
+                  for (final sec in guide.sections) ...sec.images,
+              };
+              return (
+                _admin!.videographyFile,
+                _removeDocumentById(result.content, id),
+                paths,
+                'Delete videography guide "${guide?.name ?? id}" via PixelVault',
+              );
+            })(),
+          GuideType.scenario => (() async {
+              final result = await client.readScenarioViaApi(token);
+              if (result == null) {
+                throw StateError('failed to read scenarios.yaml');
+              }
+              final guide = _scenarios[id];
+              final paths = <String>{
+                if (guide != null) ...guide.coverImages,
+                if (guide != null)
+                  for (final sec in guide.sections) ...sec.images,
+              };
+              return (
+                _admin!.scenarioFile,
+                _removeDocumentById(result.content, id),
+                paths,
+                'Delete scenario guide "${guide?.name ?? id}" via PixelVault',
+              );
+            })(),
+          GuideType.equipment => throw StateError('unreachable'),
+        };
+
+        final existence = await Future.wait(
+          candidatePaths.map((p) async => (
+                path: p,
+                exists: (await repoClient.getFileSha(p, token)) != null,
+              )),
+        );
+        final imagePaths = <String>{
+          for (final r in existence)
+            if (r.exists) r.path,
+        };
+
+        final changes = <BatchFileChange>[
+          BatchFileChange.write(path: yamlPath, content: newContent),
+          for (final p in imagePaths) BatchFileChange.delete(path: p),
+        ];
+
+        await repoClient.commitBatch(
+          changes,
+          token: token,
+          message: commitMessage,
+        );
+
+        if (type == GuideType.videography) {
+          _videography.remove(id);
+        } else {
+          _scenarios.remove(id);
+        }
+        guidesEpoch.value++;
+      }
+    } finally {
+      _restartPollForType(type);
+    }
+  }
+
+  /// Build a minimal equipment YAML document that keeps the inventory
+  /// fields but strips the guide content (description / sections / related).
+  /// The `no_guide: true` marker is what the inventory list uses to
+  /// decide an item is inventory-only.
+  String _buildNoGuideEquipmentYaml({
+    required String id,
+    required String name,
+    required String brand,
+    required String category,
+    required List<String> coverImages,
+    int? quantity,
+    String? storage,
+  }) {
+    final buf = StringBuffer();
+    buf.writeln('id: $id');
+    buf.writeln('name: ${_yamlQuote(name)}');
+    buf.writeln('category: ${_yamlQuote(category)}');
+    buf.writeln('brand: ${_yamlQuote(brand)}');
+    if (coverImages.isEmpty) {
+      buf.writeln('coverImages: []');
+    } else {
+      buf.writeln('coverImages:');
+      for (final p in coverImages) {
+        buf.writeln('  - $p');
+      }
+    }
+    buf.writeln('description: ""');
+    buf.writeln('sections: []');
+    buf.writeln('related: []');
+    if (quantity != null) buf.writeln('quantity: $quantity');
+    if (storage != null && storage.isNotEmpty) {
+      buf.writeln('storage: ${_yamlQuote(storage)}');
+    }
+    buf.writeln('no_guide: true');
+    return buf.toString();
+  }
+
+  /// Restart polling for the given guide type. Used by create/update/
+  /// delete methods in their finally blocks.
+  void _restartPollForType(GuideType type) {
+    switch (type) {
+      case GuideType.equipment:
+        _startEquipmentPolling();
+      case GuideType.videography:
+        _startVideographyPolling();
+      case GuideType.scenario:
+        _startScenariosPolling();
     }
   }
 
