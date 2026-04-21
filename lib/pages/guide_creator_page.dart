@@ -208,6 +208,7 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage>
 
   // ── Submit state ────────────────────────────────────────────────
   bool _submitting = false;
+  bool _deleting = false;
   Set<String> _originalImagePaths = {};
 
   // ── Background animation ─────────────────────────────────────
@@ -225,11 +226,11 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage>
   void initState() {
     super.initState();
 
-    // Slow, continuous phase loop (no reverse — gives a smooth wave
-    // that flows forever instead of ping-ponging).
+    // Continuous phase loop (no reverse — gives a smooth wave that flows
+    // forever instead of ping-ponging).
     _bgAnim = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 24),
+      duration: const Duration(seconds: 8),
     )..repeat();
 
     if (widget.type != GuideType.equipment || _isEditMode) _showForm = true;
@@ -755,6 +756,149 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage>
       setState(() => _submitting = false);
       _showError('Failed to save guide: $e');
     }
+  }
+
+  // ── Delete flow ────────────────────────────────────────────────
+
+  /// Entry point for the remove button (edit mode only). Opens the
+  /// appropriate confirmation dialog — for equipment, asks whether the
+  /// inventory entry should be removed too; for other guide types, a
+  /// simple confirm. On confirm, calls [DataRepository.deleteGuide] and
+  /// pops on success.
+  Future<void> _delete() async {
+    if (_deleting || _submitting) return;
+    if (!_isEditMode) return;
+
+    final bool? removeFromInventory;
+    if (widget.type == GuideType.equipment) {
+      removeFromInventory = await _showEquipmentDeleteDialog();
+      if (removeFromInventory == null) return; // Cancelled.
+    } else {
+      final confirmed = await _showGuideDeleteDialog();
+      if (confirmed != true) return;
+      removeFromInventory = false; // Ignored for non-equipment guides.
+    }
+
+    setState(() => _deleting = true);
+
+    try {
+      final id = DataRepository.generateId(widget.editData!.name);
+      await DataRepository().deleteGuide(
+        type: widget.type,
+        id: id,
+        removeFromInventory: removeFromInventory,
+      );
+
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.type == GuideType.equipment && !removeFromInventory
+                ? 'Guide removed — inventory entry preserved.'
+                : 'Guide removed successfully.',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Guide delete error: $e');
+      if (!mounted) return;
+      setState(() => _deleting = false);
+      _showError('Failed to delete guide: $e');
+    }
+  }
+
+  /// Equipment delete dialog — three-way choice:
+  ///   * Keep in Inventory → removeFromInventory = false
+  ///   * Remove Entirely   → removeFromInventory = true
+  ///   * Cancel            → null
+  Future<bool?> _showEquipmentDeleteDialog() {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.grey.shade900,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Remove Equipment Guide',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'Do you also want to remove this item from the Inventory List?\n\n'
+          'Choose "Keep in Inventory" to strip the guide content but keep '
+          'the inventory entry (quantity, storage, cover image).\n\n'
+          'Choose "Remove Entirely" to delete the item and every image it '
+          'referenced. This cannot be undone.',
+          style: TextStyle(color: Colors.white70, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white54),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text(
+              'Keep in Inventory',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Remove Entirely'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Simple confirm dialog for videography / scenario guides.
+  Future<bool?> _showGuideDeleteDialog() {
+    final kind = widget.type == GuideType.videography
+        ? 'videography guide'
+        : 'production scenario';
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.grey.shade900,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Remove ${widget.type == GuideType.videography ? 'Videography Guide' : 'Production Scenario'}',
+          style: const TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          'Delete this $kind and every image it referenced? '
+          'This cannot be undone.',
+          style: const TextStyle(color: Colors.white70, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white54),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<Map<String, dynamic>?> _showInventoryDialog() {
@@ -1569,7 +1713,7 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage>
 
                   // ── Submit button ─────────────────────────────────
                   ElevatedButton(
-                    onPressed: _submitting ? null : _submit,
+                    onPressed: (_submitting || _deleting) ? null : _submit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _kBrandBlue,
                       foregroundColor: Colors.white,
@@ -1599,6 +1743,40 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage>
                                 : 'Create',
                           ),
                   ),
+
+                  // ── Remove button (edit mode only) ────────────────
+                  if (_isEditMode) ...[
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: (_submitting || _deleting) ? null : _delete,
+                      icon: _deleting
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.redAccent,
+                              ),
+                            )
+                          : const Icon(Icons.delete_outline,
+                              color: Colors.redAccent),
+                      label: const Text(
+                        'Remove',
+                        style: TextStyle(
+                          color: Colors.redAccent,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.redAccent),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ],
+
                   const SizedBox(height: 32),
                 ],
               ),
