@@ -425,7 +425,7 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Colors.white.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -444,7 +444,7 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                    color: Colors.white,
                   ),
                   decoration: const InputDecoration(
                     border: InputBorder.none,
@@ -489,12 +489,12 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
         // ── Storage free-text input ──
         TextField(
           controller: _storageCtrl,
-          style: const TextStyle(color: Colors.black),
+          style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             hintText: 'e.g. A1, Shelf B...',
-            hintStyle: TextStyle(color: Colors.black.withValues(alpha: 0.4)),
+            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4)),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Colors.white.withValues(alpha: 0.05),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
@@ -718,8 +718,7 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
 }
 
 /// Small round icon button used for the quantity +/- stepper. Uses an
-/// [InkWell] for the ripple and a thin dark border so it reads clearly
-/// on the white stepper background.
+/// [InkWell] for the ripple and a thin white border for the glass look.
 class _CircleIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
@@ -737,9 +736,9 @@ class _CircleIconButton extends StatelessWidget {
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.black.withValues(alpha: 0.3)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
           ),
-          child: Icon(icon, color: Colors.black),
+          child: Icon(icon, color: Colors.white),
         ),
       ),
     );

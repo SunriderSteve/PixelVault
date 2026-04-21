@@ -322,12 +322,8 @@ class GitHubRepoClient {
       for (int i = 0; i < writes.length; i++) writes[i].path: blobShas[i],
     };
 
-    // Retry schedule tuned to GitHub's ref read-after-write replication
-    // window. Back-to-back commits from the same client commonly see the
-    // second ref read return a stale parent for ~1–5s before replicas
-    // catch up, so we need a longer budget than a naive immediate retry.
-    const List<int> backoffMs = [500, 1000, 2000, 3000, 5000];
-    for (int attempt = 0;; attempt++) {
+    const int maxAttempts = 4;
+    for (int attempt = 1;; attempt++) {
       try {
         return await _commitTreeAndRef(
           changes: changes,
@@ -342,8 +338,9 @@ class GitHubRepoClient {
         final bool isFastForward =
             msg.contains('not a fast forward') ||
                 msg.contains('Update is not a fast forward');
-        if (!isFastForward || attempt >= backoffMs.length) rethrow;
-        await Future.delayed(Duration(milliseconds: backoffMs[attempt]));
+        if (!isFastForward || attempt >= maxAttempts) rethrow;
+        // Back off briefly before re-reading the ref.
+        await Future.delayed(Duration(milliseconds: 200 * attempt));
       }
     }
   }
