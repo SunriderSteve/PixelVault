@@ -15,22 +15,32 @@
 import 'dart:ui'; // For ImageFilter used by BackdropFilter.
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // FilteringTextInputFormatter.
+import 'package:flutter/services.dart'; // FilteringTextInputFormatter + Uint8List.
+import 'package:image_picker/image_picker.dart';
+
+import '../services/clipboard_image_service.dart' as clipboard;
 
 /// Result returned by [showInventoryEditDialog] after the user confirms.
 ///
-/// [changed] is true if either [quantity] or [storage] differs from the
-/// initial values the dialog was opened with. Callers can short-circuit
-/// persistence when this flag is false.
+/// [changed] is true if [quantity], [storage], or the cover image
+/// differs from the initial values. [removed] is true when the user
+/// confirmed removal of the item — in that case the caller should
+/// delete the equipment entirely and ignore the other fields.
+/// [newImageBytes] is non-null only when the user replaced the cover
+/// image; the caller is responsible for AVIF conversion + upload.
 class InventoryEditResult {
   final int quantity;
   final String storage;
   final bool changed;
+  final bool removed;
+  final Uint8List? newImageBytes;
 
   InventoryEditResult({
     required this.quantity,
     required this.storage,
     required this.changed,
+    this.removed = false,
+    this.newImageBytes,
   });
 }
 
@@ -45,6 +55,7 @@ Future<InventoryEditResult?> showInventoryEditDialog(
   required String equipmentName,
   required int initialQuantity,
   required String initialStorage,
+  String initialCoverImagePath = '',
 }) {
   return showDialog<InventoryEditResult>(
     context: context,
@@ -54,22 +65,25 @@ Future<InventoryEditResult?> showInventoryEditDialog(
       equipmentName: equipmentName,
       initialQuantity: initialQuantity,
       initialStorage: initialStorage,
+      initialCoverImagePath: initialCoverImagePath,
     ),
   );
 }
 
-/// Internal two-step state: edit form → confirmation diff.
-enum _StepMode { edit, confirm }
+/// Internal dialog steps: edit form → save-confirm diff OR remove-confirm.
+enum _StepMode { edit, confirm, removeConfirm }
 
 class _InventoryEditDialog extends StatefulWidget {
   final String equipmentName;
   final int initialQuantity;
   final String initialStorage;
+  final String initialCoverImagePath;
 
   const _InventoryEditDialog({
     required this.equipmentName,
     required this.initialQuantity,
     required this.initialStorage,
+    required this.initialCoverImagePath,
   });
 
   @override
@@ -84,6 +98,13 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
 
   _StepMode _mode = _StepMode.edit;
 
+  /// In-memory bytes of a replacement cover image the user picked or
+  /// pasted. Null means "keep the existing image". The raw bytes are
+  /// forwarded to the caller which handles AVIF conversion + upload.
+  Uint8List? _imageBytes;
+
+  final ImagePicker _imagePicker = ImagePicker();
+
   @override
   void initState() {
     super.initState();
@@ -97,6 +118,39 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
     _storageCtrl.dispose();
     super.dispose();
   }
+
+  // ── Image mutators ────────────────────────────────────────────────────
+
+  Future<void> _pickImage() async {
+    final XFile? picked =
+        await _imagePicker.pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    if (!mounted) return;
+    setState(() => _imageBytes = bytes);
+  }
+
+  Future<void> _pasteImage() async {
+    try {
+      final images = await clipboard.getClipboardImages();
+      if (images.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No image found in clipboard')),
+        );
+        return;
+      }
+      if (!mounted) return;
+      setState(() => _imageBytes = images.first);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Clipboard paste failed: $e')),
+      );
+    }
+  }
+
+  void _resetImage() => setState(() => _imageBytes = null);
 
   // ── Step transitions ──────────────────────────────────────────────────
 
@@ -124,19 +178,38 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
 
     final bool changed =
         (currentQty != widget.initialQuantity) ||
-        (currentStorage != widget.initialStorage);
+        (currentStorage != widget.initialStorage) ||
+        (_imageBytes != null);
 
     Navigator.of(context).pop(
       InventoryEditResult(
         quantity: currentQty,
         storage: currentStorage,
         changed: changed,
+        newImageBytes: _imageBytes,
       ),
     );
   }
 
   /// Handler for the "Back" button in confirm mode — returns to edit.
   void _onBackToEdit() => setState(() => _mode = _StepMode.edit);
+
+  /// Transition to the remove-confirm step where the user must explicitly
+  /// acknowledge that the equipment guide will be wiped alongside the
+  /// inventory entry.
+  void _onRemovePressed() => setState(() => _mode = _StepMode.removeConfirm);
+
+  /// Final confirmation for removal — pops with `removed: true`.
+  void _onRemoveConfirmed() {
+    Navigator.of(context).pop(
+      InventoryEditResult(
+        quantity: widget.initialQuantity,
+        storage: widget.initialStorage,
+        changed: false,
+        removed: true,
+      ),
+    );
+  }
 
   // ── Field mutators ────────────────────────────────────────────────────
 
@@ -184,12 +257,13 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Header — swaps between "Edit Inventory" and "Confirm
-                // Changes" depending on the current step.
+                // Header — one label per step.
                 Text(
-                  _mode == _StepMode.edit
-                      ? 'Edit Inventory'
-                      : 'Confirm Changes',
+                  switch (_mode) {
+                    _StepMode.edit => 'Edit Inventory',
+                    _StepMode.confirm => 'Confirm Changes',
+                    _StepMode.removeConfirm => 'Remove Item',
+                  },
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -208,20 +282,34 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
                 ),
                 const SizedBox(height: 24),
 
-                // Body — either the edit form or the confirmation diff.
-                if (_mode == _StepMode.edit)
-                  _buildEditForm()
-                else
-                  _buildConfirmView(),
+                // Body — one view per step.
+                switch (_mode) {
+                  _StepMode.edit => _buildEditForm(),
+                  _StepMode.confirm => _buildConfirmView(),
+                  _StepMode.removeConfirm => _buildRemoveConfirmView(),
+                },
 
                 const SizedBox(height: 24),
 
-                // Action bar. Cancel is always present; the primary
-                // button(s) depend on the current step. Using a spread
-                // in the else branch avoids an extra nested Row.
+                // Action bar. In edit mode, a red "Remove Item" button
+                // sits on the bottom-left; the Cancel / primary button
+                // group is right-aligned via a Spacer. The other two
+                // modes keep the simpler right-aligned layout.
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
+                    if (_mode == _StepMode.edit)
+                      ElevatedButton(
+                        onPressed: _onRemovePressed,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Remove Item'),
+                      ),
+                    const Spacer(),
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
                       child: Text(
@@ -246,7 +334,7 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
                         ),
                         child: const Text('Review'),
                       )
-                    else ...[
+                    else if (_mode == _StepMode.confirm) ...[
                       TextButton(
                         onPressed: _onBackToEdit,
                         child: const Text(
@@ -266,6 +354,26 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
                         ),
                         child: const Text('Save'),
                       ),
+                    ] else ...[
+                      TextButton(
+                        onPressed: _onBackToEdit,
+                        child: const Text(
+                          'Back',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: _onRemoveConfirmed,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Remove'),
+                      ),
                     ],
                   ],
                 ),
@@ -277,12 +385,18 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
     );
   }
 
-  /// Edit-mode body: quantity stepper + storage text field, each with a
-  /// "reset to initial value" button for quick undo.
+  /// Edit-mode body: cover image preview with upload/paste controls,
+  /// quantity stepper, storage text field, and a destructive Remove
+  /// Item button at the bottom. Each editable field has a reset-to-
+  /// initial helper.
   Widget _buildEditForm() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // ── Cover image preview + controls ──
+        _buildImageSection(),
+        const SizedBox(height: 16),
+
         // ── Quantity label + reset ──
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -395,6 +509,131 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
     );
   }
 
+  /// Cover-image controls. Mirrors the inventory create dialog: a
+  /// glass-bordered 180px container that shows upload/paste buttons
+  /// when empty and a fit-to-height preview (with a close button) once
+  /// an image is staged.
+  Widget _buildImageSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Cover Image',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            height: 180,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.3),
+              ),
+            ),
+            child: _imageBytes != null
+                ? Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // Fit-to-height so the full image is visible
+                      // vertically, matching the create dialog.
+                      Center(
+                        child: Image.memory(_imageBytes!,
+                            fit: BoxFit.fitHeight),
+                      ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: GestureDetector(
+                          onTap: _resetImage,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.7),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.close,
+                                color: Colors.white, size: 18),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Row(
+                    children: [
+                      Expanded(
+                        child: _ImagePickerAction(
+                          icon: Icons.add_photo_alternate,
+                          label: 'Upload from\ndevice',
+                          onTap: _pickImage,
+                        ),
+                      ),
+                      Container(
+                        width: 1,
+                        color: Colors.white.withValues(alpha: 0.2),
+                      ),
+                      Expanded(
+                        child: _ImagePickerAction(
+                          icon: Icons.content_paste,
+                          label: 'Paste from\nclipboard',
+                          onTap: _pasteImage,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Destructive confirmation step explaining that the equipment guide
+  /// will also be deleted.
+  Widget _buildRemoveConfirmView() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.redAccent.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.redAccent.withValues(alpha: 0.4),
+        ),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
+              SizedBox(width: 8),
+              Text(
+                'Remove this item?',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12),
+          Text(
+            'Any equipment guide created for this item will be removed '
+            'as well, including every cover and section image. This '
+            'cannot be undone.',
+            style: TextStyle(color: Colors.white70, height: 1.4),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Confirm-mode body: renders a list of diff rows for any field that
   /// actually changed. If nothing differs we show a "No changes" hint so
   /// the user can still step back or cancel cleanly.
@@ -423,6 +662,26 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
               ? '(none)'
               : widget.initialStorage,
           newValue: currentStorage.isEmpty ? '(none)' : currentStorage,
+        ),
+      );
+    }
+
+    if (_imageBytes != null) {
+      changes.add(
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            children: [
+              Icon(Icons.image, size: 16, color: Colors.greenAccent),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Cover image will be replaced.',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -480,6 +739,46 @@ class _CircleIconButton extends StatelessWidget {
             border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
           ),
           child: Icon(icon, color: Colors.white),
+        ),
+      ),
+    );
+  }
+}
+
+/// Half of the cover-image glass container: icon + two-line label,
+/// tappable. Mirrors the widget with the same name in the inventory
+/// create dialog so the two flows look identical.
+class _ImagePickerAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _ImagePickerAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon,
+                color: Colors.white.withValues(alpha: 0.7), size: 36),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.7),
+                fontSize: 13,
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -290,8 +290,12 @@ class GitHubRepoClient {
   /// Commit multiple file changes (writes + deletes) in a single Git
   /// commit. This is atomic — callers see either all changes or none.
   ///
-  /// Workflow: GET ref → GET commit (for base tree) → POST blobs
-  /// (parallel) → POST tree (with base_tree) → POST commit → PATCH ref.
+  /// Workflow: POST blobs (parallel) → GET ref → GET commit (base tree)
+  /// → POST tree (with base_tree) → POST commit → PATCH ref.
+  ///
+  /// Retries on "not a fast forward" 422s (the branch head moved
+  /// between our ref read and ref patch). Blobs are reused across
+  /// retries since they're content-addressed.
   ///
   /// Returns the new commit SHA.
   Future<String> commitBatch(
@@ -308,6 +312,50 @@ class GitHubRepoClient {
       'Content-Type': 'application/json',
     };
 
+    // Create blobs once — they're content-addressed, so GitHub
+    // dedupes them even if we retry the tree/commit/ref steps.
+    final writes = changes.where((c) => !c.delete).toList();
+    final blobShas = await Future.wait(
+      writes.map((c) => _createBlob(c, jsonHeaders)),
+    );
+    final blobShaByPath = <String, String>{
+      for (int i = 0; i < writes.length; i++) writes[i].path: blobShas[i],
+    };
+
+    const int maxAttempts = 4;
+    for (int attempt = 1;; attempt++) {
+      try {
+        return await _commitTreeAndRef(
+          changes: changes,
+          blobShaByPath: blobShaByPath,
+          message: message,
+          headers: headers,
+          jsonHeaders: jsonHeaders,
+          gitApi: gitApi,
+        );
+      } catch (e) {
+        final msg = e.toString();
+        final bool isFastForward =
+            msg.contains('not a fast forward') ||
+                msg.contains('Update is not a fast forward');
+        if (!isFastForward || attempt >= maxAttempts) rethrow;
+        // Back off briefly before re-reading the ref.
+        await Future.delayed(Duration(milliseconds: 200 * attempt));
+      }
+    }
+  }
+
+  /// Inner helper for [commitBatch]: reads the current ref and base
+  /// tree, builds a new tree/commit from the pre-created blobs, and
+  /// fast-forwards the branch ref.
+  Future<String> _commitTreeAndRef({
+    required List<BatchFileChange> changes,
+    required Map<String, String> blobShaByPath,
+    required String message,
+    required Map<String, String> headers,
+    required Map<String, String> jsonHeaders,
+    required String gitApi,
+  }) async {
     // 1. Resolve the current branch head.
     final refResp = await http.get(
       Uri.parse('$gitApi/ref/heads/${admin.branch}'),
@@ -336,16 +384,7 @@ class GitHubRepoClient {
     final baseTreeSha =
         (commitBody['tree'] as Map<String, dynamic>)['sha'] as String;
 
-    // 3. Create a blob for every non-delete change, in parallel.
-    final writes = changes.where((c) => !c.delete).toList();
-    final blobShas = await Future.wait(
-      writes.map((c) => _createBlob(c, jsonHeaders)),
-    );
-    final blobShaByPath = <String, String>{
-      for (int i = 0; i < writes.length; i++) writes[i].path: blobShas[i],
-    };
-
-    // 4. Build the tree. For deletes, omit the sha (null) so the path
+    // 3. Build the tree. For deletes, omit the sha (null) so the path
     // is removed from the new tree.
     final treeEntries = <Map<String, dynamic>>[];
     for (final change in changes) {
@@ -373,7 +412,7 @@ class GitHubRepoClient {
     final newTreeSha =
         (jsonDecode(treeResp.body) as Map<String, dynamic>)['sha'] as String;
 
-    // 5. Create the commit.
+    // 4. Create the commit.
     final newCommitResp = await http.post(
       Uri.parse('$gitApi/commits'),
       headers: jsonHeaders,
@@ -393,7 +432,7 @@ class GitHubRepoClient {
         (jsonDecode(newCommitResp.body) as Map<String, dynamic>)['sha']
             as String;
 
-    // 6. Fast-forward the branch ref.
+    // 5. Fast-forward the branch ref.
     final updateResp = await http.patch(
       Uri.parse('$gitApi/refs/heads/${admin.branch}'),
       headers: jsonHeaders,

@@ -14,7 +14,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../services/avif_converter.dart' as avif;
+import '../services/clipboard_image_service.dart' as clipboard;
 import '../services/data_repository.dart';
+import 'guide_creator_page.dart' show GuideType;
 
 // ══════════════════════════════════════════════════════════════════
 // Constants
@@ -154,6 +157,18 @@ class _InventoryCreatePageState extends State<_InventoryCreatePage> {
     setState(() => _imageBytes = bytes);
   }
 
+  Future<void> _pasteImage() async {
+    final images = await clipboard.getClipboardImages();
+    if (!mounted) return;
+    if (images.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No image found on clipboard')),
+      );
+      return;
+    }
+    setState(() => _imageBytes = images.first);
+  }
+
   bool _validate() {
     final missing = <String>[];
     if (_nameCtl.text.trim().isEmpty) missing.add('Name');
@@ -179,14 +194,28 @@ class _InventoryCreatePageState extends State<_InventoryCreatePage> {
     setState(() => _submitting = true);
 
     try {
+      final name = _nameCtl.text.trim();
+      // Convert the image to AVIF (falls back to WebP) and build its
+      // repo path. The conversion happens here (UI layer) because
+      // avif_converter is web-only; the repository stays platform-neutral.
+      final converted = await avif.convertToAvif(_imageBytes!);
+      final id = DataRepository.generateId(name);
+      final repoPath = DataRepository.coverImagePath(
+        GuideType.equipment,
+        id,
+        0,
+        converted.ext,
+      );
+
       await DataRepository().createEquipment(
-        name: _nameCtl.text.trim(),
+        name: name,
         brand: _brandCtl.text.trim(),
         category: _categoryCtl.text.trim(),
         quantity: int.tryParse(_qtyCtl.text) ?? 1,
         storage: _storageCtl.text.trim().isEmpty
             ? null
             : _storageCtl.text.trim(),
+        coverImage: (bytes: converted.bytes, repoPath: repoPath),
       );
 
       if (!mounted) return;
@@ -344,62 +373,72 @@ class _InventoryCreatePageState extends State<_InventoryCreatePage> {
                               fontSize: 14,
                               fontWeight: FontWeight.w600)),
                       const SizedBox(height: 8),
-                      GestureDetector(
-                        onTap: _pickImage,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            height: 180,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.3),
-                              ),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          height: 180,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.3),
                             ),
-                            child: _imageBytes != null
-                                ? Stack(
-                                    fit: StackFit.expand,
-                                    children: [
-                                      Image.memory(_imageBytes!,
-                                          fit: BoxFit.cover),
-                                      Positioned(
-                                        top: 8,
-                                        right: 8,
-                                        child: GestureDetector(
-                                          onTap: () => setState(
-                                              () => _imageBytes = null),
-                                          child: Container(
-                                            padding: const EdgeInsets.all(4),
-                                            decoration: BoxDecoration(
-                                              color: Colors.black
-                                                  .withValues(alpha: 0.7),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: const Icon(Icons.close,
-                                                color: Colors.white,
-                                                size: 18),
+                          ),
+                          child: _imageBytes != null
+                              ? Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    // Fit-to-height so the full image is
+                                    // visible vertically even if it means
+                                    // some horizontal empty space.
+                                    Center(
+                                      child: Image.memory(_imageBytes!,
+                                          fit: BoxFit.fitHeight),
+                                    ),
+                                    Positioned(
+                                      top: 8,
+                                      right: 8,
+                                      child: GestureDetector(
+                                        onTap: () => setState(
+                                            () => _imageBytes = null),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black
+                                                .withValues(alpha: 0.7),
+                                            shape: BoxShape.circle,
                                           ),
+                                          child: const Icon(Icons.close,
+                                              color: Colors.white,
+                                              size: 18),
                                         ),
                                       ),
-                                    ],
-                                  )
-                                : Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.add_photo_alternate,
-                                          color: Colors.white
-                                              .withValues(alpha: 0.7),
-                                          size: 40),
-                                      const SizedBox(height: 8),
-                                      Text('Tap to upload',
-                                          style: TextStyle(
-                                              color: Colors.white
-                                                  .withValues(alpha: 0.7),
-                                              fontSize: 14)),
-                                    ],
-                                  ),
-                          ),
+                                    ),
+                                  ],
+                                )
+                              : Row(
+                                  children: [
+                                    Expanded(
+                                      child: _ImagePickerAction(
+                                        icon: Icons.add_photo_alternate,
+                                        label: 'Upload from\ndevice',
+                                        onTap: _pickImage,
+                                      ),
+                                    ),
+                                    Container(
+                                      width: 1,
+                                      color: Colors.white
+                                          .withValues(alpha: 0.2),
+                                    ),
+                                    Expanded(
+                                      child: _ImagePickerAction(
+                                        icon: Icons.content_paste,
+                                        label: 'Paste from\nclipboard',
+                                        onTap: _pasteImage,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -628,6 +667,43 @@ class _InventoryCreatePageState extends State<_InventoryCreatePage> {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: _kBrandBlue),
+      ),
+    );
+  }
+}
+
+class _ImagePickerAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _ImagePickerAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon,
+                color: Colors.white.withValues(alpha: 0.7), size: 36),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.7),
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

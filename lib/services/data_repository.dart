@@ -672,86 +672,238 @@ class DataRepository {
   // ══════════════════════════════════════════════════════════════
 
   /// Create a new equipment entry in equipment.yaml with `no_guide: true`
-  /// and the given inventory fields.
+  /// and the given inventory fields. When [coverImage] is supplied, the
+  /// image blob and the YAML update are persisted in a single atomic
+  /// commit via the Git Data API.
   Future<void> createEquipment({
     required String name,
     required String brand,
     required String category,
     required int quantity,
     String? storage,
+    ({Uint8List bytes, String repoPath})? coverImage,
   }) async {
     final client = _guidesClient;
-    if (client == null) throw StateError('clients not ready');
+    final repoClient = _repoClient;
+    if (client == null || repoClient == null) {
+      throw StateError('clients not ready');
+    }
     final String token = _admin?.accessToken ?? '';
     if (token.isEmpty) throw StateError('missing access token');
 
     // Generate a slug-style ID from the name.
-    final String id = name
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9\s]'), '')
-        .trim()
-        .replaceAll(RegExp(r'\s+'), '_');
+    final String id = generateId(name);
 
     if (_equipment.containsKey(id)) {
       throw StateError('Equipment with id "$id" already exists');
     }
 
+    _equipmentTimer?.cancel();
     _equipmentWriteEpoch++;
 
-    // Read current equipment.yaml via API for fresh SHA.
-    final result = await client.readEquipmentViaApi(token);
-    if (result == null) throw StateError('failed to read equipment.yaml');
+    try {
+      // Read current equipment.yaml via API for fresh SHA.
+      final result = await client.readEquipmentViaApi(token);
+      if (result == null) throw StateError('failed to read equipment.yaml');
 
-    _equipmentSha = result.sha;
+      _equipmentSha = result.sha;
 
-    // Build the new equipment YAML document.
-    final newDoc = StringBuffer();
-    newDoc.writeln('---');
-    newDoc.writeln('id: $id');
-    newDoc.writeln('name: ${_yamlQuote(name)}');
-    newDoc.writeln('category: ${_yamlQuote(category)}');
-    newDoc.writeln('brand: ${_yamlQuote(brand)}');
-    newDoc.writeln('coverImages: []');
-    newDoc.writeln('description: ""');
-    newDoc.writeln('sections: []');
-    newDoc.writeln('related: []');
-    newDoc.writeln('quantity: $quantity');
-    if (storage != null && storage.isNotEmpty) {
-      newDoc.writeln('storage: ${_yamlQuote(storage)}');
+      // Build the new equipment YAML document.
+      final coverPaths = coverImage != null ? [coverImage.repoPath] : <String>[];
+      final newDoc = StringBuffer();
+      newDoc.writeln('id: $id');
+      newDoc.writeln('name: ${_yamlQuote(name)}');
+      newDoc.writeln('category: ${_yamlQuote(category)}');
+      newDoc.writeln('brand: ${_yamlQuote(brand)}');
+      if (coverPaths.isEmpty) {
+        newDoc.writeln('coverImages: []');
+      } else {
+        newDoc.writeln('coverImages:');
+        for (final p in coverPaths) {
+          newDoc.writeln('  - $p');
+        }
+      }
+      newDoc.writeln('description: ""');
+      newDoc.writeln('sections: []');
+      newDoc.writeln('related: []');
+      newDoc.writeln('quantity: $quantity');
+      if (storage != null && storage.isNotEmpty) {
+        newDoc.writeln('storage: ${_yamlQuote(storage)}');
+      }
+      newDoc.writeln('no_guide: true');
+
+      final updatedYaml = _appendDocument(result.content, newDoc.toString());
+
+      if (coverImage != null) {
+        // Atomic commit: image blob + YAML update.
+        await repoClient.commitBatch(
+          [
+            BatchFileChange.writeBinary(
+              path: coverImage.repoPath,
+              bytes: coverImage.bytes,
+            ),
+            BatchFileChange.write(
+              path: _admin!.equipmentFile,
+              content: updatedYaml,
+            ),
+          ],
+          token: token,
+          message: 'Create equipment "$name" via PixelVault',
+        );
+        // commitBatch rewrites the file via the Git Data API, so our
+        // cached equipment.yaml SHA is now stale. Clear it so the next
+        // write re-reads a fresh one.
+        _equipmentSha = null;
+      } else {
+        final newSha = await client.writeEquipmentYaml(
+          updatedYaml,
+          sha: _equipmentSha!,
+          token: token,
+          message: 'Create equipment "$name" via PixelVault',
+        );
+        _equipmentSha = newSha;
+      }
+
+      // Update local state.
+      final eq = Equipment(
+        id: id,
+        name: name,
+        category: category,
+        brand: brand,
+        coverImages: coverPaths,
+        description: '',
+        sections: [],
+        related: [],
+        storage: storage,
+        quantity: quantity,
+        noGuide: true,
+      );
+      _equipment[id] = eq;
+      overlayEpoch.value++;
+    } finally {
+      _startEquipmentPolling();
     }
-    newDoc.writeln('no_guide: true');
+  }
 
-    final updatedYaml = result.content.trimRight().isEmpty
-        ? newDoc.toString()
-        : '${result.content.trimRight()}\n${newDoc.toString()}';
+  /// Delete an equipment item entirely: removes its document from
+  /// equipment.yaml AND deletes every image it referenced (cover +
+  /// section images). Atomic via a single Git commit.
+  Future<void> deleteEquipment(String id) async {
+    final client = _guidesClient;
+    final repoClient = _repoClient;
+    if (client == null || repoClient == null) {
+      throw StateError('clients not ready');
+    }
+    final String token = _admin?.accessToken ?? '';
+    if (token.isEmpty) throw StateError('missing access token');
 
-    // Write back.
-    final newSha = await client.writeEquipmentYaml(
-      updatedYaml,
-      sha: _equipmentSha!,
-      token: token,
-      message: 'Create equipment "$name" via PixelVault',
-    );
-    _equipmentSha = newSha;
-    // Keep the existing ETag — optimistic local state below is the
-    // source of truth until the CDN's raw view catches up.
+    final eq = _equipment[id];
+    if (eq == null) throw StateError('equipment "$id" not found');
 
-    // Update local state.
-    final eq = Equipment(
-      id: id,
-      name: name,
-      category: category,
-      brand: brand,
-      coverImages: [],
-      description: '',
-      sections: [],
-      related: [],
-      storage: storage,
-      quantity: quantity,
-      noGuide: true,
-    );
-    _equipment[id] = eq;
-    overlayEpoch.value++;
+    _equipmentTimer?.cancel();
+    _equipmentWriteEpoch++;
+
+    try {
+      final result = await client.readEquipmentViaApi(token);
+      if (result == null) throw StateError('failed to read equipment.yaml');
+
+      final updatedYaml = _removeDocumentById(result.content, id);
+
+      // Collect image paths from local model (guide images included).
+      final imagePaths = <String>{
+        ...eq.coverImages,
+        for (final sec in eq.sections) ...sec.images,
+      };
+
+      final changes = <BatchFileChange>[
+        BatchFileChange.write(
+          path: _admin!.equipmentFile,
+          content: updatedYaml,
+        ),
+        for (final p in imagePaths) BatchFileChange.delete(path: p),
+      ];
+
+      await repoClient.commitBatch(
+        changes,
+        token: token,
+        message: 'Delete equipment "${eq.name}" via PixelVault',
+      );
+      _equipmentSha = null;
+
+      _equipment.remove(id);
+      overlayEpoch.value++;
+    } finally {
+      _startEquipmentPolling();
+    }
+  }
+
+  /// Replace the cover image on an existing equipment item. Deletes any
+  /// previous cover images, uploads the new one, and rewrites the YAML
+  /// entry — all in a single atomic commit.
+  Future<void> replaceEquipmentCoverImage(
+    String id, {
+    required Uint8List bytes,
+    required String repoPath,
+  }) async {
+    final client = _guidesClient;
+    final repoClient = _repoClient;
+    if (client == null || repoClient == null) {
+      throw StateError('clients not ready');
+    }
+    final String token = _admin?.accessToken ?? '';
+    if (token.isEmpty) throw StateError('missing access token');
+
+    final eq = _equipment[id];
+    if (eq == null) throw StateError('equipment "$id" not found');
+
+    _equipmentTimer?.cancel();
+    _equipmentWriteEpoch++;
+
+    try {
+      final result = await client.readEquipmentViaApi(token);
+      if (result == null) throw StateError('failed to read equipment.yaml');
+
+      final updatedYaml = _replaceCoverImagesInDoc(
+        result.content,
+        id,
+        [repoPath],
+      );
+
+      final oldCovers = eq.coverImages.where((p) => p != repoPath).toList();
+
+      final changes = <BatchFileChange>[
+        for (final p in oldCovers) BatchFileChange.delete(path: p),
+        BatchFileChange.writeBinary(path: repoPath, bytes: bytes),
+        BatchFileChange.write(
+          path: _admin!.equipmentFile,
+          content: updatedYaml,
+        ),
+      ];
+
+      await repoClient.commitBatch(
+        changes,
+        token: token,
+        message: 'Update cover image for "${eq.name}" via PixelVault',
+      );
+      _equipmentSha = null;
+
+      _equipment[id] = Equipment(
+        id: eq.id,
+        name: eq.name,
+        category: eq.category,
+        brand: eq.brand,
+        coverImages: [repoPath],
+        description: eq.description,
+        sections: eq.sections,
+        related: eq.related,
+        storage: eq.storage,
+        quantity: eq.quantity,
+        noGuide: eq.noGuide,
+      );
+      overlayEpoch.value++;
+    } finally {
+      _startEquipmentPolling();
+    }
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -1322,6 +1474,60 @@ class DataRepository {
 
       if (!first) result.write('---\n');
       result.writeln(trimmed);
+      first = false;
+    }
+    return result.toString();
+  }
+
+  /// Replace the `coverImages:` block inside a specific document (by id)
+  /// within a multi-document YAML string. Preserves every other field.
+  String _replaceCoverImagesInDoc(
+    String yamlContent,
+    String equipmentId,
+    List<String> newPaths,
+  ) {
+    final docs = yamlContent.split(RegExp(r'^---\s*$', multiLine: true));
+    final result = StringBuffer();
+    bool first = true;
+
+    for (final doc in docs) {
+      final trimmed = doc.trim();
+      if (trimmed.isEmpty) continue;
+
+      final parsed = loadYaml(trimmed);
+      if (parsed is YamlMap && parsed['id'] == equipmentId) {
+        // Rewrite the coverImages block line-by-line so unrelated fields
+        // stay untouched (block scalars, indentation, etc.).
+        final lines = trimmed.split('\n');
+        final out = <String>[];
+        int i = 0;
+        while (i < lines.length) {
+          final line = lines[i];
+          if (RegExp(r'^coverImages:').hasMatch(line)) {
+            if (newPaths.isEmpty) {
+              out.add('coverImages: []');
+            } else {
+              out.add('coverImages:');
+              for (final p in newPaths) {
+                out.add('  - $p');
+              }
+            }
+            i++;
+            // Skip any existing indented list items from the old block.
+            while (i < lines.length && RegExp(r'^\s+-').hasMatch(lines[i])) {
+              i++;
+            }
+            continue;
+          }
+          out.add(line);
+          i++;
+        }
+        if (!first) result.write('---\n');
+        result.writeln(out.join('\n'));
+      } else {
+        if (!first) result.write('---\n');
+        result.writeln(trimmed);
+      }
       first = false;
     }
     return result.toString();

@@ -27,8 +27,10 @@ import '../widgets/smart_image.dart';
 import 'package:go_router/go_router.dart';
 
 import '../models/equipment_model.dart'; // Equipment
+import '../services/avif_converter.dart' as avif;
 import '../services/data_repository.dart';
 import '../widgets/admin_auth.dart';
+import 'guide_creator_page.dart' show GuideType;
 import 'inventory_create_dialog.dart';
 import 'inventory_edit_dialog.dart';
 
@@ -236,25 +238,86 @@ class _InventoryListPageState extends State<InventoryListPage> {
 
   /// Open the edit dialog for [item] and persist the result.
   ///
-  /// Only sends the fields that actually changed to the repository so the
-  /// gist patch stays minimal.
+  /// Three possible outcomes:
+  ///   • `removed: true`   — delete the equipment entirely.
+  ///   • `newImageBytes`   — replace the cover image (AVIF-converted +
+  ///                         uploaded, YAML patched in a single commit).
+  ///   • inventory patch   — quantity / storage diff only.
   Future<void> _editItem(Equipment item) async {
+    final String initialCover =
+        item.coverImages.isNotEmpty ? item.coverImages.first : '';
     final InventoryEditResult? res = await showInventoryEditDialog(
       context,
       equipmentName: item.name,
       initialQuantity: item.quantity ?? 0,
       initialStorage: item.storage ?? '',
+      initialCoverImagePath: initialCover,
     );
-    if (!mounted || res == null || !res.changed) return;
+    if (!mounted || res == null) return;
+
+    // ── Removal path — deletes YAML entry + every image atomically.
+    if (res.removed) {
+      try {
+        await DataRepository().deleteEquipment(item.id);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('"${item.name}" removed.')),
+        );
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to remove: $e')),
+        );
+      }
+      return;
+    }
+
+    if (!res.changed) return;
+
+    // ── Image replacement — AVIF convert, upload, rewrite YAML.
+    if (res.newImageBytes != null) {
+      try {
+        final converted = await avif.convertToAvif(res.newImageBytes!);
+        // Stamp the filename with an epoch so the URL changes on every
+        // replacement. Without this the path (e.g. {id}_cover_1.avif)
+        // stays identical, and raw.githubusercontent.com + browser
+        // caches keep serving the old bytes even after YAML updates.
+        final int stamp = DateTime.now().millisecondsSinceEpoch;
+        final String basePath = DataRepository.coverImagePath(
+          GuideType.equipment,
+          item.id,
+          0,
+          converted.ext,
+        );
+        final String repoPath = basePath.replaceFirst(
+          RegExp(r'\.([^.]+)$'),
+          '_$stamp.${converted.ext}',
+        );
+        await DataRepository().replaceEquipmentCoverImage(
+          item.id,
+          bytes: converted.bytes,
+          repoPath: repoPath,
+        );
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to replace image: $e')),
+        );
+        return;
+      }
+    }
 
     final int? newQty = (res.quantity != item.quantity) ? res.quantity : null;
-    final String? newStorage = (res.storage != item.storage) ? res.storage : null;
+    final String? newStorage =
+        (res.storage != item.storage) ? res.storage : null;
 
-    // Shouldn't happen given res.changed, but guard anyway so we never
-    // fire a no-op network request.
-    if (newQty == null && newStorage == null) return;
-
-    await _onSavePatch(item.id, newQty, newStorage);
+    if (newQty != null || newStorage != null) {
+      await _onSavePatch(item.id, newQty, newStorage);
+    } else if (res.newImageBytes != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cover image updated.')),
+      );
+    }
   }
 
   // ── Build ─────────────────────────────────────────────────────────────
