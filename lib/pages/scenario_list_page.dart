@@ -25,6 +25,26 @@ class ScenarioListPage extends StatefulWidget {
 }
 
 class _ScenarioListPageState extends State<ScenarioListPage> {
+  @override
+  void initState() {
+    super.initState();
+    // Rebuild when a scenario is created / edited / removed in any
+    // session — the repo refreshes its cache via background polling
+    // and ticks [guidesEpoch] to notify listeners.
+    DataRepository().guidesEpoch.addListener(_onGuidesChanged);
+  }
+
+  @override
+  void dispose() {
+    DataRepository().guidesEpoch.removeListener(_onGuidesChanged);
+    super.dispose();
+  }
+
+  void _onGuidesChanged() {
+    if (!mounted) return;
+    setState(() {}); // build() re-reads DataRepository().getAllScenarios()
+  }
+
   Future<void> _handleAdminToggle() async {
     final isAdmin = adminNotifier.value;
     if (isAdmin) {

@@ -45,17 +45,25 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
   final Set<String> _selectedBrands = {};
 
   // ── Source data ─────────────────────────────────────────────────────
-  // `_allItems`, `_allCategories`, and `_allBrands` are immutable for the
-  // life of this page; `_filteredItems` is recomputed on every search /
-  // filter change via [_updateFilters].
-  late final List<Equipment> _allItems;
+  // `_allItems` is refetched from the repo whenever [overlayEpoch]
+  // ticks, so a guide created / edited / removed in another session
+  // appears without a reload. The category / brand option lists are
+  // rebuilt at the same time.
+  late List<Equipment> _allItems;
   late List<Equipment> _filteredItems;
-  late final List<String> _allCategories;
-  late final List<String> _allBrands;
+  late List<String> _allCategories;
+  late List<String> _allBrands;
 
   @override
   void initState() {
     super.initState();
+    _loadFromRepo();
+    _searchController.addListener(_updateFilters);
+    DataRepository().overlayEpoch.addListener(_onOverlayChanged);
+  }
+
+  /// (Re)populate the source list + filter option lists from the repo.
+  void _loadFromRepo() {
     _allItems = DataRepository().getAllEquipment();
 
     // Seed `_filteredItems` with only guides that actually have content —
@@ -64,16 +72,23 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
     _filteredItems = _allItems.where(_hasContent).toList()
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
-    // Build the filter option lists. Alphabetical so the chip order is
-    // stable across sessions regardless of YAML load order.
+    // Alphabetical so the chip order is stable across sessions
+    // regardless of YAML load order.
     _allCategories = _allItems.map((e) => e.category).toSet().toList()..sort();
     _allBrands = _allItems.map((e) => e.brand).toSet().toList()..sort();
+  }
 
-    _searchController.addListener(_updateFilters);
+  /// Repository signalled an equipment change — refetch and re-apply
+  /// the current search/filter/sort so the grid reflects it immediately.
+  void _onOverlayChanged() {
+    if (!mounted) return;
+    _loadFromRepo();
+    _updateFilters();
   }
 
   @override
   void dispose() {
+    DataRepository().overlayEpoch.removeListener(_onOverlayChanged);
     _searchController.dispose();
     super.dispose();
   }

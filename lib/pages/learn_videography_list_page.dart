@@ -31,9 +31,10 @@ class _LearnVideographyListPageState extends State<LearnVideographyListPage> {
   /// Alphabetical sort direction. A→Z by default.
   bool _sortAsc = true;
 
-  // Source list + search-filtered view. `_all` is immutable for the
-  // life of this page; `_filtered` is recomputed on every search change.
-  late final List<VideographyGuide> _all;
+  // Source list + search-filtered view. `_all` is refetched whenever
+  // [DataRepository.guidesEpoch] ticks so a guide created in another
+  // tab appears without a reload.
+  late List<VideographyGuide> _all;
   late List<VideographyGuide> _filtered;
 
   @override
@@ -43,6 +44,7 @@ class _LearnVideographyListPageState extends State<LearnVideographyListPage> {
     _filtered = List.of(_all)
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     _searchCtrl.addListener(_onSearch);
+    DataRepository().guidesEpoch.addListener(_onGuidesChanged);
   }
 
   /// Case-insensitive `contains` filter on the guide name plus the
@@ -61,8 +63,17 @@ class _LearnVideographyListPageState extends State<LearnVideographyListPage> {
     });
   }
 
+  /// Refetch the source list when the repository signals a change and
+  /// re-run the current search/sort so the grid reflects it immediately.
+  void _onGuidesChanged() {
+    if (!mounted) return;
+    _all = DataRepository().getAllVideographyGuides();
+    _onSearch();
+  }
+
   @override
   void dispose() {
+    DataRepository().guidesEpoch.removeListener(_onGuidesChanged);
     _searchCtrl.dispose();
     super.dispose();
   }
