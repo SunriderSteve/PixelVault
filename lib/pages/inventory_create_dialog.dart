@@ -37,8 +37,10 @@ void showInventoryCreator(BuildContext context) {
     barrierColor: Colors.black87,
     transitionDuration: const Duration(milliseconds: 300),
     transitionBuilder: (ctx, a1, a2, child) => SlideTransition(
-      position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
-          .animate(CurvedAnimation(parent: a1, curve: Curves.easeOutCubic)),
+      position: Tween<Offset>(
+        begin: const Offset(0, 1),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(parent: a1, curve: Curves.easeOutCubic)),
       child: child,
     ),
     pageBuilder: (ctx, _, _) => const _InventoryCreatePage(),
@@ -83,18 +85,20 @@ class _InventoryCreatePageState extends State<_InventoryCreatePage> {
     super.initState();
 
     final allEquip = DataRepository().getAllEquipment();
-    _allBrands = allEquip
-        .map((e) => e.brand)
-        .where((b) => b.isNotEmpty && b != 'Unknown')
-        .toSet()
-        .toList()
-      ..sort();
-    _allCategories = allEquip
-        .map((e) => e.category)
-        .where((c) => c.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
+    _allBrands =
+        allEquip
+            .map((e) => e.brand)
+            .where((b) => b.isNotEmpty && b != 'Unknown')
+            .toSet()
+            .toList()
+          ..sort();
+    _allCategories =
+        allEquip
+            .map((e) => e.category)
+            .where((c) => c.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
 
     _nameFocus.addListener(() {
       if (!_nameFocus.hasFocus) _scanTitleForBrand();
@@ -343,8 +347,11 @@ class _InventoryCreatePageState extends State<_InventoryCreatePage> {
                             ),
                             child: const Row(
                               children: [
-                                Icon(Icons.info_outline,
-                                    color: Colors.white70, size: 20),
+                                Icon(
+                                  Icons.info_outline,
+                                  color: Colors.white70,
+                                  size: 20,
+                                ),
                                 SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
@@ -367,11 +374,14 @@ class _InventoryCreatePageState extends State<_InventoryCreatePage> {
                       const SizedBox(height: 24),
 
                       // ── Cover image ────────────────────────────────
-                      const Text('Cover Image *',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600)),
+                      const Text(
+                        'Cover Image *',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(16),
@@ -392,25 +402,30 @@ class _InventoryCreatePageState extends State<_InventoryCreatePage> {
                                     // visible vertically even if it means
                                     // some horizontal empty space.
                                     Center(
-                                      child: Image.memory(_imageBytes!,
-                                          fit: BoxFit.fitHeight),
+                                      child: Image.memory(
+                                        _imageBytes!,
+                                        fit: BoxFit.fitHeight,
+                                      ),
                                     ),
                                     Positioned(
                                       top: 8,
                                       right: 8,
                                       child: GestureDetector(
-                                        onTap: () => setState(
-                                            () => _imageBytes = null),
+                                        onTap: () =>
+                                            setState(() => _imageBytes = null),
                                         child: Container(
                                           padding: const EdgeInsets.all(4),
                                           decoration: BoxDecoration(
-                                            color: Colors.black
-                                                .withValues(alpha: 0.7),
+                                            color: Colors.black.withValues(
+                                              alpha: 0.7,
+                                            ),
                                             shape: BoxShape.circle,
                                           ),
-                                          child: const Icon(Icons.close,
-                                              color: Colors.white,
-                                              size: 18),
+                                          child: const Icon(
+                                            Icons.close,
+                                            color: Colors.white,
+                                            size: 18,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -427,8 +442,9 @@ class _InventoryCreatePageState extends State<_InventoryCreatePage> {
                                     ),
                                     Container(
                                       width: 1,
-                                      color: Colors.white
-                                          .withValues(alpha: 0.2),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.2,
+                                      ),
                                     ),
                                     Expanded(
                                       child: _ImagePickerAction(
@@ -461,8 +477,9 @@ class _InventoryCreatePageState extends State<_InventoryCreatePage> {
                         suggestions: _brandSuggestions,
                         onSelect: (v) {
                           _brandCtl.text = v;
-                          _brandCtl.selection =
-                              TextSelection.collapsed(offset: v.length);
+                          _brandCtl.selection = TextSelection.collapsed(
+                            offset: v.length,
+                          );
                           setState(() => _brandSuggestions = []);
                         },
                       ),
@@ -476,19 +493,23 @@ class _InventoryCreatePageState extends State<_InventoryCreatePage> {
                         suggestions: _categorySuggestions,
                         onSelect: (v) {
                           _categoryCtl.text = v;
-                          _categoryCtl.selection =
-                              TextSelection.collapsed(offset: v.length);
+                          _categoryCtl.selection = TextSelection.collapsed(
+                            offset: v.length,
+                          );
                           setState(() => _categorySuggestions = []);
                         },
                       ),
                       const SizedBox(height: 24),
 
                       // ── Quantity ────────────────────────────────────
-                      const Text('Quantity *',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600)),
+                      const Text(
+                        'Quantity *',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
@@ -496,7 +517,9 @@ class _InventoryCreatePageState extends State<_InventoryCreatePage> {
                           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
@@ -508,7 +531,9 @@ class _InventoryCreatePageState extends State<_InventoryCreatePage> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 _circleButton(
-                                    Icons.remove, () => _adjustQuantity(-1)),
+                                  Icons.remove,
+                                  () => _adjustQuantity(-1),
+                                ),
                                 const SizedBox(width: 24),
                                 SizedBox(
                                   width: 80,
@@ -532,7 +557,9 @@ class _InventoryCreatePageState extends State<_InventoryCreatePage> {
                                 ),
                                 const SizedBox(width: 24),
                                 _circleButton(
-                                    Icons.add, () => _adjustQuantity(1)),
+                                  Icons.add,
+                                  () => _adjustQuantity(1),
+                                ),
                               ],
                             ),
                           ),
@@ -544,8 +571,10 @@ class _InventoryCreatePageState extends State<_InventoryCreatePage> {
                       TextField(
                         controller: _storageCtl,
                         style: const TextStyle(color: Colors.white),
-                        decoration: _fieldDecoration('Storage Location',
-                            hint: 'e.g. A1, Shelf B (optional)'),
+                        decoration: _fieldDecoration(
+                          'Storage Location',
+                          hint: 'e.g. A, Tripod Shelf...',
+                        ),
                       ),
                       const SizedBox(height: 32),
 
@@ -555,13 +584,17 @@ class _InventoryCreatePageState extends State<_InventoryCreatePage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _kBrandBlue,
                           foregroundColor: Colors.white,
-                          disabledBackgroundColor:
-                              _kBrandBlue.withValues(alpha: 0.5),
+                          disabledBackgroundColor: _kBrandBlue.withValues(
+                            alpha: 0.5,
+                          ),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           textStyle: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         child: _submitting
                             ? const SizedBox(
@@ -630,8 +663,7 @@ class _InventoryCreatePageState extends State<_InventoryCreatePage> {
             decoration: BoxDecoration(
               color: Colors.grey.shade900,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.15)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
             ),
             child: ListView.builder(
               shrinkWrap: true,
@@ -640,8 +672,10 @@ class _InventoryCreatePageState extends State<_InventoryCreatePage> {
               itemBuilder: (ctx, i) {
                 return ListTile(
                   dense: true,
-                  title: Text(suggestions[i],
-                      style: const TextStyle(color: Colors.white)),
+                  title: Text(
+                    suggestions[i],
+                    style: const TextStyle(color: Colors.white),
+                  ),
                   onTap: () => onSelect(suggestions[i]),
                 );
               },
@@ -691,8 +725,7 @@ class _ImagePickerAction extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon,
-                color: Colors.white.withValues(alpha: 0.7), size: 36),
+            Icon(icon, color: Colors.white.withValues(alpha: 0.7), size: 36),
             const SizedBox(height: 8),
             Text(
               label,
@@ -716,8 +749,7 @@ class _CapitalizeFirstFormatter extends TextInputFormatter {
     TextEditingValue newValue,
   ) {
     if (newValue.text.isEmpty) return newValue;
-    final cap =
-        newValue.text[0].toUpperCase() + newValue.text.substring(1);
+    final cap = newValue.text[0].toUpperCase() + newValue.text.substring(1);
     if (cap == newValue.text) return newValue;
     return newValue.copyWith(text: cap);
   }

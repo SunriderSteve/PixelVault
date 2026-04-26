@@ -13,6 +13,7 @@
 // and closes with a success message.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -41,13 +42,36 @@ enum GuideType { equipment, videography, scenario }
 /// A single image in the cover or section image row. Starts with
 /// [loading] true while bytes are being read; once ready, [bytes]
 /// is non-null and [loading] is false.
+///
+/// [signature] is a cheap byte fingerprint used to dedupe images
+/// within a row (block adding the same image twice) and across rows
+/// (upload once, reference from many YAML positions). For asset
+/// entries it falls back to the asset path string.
 class _ImageEntry {
   Uint8List? bytes;
   String? assetPath; // Non-null for pre-existing cover images.
   bool loading;
-  _ImageEntry({this.assetPath, this.loading = false});
+  String? signature;
+  _ImageEntry({this.assetPath, this.loading = false, this.signature}) {
+    // Asset entries get their path as a stable signature up-front;
+    // new uploads compute theirs once bytes are read.
+    signature ??= assetPath;
+  }
   bool get isAsset => assetPath != null;
   bool get isReady => !loading && (bytes != null || isAsset);
+}
+
+/// Cheap fingerprint over an image's bytes — length + a sampled head
+/// and tail. Crypto-strength hashing is overkill for "did the user
+/// pick the same file twice"; this catches realistic duplicates in
+/// constant time and avoids pulling in the `crypto` package.
+String _imageSignature(Uint8List bytes) {
+  if (bytes.isEmpty) return 'empty';
+  final int len = bytes.length;
+  final int sampleSize = math.min(32, len);
+  final headSample = bytes.sublist(0, sampleSize);
+  final tailSample = bytes.sublist(len - sampleSize, len);
+  return '$len:${base64Encode(headSample)}:${base64Encode(tailSample)}';
 }
 
 /// Mutable state for one collapsible section in the creation form.
@@ -67,7 +91,8 @@ class _SectionData {
 class _ImageEntrySnapshot {
   final Uint8List? bytes;
   final String? assetPath;
-  const _ImageEntrySnapshot({this.bytes, this.assetPath});
+  final String? signature;
+  const _ImageEntrySnapshot({this.bytes, this.assetPath, this.signature});
 }
 
 /// Immutable snapshot of a section for undo/redo.
@@ -361,7 +386,11 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage>
       category: _categoryCtl.text,
       coverImages: _coverImages
           .map(
-            (e) => _ImageEntrySnapshot(bytes: e.bytes, assetPath: e.assetPath),
+            (e) => _ImageEntrySnapshot(
+              bytes: e.bytes,
+              assetPath: e.assetPath,
+              signature: e.signature,
+            ),
           )
           .toList(),
       sections: _sections
@@ -374,6 +403,7 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage>
                     (e) => _ImageEntrySnapshot(
                       bytes: e.bytes,
                       assetPath: e.assetPath,
+                      signature: e.signature,
                     ),
                   )
                   .toList(),
@@ -403,7 +433,8 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage>
     _coverImages.clear();
     for (final img in snap.coverImages) {
       _coverImages.add(
-        _ImageEntry(assetPath: img.assetPath)..bytes = img.bytes,
+        _ImageEntry(assetPath: img.assetPath, signature: img.signature)
+          ..bytes = img.bytes,
       );
     }
 
@@ -419,7 +450,10 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage>
       sd.titleCtl.addListener(_onTextChanged);
       sd.bodyCtl.addListener(_onTextChanged);
       for (final img in ss.images) {
-        sd.images.add(_ImageEntry(assetPath: img.assetPath)..bytes = img.bytes);
+        sd.images.add(
+          _ImageEntry(assetPath: img.assetPath, signature: img.signature)
+            ..bytes = img.bytes,
+        );
       }
       _sections.add(sd);
     }
@@ -448,24 +482,47 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage>
 
   // ── Image helpers ──────────────────────────────────────────────
 
+  /// Set of in-row image signatures, used for dedup. Resolves null
+  /// signatures (stray entries that haven't computed one yet) so the
+  /// caller doesn't need to filter.
+  Set<String> _signaturesIn(List<_ImageEntry> row) {
+    return {for (final e in row) if (e.signature != null) e.signature!};
+  }
+
   Future<void> _pickImages(List<_ImageEntry> target) async {
     final files = await _imagePicker.pickMultiImage();
     if (files.isEmpty) return;
     _pushSnapshot();
+    final seen = _signaturesIn(target);
+    int skipped = 0;
     for (final file in files) {
-      final entry = _ImageEntry(loading: true);
-      setState(() => target.add(entry));
       try {
+        // Read bytes BEFORE adding to the row so we can fingerprint
+        // and reject duplicates without flashing a placeholder tile.
         final bytes = await file.readAsBytes();
+        final sig = _imageSignature(bytes);
+        if (seen.contains(sig)) {
+          skipped++;
+          continue;
+        }
+        seen.add(sig);
         if (!mounted) return;
         setState(() {
-          entry.bytes = bytes;
-          entry.loading = false;
+          target.add(
+            _ImageEntry(signature: sig)
+              ..bytes = bytes,
+          );
         });
-      } catch (e) {
-        if (!mounted) return;
-        setState(() => target.remove(entry));
+      } catch (_) {
+        // Read failure — silently drop; nothing was added to the row.
       }
+    }
+    if (skipped > 0 && mounted) {
+      _showError(
+        skipped == 1
+            ? 'Skipped 1 duplicate image (already in this row).'
+            : 'Skipped $skipped duplicate images (already in this row).',
+      );
     }
   }
 
@@ -478,8 +535,28 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage>
       return;
     }
     _pushSnapshot();
+    final seen = _signaturesIn(target);
+    int skipped = 0;
     for (final bytes in images) {
-      setState(() => target.add(_ImageEntry()..bytes = bytes));
+      final sig = _imageSignature(bytes);
+      if (seen.contains(sig)) {
+        skipped++;
+        continue;
+      }
+      seen.add(sig);
+      setState(() {
+        target.add(
+          _ImageEntry(signature: sig)
+            ..bytes = bytes,
+        );
+      });
+    }
+    if (skipped > 0 && mounted) {
+      _showError(
+        skipped == 1
+            ? 'Skipped 1 duplicate image (already in this row).'
+            : 'Skipped $skipped duplicate images (already in this row).',
+      );
     }
   }
 
@@ -650,6 +727,13 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage>
           ? DataRepository.generateId(widget.editData!.name)
           : DataRepository.generateId(name);
 
+      // Cross-row dedup map: the first time we see a given image
+      // signature we convert it once and remember the repo path; any
+      // later occurrence (cover or section, same row or different)
+      // reuses that path with `bytes: null` so we don't upload the
+      // same blob twice or write conflicting paths in the YAML.
+      final dedupedPaths = <String, String>{}; // signature -> repoPath
+
       // Convert new images to AVIF and build image descriptors.
       final coverDescs = <({Uint8List? bytes, String repoPath})>[];
       for (var i = 0; i < _coverImages.length; i++) {
@@ -657,14 +741,23 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage>
         if (entry.isAsset) {
           coverDescs.add((bytes: null, repoPath: entry.assetPath!));
         } else if (entry.bytes != null) {
-          final result = await avif.convertToAvif(entry.bytes!);
-          final path = DataRepository.coverImagePath(
-            widget.type,
-            id,
-            i,
-            result.ext,
-          );
-          coverDescs.add((bytes: result.bytes, repoPath: path));
+          final sig = entry.signature ?? _imageSignature(entry.bytes!);
+          final existingPath = dedupedPaths[sig];
+          if (existingPath != null) {
+            // Already encoded as part of an earlier descriptor in this
+            // submit — reuse its path, no second upload.
+            coverDescs.add((bytes: null, repoPath: existingPath));
+          } else {
+            final result = await avif.convertToAvif(entry.bytes!);
+            final path = DataRepository.coverImagePath(
+              widget.type,
+              id,
+              i,
+              result.ext,
+            );
+            dedupedPaths[sig] = path;
+            coverDescs.add((bytes: result.bytes, repoPath: path));
+          }
         }
       }
 
@@ -684,15 +777,22 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage>
           if (entry.isAsset) {
             imgDescs.add((bytes: null, repoPath: entry.assetPath!));
           } else if (entry.bytes != null) {
-            final result = await avif.convertToAvif(entry.bytes!);
-            final path = DataRepository.sectionImagePath(
-              widget.type,
-              id,
-              si,
-              ii,
-              result.ext,
-            );
-            imgDescs.add((bytes: result.bytes, repoPath: path));
+            final sig = entry.signature ?? _imageSignature(entry.bytes!);
+            final existingPath = dedupedPaths[sig];
+            if (existingPath != null) {
+              imgDescs.add((bytes: null, repoPath: existingPath));
+            } else {
+              final result = await avif.convertToAvif(entry.bytes!);
+              final path = DataRepository.sectionImagePath(
+                widget.type,
+                id,
+                si,
+                ii,
+                result.ext,
+              );
+              dedupedPaths[sig] = path;
+              imgDescs.add((bytes: result.bytes, repoPath: path));
+            }
           }
         }
         sectionDescs.add((
@@ -937,7 +1037,7 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage>
               style: const TextStyle(color: Colors.white),
               decoration: _fieldDecoration(
                 'Storage Location',
-                hint: 'e.g. A1, Shelf B',
+                hint: 'e.g. A, Tripod Shelf...',
               ),
             ),
           ],
@@ -1747,7 +1847,7 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage>
                   // ── Remove button (edit mode only) ────────────────
                   if (_isEditMode) ...[
                     const SizedBox(height: 12),
-                    OutlinedButton.icon(
+                    ElevatedButton.icon(
                       onPressed: (_submitting || _deleting) ? null : _delete,
                       icon: _deleting
                           ? const SizedBox(
@@ -1755,20 +1855,23 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage>
                               height: 18,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: Colors.redAccent,
+                                color: Colors.white,
                               ),
                             )
-                          : const Icon(Icons.delete_outline,
-                              color: Colors.redAccent),
+                          : const Icon(
+                              Icons.delete_outline,
+                              color: Colors.white,
+                            ),
                       label: const Text(
                         'Remove',
                         style: TextStyle(
-                          color: Colors.redAccent,
+                          color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.redAccent),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),

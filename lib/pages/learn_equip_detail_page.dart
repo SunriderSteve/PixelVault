@@ -23,6 +23,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/equipment_model.dart';
 import '../services/data_repository.dart';
 import '../widgets/admin_auth.dart';
+import '../widgets/pending_changes_fab.dart' show ensureNoPendingChangeFor;
 import 'guide_creator_page.dart';
 
 class EquipDetailPage extends StatefulWidget {
@@ -171,23 +172,29 @@ class _LearnEquipDetailPageState extends State<EquipDetailPage> {
                         if (isAdmin)
                           IconButton(
                             icon: const Icon(Icons.edit, color: Colors.white),
-                            onPressed: () => showGuideEditor(
-                              context,
-                              GuideType.equipment,
-                              GuideEditData(
-                                name: _equip.name,
-                                brand: _equip.brand,
-                                category: _equip.category,
-                                coverImages: _equip.coverImages,
-                                sections: _equip.sections
-                                    .map((s) => (
-                                          title: s.title,
-                                          body: s.body,
-                                          images: s.images,
-                                        ))
-                                    .toList(),
-                              ),
-                            ),
+                            onPressed: () {
+                              if (!ensureNoPendingChangeFor(
+                                  context, _equip.id)) {
+                                return;
+                              }
+                              showGuideEditor(
+                                context,
+                                GuideType.equipment,
+                                GuideEditData(
+                                  name: _equip.name,
+                                  brand: _equip.brand,
+                                  category: _equip.category,
+                                  coverImages: _equip.coverImages,
+                                  sections: _equip.sections
+                                      .map((s) => (
+                                            title: s.title,
+                                            body: s.body,
+                                            images: s.images,
+                                          ))
+                                      .toList(),
+                                ),
+                              );
+                            },
                             tooltip: 'Edit Guide',
                           ),
                         IconButton(

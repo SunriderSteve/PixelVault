@@ -33,6 +33,7 @@ import '../models/equipment_model.dart';
 import '../models/scenario_model.dart';
 import '../models/videography_model.dart';
 import '../pages/guide_creator_page.dart' show GuideType;
+import 'batch_queue.dart';
 import 'github_repo_client.dart';
 import 'guides_client.dart';
 import 'production_shoots_client.dart';
@@ -61,12 +62,6 @@ class DataRepository {
   GitHubRepoClient? _repoClient;
   GuidesClient? _guidesClient;
   ProductionShootsClient? _shootsClient;
-
-  // ── YAML file write state ──────────────────────────────────────
-  // Only equipment still uses per-file SHA (for applyInventoryChanges,
-  // which is a single-file write). Guide create/update use the Git
-  // Data API (batch commits) and don't need per-file SHAs.
-  String? _equipmentSha;
 
   // ── Production shoots ──────────────────────────────────────────
   Map<String, Map<String, ShootEquip>> _shoots = {};
@@ -129,6 +124,10 @@ class DataRepository {
       _guidesClient = GuidesClient(_admin!, _repoClient!);
       _shootsClient = ProductionShootsClient(_admin!, _repoClient!);
     }
+
+    // Wire the batch queue so its auto-flush + manual-push paths hand
+    // control back here to build the single atomic commit.
+    BatchQueueService().registerFlush(_flushBatch);
 
     await _loadGuidesFromRepo();
     await fetchShootsOnce();
@@ -709,90 +708,56 @@ class DataRepository {
   // Inventory changes (write to equipment.yaml via repo API)
   // ══════════════════════════════════════════════════════════════
 
-  /// Write inventory changes for a single equipment id. Reads the
-  /// current equipment.yaml via API (for fresh SHA), modifies the
-  /// target document, and writes back.
+  /// Queue an inventory edit for [equipmentId]. The local cache is NOT
+  /// updated until the batch pushes — the admin sees the old values
+  /// in the list while the change sits in the queue. Same reason as
+  /// creations: optimistic edits that touch images render broken
+  /// thumbnails before the blobs are uploaded, and applying the same
+  /// rule to plain quantity/storage tweaks keeps the rule simple
+  /// ("nothing changes until you push").
   Future<void> applyInventoryChanges(
     String equipmentId, {
     int? quantity,
     String? storage,
   }) async {
-    final client = _guidesClient;
-    final repoClient = _repoClient;
-    if (client == null || repoClient == null) {
-      throw StateError('clients not ready');
-    }
-    final String token = _admin?.accessToken ?? '';
-    if (token.isEmpty) throw StateError('missing access token');
+    if (_admin == null) throw StateError('clients not ready');
+    if (_admin!.accessToken.isEmpty) throw StateError('missing access token');
 
-    // Snapshot for revert on failure.
     final prevEquipment = _equipment[equipmentId];
-
-    // Optimistic local update.
-    if (prevEquipment != null) {
-      _equipment[equipmentId] = prevEquipment.copyWith(
-        quantity: quantity,
-        storage: storage,
-      );
-      overlayEpoch.value++;
+    if (prevEquipment == null) {
+      throw StateError('equipment "$equipmentId" not found');
     }
 
-    // Cancel equipment polling during the write, and bump the write epoch
-    // so any in-flight poll's response is discarded (prevents revert).
-    _equipmentTimer?.cancel();
-    _equipmentWriteEpoch++;
-
-    try {
-      // Read fresh equipment.yaml via API (gets content + SHA).
-      final result = await client.readEquipmentViaApi(token);
-      if (result == null) throw StateError('failed to read equipment.yaml');
-
-      _equipmentSha = result.sha;
-      final yamlContent = result.content;
-
-      // Modify the target document in the multi-document YAML.
-      final updatedYaml = _updateEquipmentDocument(
-        yamlContent,
+    BatchQueueService().add(PendingOp(
+      displayName: prevEquipment.name,
+      kind: PendingOpKind.edit,
+      entityId: equipmentId,
+      yamlFile: _admin!.equipmentFile,
+      applyToYaml: (content) => _updateEquipmentDocument(
+        content,
         equipmentId,
         quantity: quantity,
         storage: storage,
-      );
-
-      // Write back to repo.
-      final newSha = await client.writeEquipmentYaml(
-        updatedYaml,
-        sha: _equipmentSha!,
-        token: token,
-        message: 'Update inventory for $equipmentId via PixelVault',
-      );
-      _equipmentSha = newSha;
-      // Keep the existing ETag: the optimistic local update already
-      // reflects the new state. Clearing it would force the next poll
-      // to fetch from the raw CDN, which may still serve the pre-write
-      // content for up to a few minutes and cause a visible revert.
-
-      overlayEpoch.value++;
-    } catch (e) {
-      // Revert optimistic update on failure.
-      if (prevEquipment != null) {
-        _equipment[equipmentId] = prevEquipment;
-      }
-      overlayEpoch.value++;
-      _startEquipmentPolling();
-      rethrow;
-    }
-
-    _startEquipmentPolling();
+      ),
+      commitSummary: 'Edit inventory for ${prevEquipment.name}',
+      // Nothing to revert — the local cache was never touched.
+      revertLocal: () {},
+    ));
   }
 
   // ══════════════════════════════════════════════════════════════
   // Equipment creation
   // ══════════════════════════════════════════════════════════════
 
-  /// Create a new equipment entry in equipment.yaml with `no_guide: true`
-  /// and the given inventory fields. When [coverImage] is supplied, the
-  /// image blob and the YAML update are persisted in a single atomic
-  /// commit via the Git Data API.
+  /// Queue a new equipment entry (inventory-only, no guide) for
+  /// equipment.yaml.
+  ///
+  /// The local cache is NOT touched at enqueue time — the new item
+  /// only enters the in-memory map after the batch pushes and the
+  /// next poll picks it up from the repo. Optimistic adds caused
+  /// missing-image errors because the cover blob hasn't been uploaded
+  /// yet at enqueue time, so the inventory list would render a tile
+  /// pointing at a 404 until push.
   Future<void> createEquipment({
     required String name,
     required String brand,
@@ -801,241 +766,130 @@ class DataRepository {
     String? storage,
     ({Uint8List bytes, String repoPath})? coverImage,
   }) async {
-    final client = _guidesClient;
-    final repoClient = _repoClient;
-    if (client == null || repoClient == null) {
-      throw StateError('clients not ready');
-    }
-    final String token = _admin?.accessToken ?? '';
-    if (token.isEmpty) throw StateError('missing access token');
+    if (_admin == null) throw StateError('clients not ready');
+    if (_admin!.accessToken.isEmpty) throw StateError('missing access token');
 
     // Generate a slug-style ID from the name.
     final String id = generateId(name);
-
     if (_equipment.containsKey(id)) {
       throw StateError('Equipment with id "$id" already exists');
     }
-
-    _equipmentTimer?.cancel();
-    _equipmentWriteEpoch++;
-
-    try {
-      // Read current equipment.yaml via API for fresh SHA.
-      final result = await client.readEquipmentViaApi(token);
-      if (result == null) throw StateError('failed to read equipment.yaml');
-
-      _equipmentSha = result.sha;
-
-      // Build the new equipment YAML document.
-      final coverPaths = coverImage != null ? [coverImage.repoPath] : <String>[];
-      final newDoc = StringBuffer();
-      newDoc.writeln('id: $id');
-      newDoc.writeln('name: ${_yamlQuote(name)}');
-      newDoc.writeln('category: ${_yamlQuote(category)}');
-      newDoc.writeln('brand: ${_yamlQuote(brand)}');
-      if (coverPaths.isEmpty) {
-        newDoc.writeln('coverImages: []');
-      } else {
-        newDoc.writeln('coverImages:');
-        for (final p in coverPaths) {
-          newDoc.writeln('  - $p');
-        }
-      }
-      newDoc.writeln('description: ""');
-      newDoc.writeln('sections: []');
-      newDoc.writeln('related: []');
-      newDoc.writeln('quantity: $quantity');
-      if (storage != null && storage.isNotEmpty) {
-        newDoc.writeln('storage: ${_yamlQuote(storage)}');
-      }
-      newDoc.writeln('no_guide: true');
-
-      final updatedYaml = _appendDocument(result.content, newDoc.toString());
-
-      if (coverImage != null) {
-        // Atomic commit: image blob + YAML update.
-        await repoClient.commitBatch(
-          [
-            BatchFileChange.writeBinary(
-              path: coverImage.repoPath,
-              bytes: coverImage.bytes,
-            ),
-            BatchFileChange.write(
-              path: _admin!.equipmentFile,
-              content: updatedYaml,
-            ),
-          ],
-          token: token,
-          message: 'Create equipment "$name" via PixelVault',
-        );
-        // commitBatch rewrites the file via the Git Data API, so our
-        // cached equipment.yaml SHA is now stale. Clear it so the next
-        // write re-reads a fresh one.
-        _equipmentSha = null;
-      } else {
-        final newSha = await client.writeEquipmentYaml(
-          updatedYaml,
-          sha: _equipmentSha!,
-          token: token,
-          message: 'Create equipment "$name" via PixelVault',
-        );
-        _equipmentSha = newSha;
-      }
-
-      // Update local state.
-      final eq = Equipment(
-        id: id,
-        name: name,
-        category: category,
-        brand: brand,
-        coverImages: coverPaths,
-        description: '',
-        sections: [],
-        related: [],
-        storage: storage,
-        quantity: quantity,
-        noGuide: true,
-      );
-      _equipment[id] = eq;
-      overlayEpoch.value++;
-    } finally {
-      _startEquipmentPolling();
+    if (BatchQueueService().hasPendingFor(id)) {
+      throw StateError('A pending change for "$id" is already queued');
     }
+
+    // Build the YAML document once; the closure captures it verbatim.
+    final coverPaths = coverImage != null ? [coverImage.repoPath] : <String>[];
+    final newDoc = StringBuffer();
+    newDoc.writeln('id: $id');
+    newDoc.writeln('name: ${_yamlQuote(name)}');
+    newDoc.writeln('category: ${_yamlQuote(category)}');
+    newDoc.writeln('brand: ${_yamlQuote(brand)}');
+    if (coverPaths.isEmpty) {
+      newDoc.writeln('coverImages: []');
+    } else {
+      newDoc.writeln('coverImages:');
+      for (final p in coverPaths) {
+        newDoc.writeln('  - $p');
+      }
+    }
+    newDoc.writeln('description: ""');
+    newDoc.writeln('sections: []');
+    newDoc.writeln('related: []');
+    newDoc.writeln('quantity: $quantity');
+    if (storage != null && storage.isNotEmpty) {
+      newDoc.writeln('storage: ${_yamlQuote(storage)}');
+    }
+    newDoc.writeln('no_guide: true');
+    final String yamlDoc = newDoc.toString();
+
+    final imageWrites = <String, Uint8List>{};
+    if (coverImage != null) {
+      imageWrites[coverImage.repoPath] = coverImage.bytes;
+    }
+
+    BatchQueueService().add(PendingOp(
+      displayName: name,
+      kind: PendingOpKind.creation,
+      entityId: id,
+      yamlFile: _admin!.equipmentFile,
+      // Strip-then-append so a re-enqueue after a failed flush doesn't
+      // land a duplicate doc in the YAML.
+      applyToYaml: (content) =>
+          _appendDocument(_removeDocumentById(content, id), yamlDoc),
+      imageWrites: imageWrites,
+      commitSummary: 'Add $name',
+      // Nothing to revert — the local cache was never touched.
+      revertLocal: () {},
+    ));
   }
 
-  /// Delete an equipment item entirely: removes its document from
-  /// equipment.yaml AND deletes every image it referenced (cover +
-  /// section images). Atomic via a single Git commit.
+  /// Queue deletion of an equipment item. Drops the YAML document and
+  /// every image it referenced. Local state is updated immediately;
+  /// the push is batched with any other pending ops.
   Future<void> deleteEquipment(String id) async {
-    final client = _guidesClient;
-    final repoClient = _repoClient;
-    if (client == null || repoClient == null) {
-      throw StateError('clients not ready');
-    }
-    final String token = _admin?.accessToken ?? '';
-    if (token.isEmpty) throw StateError('missing access token');
+    if (_admin == null) throw StateError('clients not ready');
+    if (_admin!.accessToken.isEmpty) throw StateError('missing access token');
 
     final eq = _equipment[id];
     if (eq == null) throw StateError('equipment "$id" not found');
 
-    _equipmentTimer?.cancel();
-    _equipmentWriteEpoch++;
+    final imageDeletes = <String>{
+      ...eq.coverImages,
+      for (final sec in eq.sections) ...sec.images,
+    };
 
-    try {
-      final result = await client.readEquipmentViaApi(token);
-      if (result == null) throw StateError('failed to read equipment.yaml');
+    // Optimistic local state.
+    _equipment.remove(id);
+    overlayEpoch.value++;
 
-      final updatedYaml = _removeDocumentById(result.content, id);
-
-      // Collect image paths from local model (guide images included).
-      final candidatePaths = <String>{
-        ...eq.coverImages,
-        for (final sec in eq.sections) ...sec.images,
-      };
-
-      // Pre-filter to only paths that actually exist in the repo.
-      // The tree API rejects the whole commit with GitRPC::BadObjectState
-      // if we ask it to delete a path that isn't in base_tree (e.g. an
-      // image left stale in the local model after a previous cover
-      // replace cleaned it up).
-      final existence = await Future.wait(
-        candidatePaths.map((p) async =>
-            (path: p, exists: (await repoClient.getFileSha(p, token)) != null)),
-      );
-      final imagePaths = <String>{
-        for (final r in existence)
-          if (r.exists) r.path,
-      };
-
-      final changes = <BatchFileChange>[
-        BatchFileChange.write(
-          path: _admin!.equipmentFile,
-          content: updatedYaml,
-        ),
-        for (final p in imagePaths) BatchFileChange.delete(path: p),
-      ];
-
-      await repoClient.commitBatch(
-        changes,
-        token: token,
-        message: 'Delete equipment "${eq.name}" via PixelVault',
-      );
-      _equipmentSha = null;
-
-      _equipment.remove(id);
-      overlayEpoch.value++;
-    } finally {
-      _startEquipmentPolling();
-    }
+    BatchQueueService().add(PendingOp(
+      displayName: eq.name,
+      kind: PendingOpKind.removal,
+      entityId: id,
+      yamlFile: _admin!.equipmentFile,
+      applyToYaml: (content) => _removeDocumentById(content, id),
+      imageDeletes: imageDeletes,
+      commitSummary: 'Delete ${eq.name}',
+      revertLocal: () {
+        _equipment[id] = eq;
+        overlayEpoch.value++;
+      },
+    ));
   }
 
-  /// Replace the cover image on an existing equipment item. Deletes any
-  /// previous cover images, uploads the new one, and rewrites the YAML
-  /// entry — all in a single atomic commit.
+  /// Queue a cover image replacement for an equipment item. The new
+  /// image bytes are pooled into the next batch push along with a
+  /// delete for the previous covers and a rewrite of the YAML entry.
+  ///
+  /// Local cache is left alone until push: rewriting `coverImages` to
+  /// the new path before the blob is uploaded would render the tile
+  /// with a 404 placeholder.
   Future<void> replaceEquipmentCoverImage(
     String id, {
     required Uint8List bytes,
     required String repoPath,
   }) async {
-    final client = _guidesClient;
-    final repoClient = _repoClient;
-    if (client == null || repoClient == null) {
-      throw StateError('clients not ready');
-    }
-    final String token = _admin?.accessToken ?? '';
-    if (token.isEmpty) throw StateError('missing access token');
+    if (_admin == null) throw StateError('clients not ready');
+    if (_admin!.accessToken.isEmpty) throw StateError('missing access token');
 
     final eq = _equipment[id];
     if (eq == null) throw StateError('equipment "$id" not found');
 
-    _equipmentTimer?.cancel();
-    _equipmentWriteEpoch++;
+    final oldCovers = eq.coverImages.where((p) => p != repoPath).toList();
 
-    try {
-      final result = await client.readEquipmentViaApi(token);
-      if (result == null) throw StateError('failed to read equipment.yaml');
-
-      final updatedYaml = _replaceCoverImagesInDoc(
-        result.content,
-        id,
-        [repoPath],
-      );
-
-      final oldCovers = eq.coverImages.where((p) => p != repoPath).toList();
-
-      final changes = <BatchFileChange>[
-        for (final p in oldCovers) BatchFileChange.delete(path: p),
-        BatchFileChange.writeBinary(path: repoPath, bytes: bytes),
-        BatchFileChange.write(
-          path: _admin!.equipmentFile,
-          content: updatedYaml,
-        ),
-      ];
-
-      await repoClient.commitBatch(
-        changes,
-        token: token,
-        message: 'Update cover image for "${eq.name}" via PixelVault',
-      );
-      _equipmentSha = null;
-
-      _equipment[id] = Equipment(
-        id: eq.id,
-        name: eq.name,
-        category: eq.category,
-        brand: eq.brand,
-        coverImages: [repoPath],
-        description: eq.description,
-        sections: eq.sections,
-        related: eq.related,
-        storage: eq.storage,
-        quantity: eq.quantity,
-        noGuide: eq.noGuide,
-      );
-      overlayEpoch.value++;
-    } finally {
-      _startEquipmentPolling();
-    }
+    BatchQueueService().add(PendingOp(
+      displayName: eq.name,
+      kind: PendingOpKind.edit,
+      entityId: id,
+      yamlFile: _admin!.equipmentFile,
+      applyToYaml: (content) =>
+          _replaceCoverImagesInDoc(content, id, [repoPath]),
+      imageWrites: {repoPath: bytes},
+      imageDeletes: oldCovers.toSet(),
+      commitSummary: 'Replace cover image for ${eq.name}',
+      revertLocal: () {},
+    ));
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -1111,12 +965,18 @@ class DataRepository {
     );
   }
 
-  /// Create a new guide and persist it to the repo in a single atomic
-  /// commit (YAML + all images bundled together via the Git Data API).
+  /// Queue a new guide for the given [type]. All images are pooled as
+  /// part of the pending op; when the batch flushes the YAML + every
+  /// image blob are pushed in one atomic Git commit.
   ///
   /// [coverImages] and [sections] carry the already-converted image
   /// bytes alongside their target repo paths. Asset-only entries
   /// (pre-existing images kept during edit) have null bytes.
+  ///
+  /// Local cache is left alone until push: optimistic inserts would
+  /// add a tile to the guide list pointing at image paths whose blobs
+  /// haven't been uploaded yet, rendering as 404s until the push
+  /// completes.
   Future<void> createGuide({
     required GuideType type,
     required String id,
@@ -1137,15 +997,14 @@ class DataRepository {
     String? storage,
     String? existingEquipId,
   }) async {
-    final client = _guidesClient;
-    final repoClient = _repoClient;
-    if (client == null || repoClient == null) {
-      throw StateError('clients not ready');
-    }
-    final String token = _admin?.accessToken ?? '';
-    if (token.isEmpty) throw StateError('missing access token');
+    if (_admin == null) throw StateError('clients not ready');
+    if (_admin!.accessToken.isEmpty) throw StateError('missing access token');
 
-    // 1. Build YAML document.
+    if (BatchQueueService().hasPendingFor(id)) {
+      throw StateError('A pending change for "$id" is already queued');
+    }
+
+    // 1. Build YAML document + collect image bytes keyed by path.
     final coverPaths = coverImages.map((e) => e.repoPath).toList();
     final sectionData = sections
         .map((s) => (
@@ -1169,151 +1028,57 @@ class DataRepository {
       storage: storage,
     );
 
-    // 2. Gather batched changes: image uploads (deduped) + YAML update.
-    final changes = <BatchFileChange>[];
-    final seenPaths = <String>{};
-
-    void addImageChange(({Uint8List? bytes, String repoPath}) img) {
-      if (img.bytes == null) return;
-      if (!seenPaths.add(img.repoPath)) return;
-      changes.add(BatchFileChange.writeBinary(
-        path: img.repoPath,
-        bytes: img.bytes!,
-      ));
-    }
-
+    final imageWrites = <String, Uint8List>{};
     for (final img in coverImages) {
-      addImageChange(img);
+      if (img.bytes != null) imageWrites[img.repoPath] = img.bytes!;
     }
     for (final sec in sections) {
       for (final img in sec.images) {
-        addImageChange(img);
+        if (img.bytes != null) imageWrites[img.repoPath] = img.bytes!;
       }
     }
 
-    // Cancel the relevant poll timer + bump its write epoch so an
-    // in-flight poll response can't overwrite the post-write cache.
-    switch (type) {
-      case GuideType.equipment:
-        _equipmentTimer?.cancel();
-        _equipmentWriteEpoch++;
-      case GuideType.videography:
-        _videographyTimer?.cancel();
-        _videographyWriteEpoch++;
-      case GuideType.scenario:
-        _scenariosTimer?.cancel();
-        _scenariosWriteEpoch++;
-    }
+    // 2. Build the yaml mutation + enqueue. No optimistic cache write.
+    final String yamlFile = switch (type) {
+      GuideType.equipment => _admin!.equipmentFile,
+      GuideType.videography => _admin!.videographyFile,
+      GuideType.scenario => _admin!.scenarioFile,
+    };
+    final String kindLabel = switch (type) {
+      GuideType.equipment => 'equipment',
+      GuideType.videography => 'videography',
+      GuideType.scenario => 'scenario',
+    };
 
-    try {
-      // Read current YAML so we can append/replace the document.
-      final (String yamlPath, String newContent, String commitMessage)
-          = await switch (type) {
-        GuideType.equipment => (() async {
-            final result = await client.readEquipmentViaApi(token);
-            if (result == null) {
-              throw StateError('failed to read equipment.yaml');
-            }
-            _equipmentSha = result.sha;
-            String content = result.content;
-            // If replacing an existing no_guide entry, remove it first.
-            if (existingEquipId != null) {
-              content = _removeDocumentById(content, existingEquipId);
-            }
-            content = _appendDocument(content, yamlDoc);
-            return (
-              _admin!.equipmentFile,
-              content,
-              'Create equipment guide "$name" via PixelVault',
-            );
-          })(),
-        GuideType.videography => (() async {
-            final result = await client.readVideographyViaApi(token);
-            if (result == null) {
-              throw StateError('failed to read videography.yaml');
-            }
-            return (
-              _admin!.videographyFile,
-              _appendDocument(result.content, yamlDoc),
-              'Create videography guide "$name" via PixelVault',
-            );
-          })(),
-        GuideType.scenario => (() async {
-            final result = await client.readScenarioViaApi(token);
-            if (result == null) {
-              throw StateError('failed to read scenarios.yaml');
-            }
-            return (
-              _admin!.scenarioFile,
-              _appendDocument(result.content, yamlDoc),
-              'Create scenario guide "$name" via PixelVault',
-            );
-          })(),
-      };
-
-      changes.add(BatchFileChange.write(path: yamlPath, content: newContent));
-
-      // 3. Atomic commit.
-      await repoClient.commitBatch(
-        changes,
-        token: token,
-        message: commitMessage,
-      );
-
-      // 4. Update local cache.
-      switch (type) {
-        case GuideType.equipment:
-          _equipment[id] = Equipment(
-            id: id,
-            name: name,
-            category: category,
-            brand: brand,
-            coverImages: coverPaths,
-            description: description,
-            sections: sectionData
-                .map((s) => EquipSection(
-                    title: s.title, images: s.images, body: s.body))
-                .toList(),
-            related: related,
-            storage: storage,
-            quantity: quantity,
-          );
-          overlayEpoch.value++;
-
-        case GuideType.videography:
-          _videography[id] = VideographyGuide(
-            id: id,
-            name: name,
-            coverImages: coverPaths,
-            sections: sectionData
-                .map((s) => GuideSection(
-                    title: s.title, images: s.images, body: s.body))
-                .toList(),
-          );
-          guidesEpoch.value++;
-
-        case GuideType.scenario:
-          _scenarios[id] = ScenarioGuide(
-            id: id,
-            name: name,
-            description: description,
-            coverImages: coverPaths,
-            sections: sectionData
-                .map((s) => ScenarioSection(
-                    title: s.title, images: s.images, body: s.body))
-                .toList(),
-            related: related,
-          );
-          guidesEpoch.value++;
-      }
-    } finally {
-      _restartPollForType(type);
-    }
+    BatchQueueService().add(PendingOp(
+      displayName: name,
+      kind: PendingOpKind.creation,
+      entityId: id,
+      yamlFile: yamlFile,
+      applyToYaml: (content) {
+        var c = content;
+        if (type == GuideType.equipment && existingEquipId != null) {
+          c = _removeDocumentById(c, existingEquipId);
+        }
+        // If we're re-enqueuing this op after a failure, the doc may
+        // already be present — strip it first so we never double-write.
+        c = _removeDocumentById(c, id);
+        return _appendDocument(c, yamlDoc);
+      },
+      imageWrites: imageWrites,
+      commitSummary: 'Add $kindLabel guide $name',
+      // Nothing to revert — the local cache was never touched.
+      revertLocal: () {},
+    ));
   }
 
-  /// Update an existing guide. Handles image diffing (delete removed,
-  /// upload new) and replaces the YAML document — all in a single
-  /// atomic commit.
+  /// Queue an update to an existing guide. The new image bytes go in
+  /// with the op; any paths in [removedImagePaths] are scheduled for
+  /// deletion when the batch flushes.
+  ///
+  /// Local cache is left alone until push: writing the new YAML view
+  /// (which references new image paths) before the blobs are uploaded
+  /// would point detail pages at 404s.
   Future<void> updateGuide({
     required GuideType type,
     required String id,
@@ -1332,13 +1097,8 @@ class DataRepository {
     List<String> related = const [],
     List<String> removedImagePaths = const [],
   }) async {
-    final client = _guidesClient;
-    final repoClient = _repoClient;
-    if (client == null || repoClient == null) {
-      throw StateError('clients not ready');
-    }
-    final String token = _admin?.accessToken ?? '';
-    if (token.isEmpty) throw StateError('missing access token');
+    if (_admin == null) throw StateError('clients not ready');
+    if (_admin!.accessToken.isEmpty) throw StateError('missing access token');
 
     // 1. Build updated YAML document.
     final coverPaths = coverImages.map((e) => e.repoPath).toList();
@@ -1350,209 +1110,75 @@ class DataRepository {
             ))
         .toList();
 
-    // 2. Gather batched changes: image deletes + uploads (deduped) +
-    //    the YAML rewrite.
-    final changes = <BatchFileChange>[];
-    final seenPaths = <String>{};
+    // Equipment carries inventory fields that aren't part of the
+    // editor form; preserve them from the existing cache entry.
+    final existingEq =
+        type == GuideType.equipment ? _equipment[id] : null;
+    final yamlDoc = _buildGuideYaml(
+      type: type,
+      id: id,
+      name: name,
+      brand: brand,
+      category: category,
+      description: description,
+      coverImages: coverPaths,
+      sections: sectionData,
+      related: related,
+      quantity: existingEq?.quantity,
+      storage: existingEq?.storage,
+    );
 
-    for (final path in removedImagePaths) {
-      // A path that's being re-uploaded with new bytes isn't a true
-      // delete — skip here so the blob write below wins.
-      changes.add(BatchFileChange.delete(path: path));
-    }
-
-    void addImageChange(({Uint8List? bytes, String repoPath}) img) {
-      if (img.bytes == null) return;
-      if (!seenPaths.add(img.repoPath)) return;
-      changes.add(BatchFileChange.writeBinary(
-        path: img.repoPath,
-        bytes: img.bytes!,
-      ));
-    }
-
+    // 2. Gather image writes + deletes.
+    final imageWrites = <String, Uint8List>{};
     for (final img in coverImages) {
-      addImageChange(img);
+      if (img.bytes != null) imageWrites[img.repoPath] = img.bytes!;
     }
     for (final sec in sections) {
       for (final img in sec.images) {
-        addImageChange(img);
+        if (img.bytes != null) imageWrites[img.repoPath] = img.bytes!;
       }
     }
+    final imageDeletes = removedImagePaths.toSet();
 
-    // Cancel the relevant poll timer + bump its write epoch so an
-    // in-flight poll response can't overwrite the post-write cache.
-    switch (type) {
-      case GuideType.equipment:
-        _equipmentTimer?.cancel();
-        _equipmentWriteEpoch++;
-      case GuideType.videography:
-        _videographyTimer?.cancel();
-        _videographyWriteEpoch++;
-      case GuideType.scenario:
-        _scenariosTimer?.cancel();
-        _scenariosWriteEpoch++;
-    }
+    final String yamlFile = switch (type) {
+      GuideType.equipment => _admin!.equipmentFile,
+      GuideType.videography => _admin!.videographyFile,
+      GuideType.scenario => _admin!.scenarioFile,
+    };
+    final String kindLabel = switch (type) {
+      GuideType.equipment => 'equipment',
+      GuideType.videography => 'videography',
+      GuideType.scenario => 'scenario',
+    };
 
-    try {
-      final (String yamlPath, String newContent, String commitMessage)
-          = await switch (type) {
-        GuideType.equipment => (() async {
-            final result = await client.readEquipmentViaApi(token);
-            if (result == null) {
-              throw StateError('failed to read equipment.yaml');
-            }
-            _equipmentSha = result.sha;
-
-            // Preserve quantity/storage from the existing document.
-            final existing = _equipment[id];
-            final fullDoc = _buildGuideYaml(
-              type: type,
-              id: id,
-              name: name,
-              brand: brand,
-              category: category,
-              description: description,
-              coverImages: coverPaths,
-              sections: sectionData,
-              related: related,
-              quantity: existing?.quantity,
-              storage: existing?.storage,
-            );
-
-            var content = _removeDocumentById(result.content, id);
-            content = _appendDocument(content, fullDoc);
-            return (
-              _admin!.equipmentFile,
-              content,
-              'Update equipment guide "$name" via PixelVault',
-            );
-          })(),
-        GuideType.videography => (() async {
-            final result = await client.readVideographyViaApi(token);
-            if (result == null) {
-              throw StateError('failed to read videography.yaml');
-            }
-
-            final yamlDoc = _buildGuideYaml(
-              type: type,
-              id: id,
-              name: name,
-              brand: brand,
-              category: category,
-              description: description,
-              coverImages: coverPaths,
-              sections: sectionData,
-              related: related,
-            );
-            var content = _removeDocumentById(result.content, id);
-            content = _appendDocument(content, yamlDoc);
-            return (
-              _admin!.videographyFile,
-              content,
-              'Update videography guide "$name" via PixelVault',
-            );
-          })(),
-        GuideType.scenario => (() async {
-            final result = await client.readScenarioViaApi(token);
-            if (result == null) {
-              throw StateError('failed to read scenarios.yaml');
-            }
-
-            final yamlDoc = _buildGuideYaml(
-              type: type,
-              id: id,
-              name: name,
-              brand: brand,
-              category: category,
-              description: description,
-              coverImages: coverPaths,
-              sections: sectionData,
-              related: related,
-            );
-            var content = _removeDocumentById(result.content, id);
-            content = _appendDocument(content, yamlDoc);
-            return (
-              _admin!.scenarioFile,
-              content,
-              'Update scenario guide "$name" via PixelVault',
-            );
-          })(),
-      };
-
-      changes.add(BatchFileChange.write(path: yamlPath, content: newContent));
-
-      // 3. Atomic commit.
-      await repoClient.commitBatch(
-        changes,
-        token: token,
-        message: commitMessage,
-      );
-
-      // 4. Update local cache.
-      switch (type) {
-        case GuideType.equipment:
-          final existing = _equipment[id];
-          _equipment[id] = Equipment(
-            id: id,
-            name: name,
-            category: category,
-            brand: brand,
-            coverImages: coverPaths,
-            description: description,
-            sections: sectionData
-                .map((s) => EquipSection(
-                    title: s.title, images: s.images, body: s.body))
-                .toList(),
-            related: related,
-            storage: existing?.storage,
-            quantity: existing?.quantity,
-          );
-          overlayEpoch.value++;
-
-        case GuideType.videography:
-          _videography[id] = VideographyGuide(
-            id: id,
-            name: name,
-            coverImages: coverPaths,
-            sections: sectionData
-                .map((s) => GuideSection(
-                    title: s.title, images: s.images, body: s.body))
-                .toList(),
-          );
-          guidesEpoch.value++;
-
-        case GuideType.scenario:
-          _scenarios[id] = ScenarioGuide(
-            id: id,
-            name: name,
-            description: description,
-            coverImages: coverPaths,
-            sections: sectionData
-                .map((s) => ScenarioSection(
-                    title: s.title, images: s.images, body: s.body))
-                .toList(),
-            related: related,
-          );
-          guidesEpoch.value++;
-      }
-    } finally {
-      _restartPollForType(type);
-    }
+    BatchQueueService().add(PendingOp(
+      displayName: name,
+      kind: PendingOpKind.edit,
+      entityId: id,
+      yamlFile: yamlFile,
+      applyToYaml: (content) {
+        var c = _removeDocumentById(content, id);
+        return _appendDocument(c, yamlDoc);
+      },
+      imageWrites: imageWrites,
+      imageDeletes: imageDeletes,
+      commitSummary: 'Edit $kindLabel guide $name',
+      // Nothing to revert — the local cache was never touched.
+      revertLocal: () {},
+    ));
   }
 
-  /// Delete a guide. Dispatches by [type]:
+  /// Queue deletion of a guide. Dispatches by [type]:
   ///
   ///  * equipment + [removeFromInventory] true  → delegates to
-  ///    [deleteEquipment], which wipes the doc + every image.
-  ///  * equipment + [removeFromInventory] false → replaces the doc with
-  ///    a minimal `no_guide: true` entry (name / brand / category /
+  ///    [deleteEquipment] so the doc + every image drops in the same
+  ///    batch.
+  ///  * equipment + [removeFromInventory] false → replaces the doc
+  ///    with a minimal `no_guide: true` entry (name / brand / category /
   ///    quantity / storage / first cover image) so the item still shows
-  ///    in the inventory list, and deletes only the section images plus
-  ///    any extra cover images.
-  ///  * videography / scenario → removes the doc and deletes every
-  ///    image it referenced.
-  ///
-  /// All writes are atomic (single Git commit via [GitHubRepoClient.commitBatch]).
+  ///    in the inventory list, and schedules the section images + any
+  ///    extra covers for deletion.
+  ///  * videography / scenario → drops the doc and every image.
   Future<void> deleteGuide({
     required GuideType type,
     required String id,
@@ -1563,181 +1189,120 @@ class DataRepository {
       return;
     }
 
-    final client = _guidesClient;
-    final repoClient = _repoClient;
-    if (client == null || repoClient == null) {
-      throw StateError('clients not ready');
+    if (_admin == null) throw StateError('clients not ready');
+    if (_admin!.accessToken.isEmpty) throw StateError('missing access token');
+
+    if (type == GuideType.equipment) {
+      // Strip the guide but keep the inventory entry.
+      final eq = _equipment[id];
+      if (eq == null) throw StateError('equipment "$id" not found');
+
+      final keptCovers = eq.coverImages.isEmpty
+          ? <String>[]
+          : [eq.coverImages.first];
+      final discardedCovers = eq.coverImages.length > 1
+          ? eq.coverImages.sublist(1)
+          : <String>[];
+
+      final noGuideDoc = _buildNoGuideEquipmentYaml(
+        id: id,
+        name: eq.name,
+        brand: eq.brand,
+        category: eq.category,
+        coverImages: keptCovers,
+        quantity: eq.quantity,
+        storage: eq.storage,
+      );
+
+      final imageDeletes = <String>{
+        ...discardedCovers,
+        for (final sec in eq.sections) ...sec.images,
+      };
+
+      // Optimistic local state.
+      _equipment[id] = Equipment(
+        id: eq.id,
+        name: eq.name,
+        category: eq.category,
+        brand: eq.brand,
+        coverImages: keptCovers,
+        description: '',
+        sections: [],
+        related: [],
+        storage: eq.storage,
+        quantity: eq.quantity,
+        noGuide: true,
+      );
+      overlayEpoch.value++;
+
+      BatchQueueService().add(PendingOp(
+        displayName: eq.name,
+        kind: PendingOpKind.removal,
+        entityId: id,
+        yamlFile: _admin!.equipmentFile,
+        applyToYaml: (content) {
+          var c = _removeDocumentById(content, id);
+          return _appendDocument(c, noGuideDoc);
+        },
+        imageDeletes: imageDeletes,
+        commitSummary: 'Strip guide for ${eq.name}',
+        revertLocal: () {
+          _equipment[id] = eq;
+          overlayEpoch.value++;
+        },
+      ));
+      return;
     }
-    final String token = _admin?.accessToken ?? '';
-    if (token.isEmpty) throw StateError('missing access token');
 
-    switch (type) {
-      case GuideType.equipment:
-        _equipmentTimer?.cancel();
-        _equipmentWriteEpoch++;
-      case GuideType.videography:
-        _videographyTimer?.cancel();
-        _videographyWriteEpoch++;
-      case GuideType.scenario:
-        _scenariosTimer?.cancel();
-        _scenariosWriteEpoch++;
-    }
+    // Videography / scenario — drop the doc + every image.
+    final String yamlFile = type == GuideType.videography
+        ? _admin!.videographyFile
+        : _admin!.scenarioFile;
+    final String displayName;
+    final Set<String> imageDeletes;
+    final VoidCallback revert;
 
-    try {
-      if (type == GuideType.equipment) {
-        // Strip the guide but keep the inventory entry.
-        final eq = _equipment[id];
-        if (eq == null) throw StateError('equipment "$id" not found');
-
-        final result = await client.readEquipmentViaApi(token);
-        if (result == null) throw StateError('failed to read equipment.yaml');
-
-        // Keep the first cover image (needed for inventory display);
-        // the rest + all section images are deleted.
-        final keptCovers = eq.coverImages.isEmpty
-            ? <String>[]
-            : [eq.coverImages.first];
-        final discardedCovers = eq.coverImages.length > 1
-            ? eq.coverImages.sublist(1)
-            : <String>[];
-
-        final noGuideDoc = _buildNoGuideEquipmentYaml(
-          id: id,
-          name: eq.name,
-          brand: eq.brand,
-          category: eq.category,
-          coverImages: keptCovers,
-          quantity: eq.quantity,
-          storage: eq.storage,
-        );
-
-        var yamlContent = _removeDocumentById(result.content, id);
-        yamlContent = _appendDocument(yamlContent, noGuideDoc);
-
-        final candidatePaths = <String>{
-          ...discardedCovers,
-          for (final sec in eq.sections) ...sec.images,
-        };
-
-        final existence = await Future.wait(
-          candidatePaths.map((p) async => (
-                path: p,
-                exists: (await repoClient.getFileSha(p, token)) != null,
-              )),
-        );
-        final imagePaths = <String>{
-          for (final r in existence)
-            if (r.exists) r.path,
-        };
-
-        final changes = <BatchFileChange>[
-          BatchFileChange.write(
-            path: _admin!.equipmentFile,
-            content: yamlContent,
-          ),
-          for (final p in imagePaths) BatchFileChange.delete(path: p),
-        ];
-
-        await repoClient.commitBatch(
-          changes,
-          token: token,
-          message: 'Strip equipment guide "${eq.name}" via PixelVault',
-        );
-        _equipmentSha = null;
-
-        _equipment[id] = Equipment(
-          id: eq.id,
-          name: eq.name,
-          category: eq.category,
-          brand: eq.brand,
-          coverImages: keptCovers,
-          description: '',
-          sections: [],
-          related: [],
-          storage: eq.storage,
-          quantity: eq.quantity,
-          noGuide: true,
-        );
-        overlayEpoch.value++;
-      } else {
-        // Videography / scenario: drop the doc + every image.
-        final (
-          String yamlPath,
-          String newContent,
-          Set<String> candidatePaths,
-          String commitMessage,
-        ) = await switch (type) {
-          GuideType.videography => (() async {
-              final result = await client.readVideographyViaApi(token);
-              if (result == null) {
-                throw StateError('failed to read videography.yaml');
-              }
-              final guide = _videography[id];
-              final paths = <String>{
-                if (guide != null) ...guide.coverImages,
-                if (guide != null)
-                  for (final sec in guide.sections) ...sec.images,
-              };
-              return (
-                _admin!.videographyFile,
-                _removeDocumentById(result.content, id),
-                paths,
-                'Delete videography guide "${guide?.name ?? id}" via PixelVault',
-              );
-            })(),
-          GuideType.scenario => (() async {
-              final result = await client.readScenarioViaApi(token);
-              if (result == null) {
-                throw StateError('failed to read scenarios.yaml');
-              }
-              final guide = _scenarios[id];
-              final paths = <String>{
-                if (guide != null) ...guide.coverImages,
-                if (guide != null)
-                  for (final sec in guide.sections) ...sec.images,
-              };
-              return (
-                _admin!.scenarioFile,
-                _removeDocumentById(result.content, id),
-                paths,
-                'Delete scenario guide "${guide?.name ?? id}" via PixelVault',
-              );
-            })(),
-          GuideType.equipment => throw StateError('unreachable'),
-        };
-
-        final existence = await Future.wait(
-          candidatePaths.map((p) async => (
-                path: p,
-                exists: (await repoClient.getFileSha(p, token)) != null,
-              )),
-        );
-        final imagePaths = <String>{
-          for (final r in existence)
-            if (r.exists) r.path,
-        };
-
-        final changes = <BatchFileChange>[
-          BatchFileChange.write(path: yamlPath, content: newContent),
-          for (final p in imagePaths) BatchFileChange.delete(path: p),
-        ];
-
-        await repoClient.commitBatch(
-          changes,
-          token: token,
-          message: commitMessage,
-        );
-
-        if (type == GuideType.videography) {
-          _videography.remove(id);
-        } else {
-          _scenarios.remove(id);
-        }
+    if (type == GuideType.videography) {
+      final guide = _videography[id];
+      if (guide == null) throw StateError('videography guide "$id" not found');
+      displayName = guide.name;
+      imageDeletes = <String>{
+        ...guide.coverImages,
+        for (final sec in guide.sections) ...sec.images,
+      };
+      _videography.remove(id);
+      guidesEpoch.value++;
+      revert = () {
+        _videography[id] = guide;
         guidesEpoch.value++;
-      }
-    } finally {
-      _restartPollForType(type);
+      };
+    } else {
+      final guide = _scenarios[id];
+      if (guide == null) throw StateError('scenario guide "$id" not found');
+      displayName = guide.name;
+      imageDeletes = <String>{
+        ...guide.coverImages,
+        for (final sec in guide.sections) ...sec.images,
+      };
+      _scenarios.remove(id);
+      guidesEpoch.value++;
+      revert = () {
+        _scenarios[id] = guide;
+        guidesEpoch.value++;
+      };
     }
+
+    BatchQueueService().add(PendingOp(
+      displayName: displayName,
+      kind: PendingOpKind.removal,
+      entityId: id,
+      yamlFile: yamlFile,
+      applyToYaml: (content) => _removeDocumentById(content, id),
+      imageDeletes: imageDeletes,
+      commitSummary:
+          'Delete ${type == GuideType.videography ? 'videography' : 'scenario'} guide $displayName',
+      revertLocal: revert,
+    ));
   }
 
   /// Build a minimal equipment YAML document that keeps the inventory
@@ -1777,16 +1342,108 @@ class DataRepository {
     return buf.toString();
   }
 
-  /// Restart polling for the given guide type. Used by create/update/
-  /// delete methods in their finally blocks.
-  void _restartPollForType(GuideType type) {
-    switch (type) {
-      case GuideType.equipment:
-        _startEquipmentPolling();
-      case GuideType.videography:
-        _startVideographyPolling();
-      case GuideType.scenario:
-        _startScenariosPolling();
+  // ══════════════════════════════════════════════════════════════
+  // Batch flush — invoked by [BatchQueueService] when the admin presses
+  // Push or the auto-flush timer fires.
+  // ══════════════════════════════════════════════════════════════
+
+  /// Collapse every op in the queue into a single atomic GitHub commit.
+  ///
+  /// Reads each unique YAML file once, replays every op's
+  /// [PendingOp.applyToYaml] in insertion order to build the final
+  /// content, then unions the ops' image writes + deletes. Image deletes
+  /// are pre-filtered to paths that actually exist in the repo — the
+  /// tree API rejects the whole commit with `GitRPC::BadObjectState`
+  /// otherwise. One `commitBatch` call ships the whole thing.
+  Future<void> _flushBatch(List<PendingOp> ops) async {
+    if (ops.isEmpty) return;
+    final client = _guidesClient;
+    final repoClient = _repoClient;
+    if (client == null || repoClient == null) {
+      throw StateError('clients not ready');
+    }
+    final String token = _admin?.accessToken ?? '';
+    if (token.isEmpty) throw StateError('missing access token');
+
+    // Cancel all polls + bump write epochs so any in-flight poll
+    // response is discarded (would otherwise race with the commit and
+    // cause a visible revert).
+    _equipmentTimer?.cancel();
+    _videographyTimer?.cancel();
+    _scenariosTimer?.cancel();
+    _equipmentWriteEpoch++;
+    _videographyWriteEpoch++;
+    _scenariosWriteEpoch++;
+
+    try {
+      // 1. Read each unique YAML file once.
+      final uniqueFiles = ops.map((o) => o.yamlFile).toSet();
+      final yamlContents = <String, String>{};
+      for (final file in uniqueFiles) {
+        final result = await repoClient.readViaApi(file, token);
+        if (result == null) throw StateError('failed to read $file');
+        yamlContents[file] = result.content;
+      }
+
+      // 2. Replay mutations in order. Also union the image writes
+      //    and deletes, with later ops overriding earlier ones: a
+      //    write supersedes any pending delete for the same path and
+      //    vice-versa, so we never end up asking the tree API to
+      //    both add and remove the same blob in the same commit.
+      final imageWrites = <String, Uint8List>{};
+      final imageDeletes = <String>{};
+      for (final op in ops) {
+        yamlContents[op.yamlFile] =
+            op.applyToYaml(yamlContents[op.yamlFile]!);
+        for (final entry in op.imageWrites.entries) {
+          imageDeletes.remove(entry.key);
+          imageWrites[entry.key] = entry.value;
+        }
+        for (final path in op.imageDeletes) {
+          imageWrites.remove(path);
+          imageDeletes.add(path);
+        }
+      }
+
+      // 3. Pre-filter deletes to only paths that actually exist in the
+      //    repo. A previous op in *this* batch may have already declared
+      //    the write for some of these paths, so skip those too.
+      final existence = await Future.wait(
+        imageDeletes.map((p) async => (
+              path: p,
+              exists: (await repoClient.getFileSha(p, token)) != null,
+            )),
+      );
+      final realDeletes = <String>{
+        for (final r in existence)
+          if (r.exists) r.path,
+      };
+
+      // 4. Build the single commit.
+      final changes = <BatchFileChange>[
+        for (final e in yamlContents.entries)
+          BatchFileChange.write(path: e.key, content: e.value),
+        for (final e in imageWrites.entries)
+          BatchFileChange.writeBinary(path: e.key, bytes: e.value),
+        for (final p in realDeletes) BatchFileChange.delete(path: p),
+      ];
+
+      // Commit message: one line per op, truncated if silly-long.
+      final summaries = ops.map((o) => o.commitSummary).toList();
+      final String message = summaries.length == 1
+          ? '${summaries.first} via PixelVault'
+          : 'Batch update via PixelVault (${ops.length} changes)\n\n'
+              '${summaries.map((s) => '- $s').join('\n')}';
+
+      await repoClient.commitBatch(
+        changes,
+        token: token,
+        message: message,
+      );
+    } finally {
+      _startEquipmentPolling();
+      _startVideographyPolling();
+      _startScenariosPolling();
     }
   }
 

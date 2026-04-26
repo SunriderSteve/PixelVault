@@ -23,6 +23,7 @@
 // stable — renaming a route also requires updating the matching
 // destination page's Hero tag so the transition doesn't break.
 
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 import 'pages/homepage.dart';
@@ -37,9 +38,18 @@ import 'pages/production_shoots_page.dart';
 import 'pages/scenario_detail_page.dart';
 import 'pages/scenario_list_page.dart';
 
+/// Root navigator key. Exposed so widgets that live above the
+/// Navigator (e.g. the global pending-changes FAB injected via
+/// `MaterialApp.builder`) can reach into the navigation tree to show
+/// dialogs — those widgets' own contexts sit ABOVE the Navigator and
+/// `Navigator.of(context)` would otherwise fail to resolve.
+final GlobalKey<NavigatorState> rootNavigatorKey =
+    GlobalKey<NavigatorState>();
+
 /// Top-level router for the app. Wired into `MaterialApp.router` in
 /// `main.dart` — this is the single source of truth for navigation.
 final GoRouter appRouter = GoRouter(
+  navigatorKey: rootNavigatorKey,
   routes: [
     // ── Home ──────────────────────────────────────────────────────
     GoRoute(path: '/', builder: (_, _) => const HomePage()),

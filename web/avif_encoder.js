@@ -15,13 +15,29 @@
   /**
    * Test whether the browser can encode AVIF via canvas.
    * Caches the result after the first call.
+   *
+   * The probe uses a 64×64 canvas with actual pixel content rather
+   * than a 1×1 blank one. AV1 (AVIF's underlying codec) has block-size
+   * minimums and Chromium's encoder bails to PNG silently for tiny
+   * blank inputs even on builds that handle real images fine — the
+   * old 1×1 probe gave a false negative on every browser we ship to,
+   * making `convertToAvif` always fall through to WebP.
+   *
+   * Per the canvas spec, when the requested MIME isn't supported the
+   * resulting blob is PNG, so the type check at the end stays the
+   * authoritative signal.
+   *
    * @returns {Promise<boolean>}
    */
   async function canEncodeAvif() {
     if (_canAvif !== null) return _canAvif;
     try {
-      const c = new OffscreenCanvas(1, 1);
-      const blob = await c.convertToBlob({ type: 'image/avif' });
+      const c = new OffscreenCanvas(64, 64);
+      const ctx = c.getContext('2d');
+      // Solid fill so the encoder has real pixel data to work with.
+      ctx.fillStyle = '#ff0000';
+      ctx.fillRect(0, 0, 64, 64);
+      const blob = await c.convertToBlob({ type: 'image/avif', quality: 0.5 });
       _canAvif = blob.type === 'image/avif';
     } catch (_) {
       _canAvif = false;
@@ -53,15 +69,28 @@
     ctx.drawImage(bitmap, 0, 0);
     bitmap.close();
 
-    // Encode — prefer AVIF, fall back to WebP.
-    const useAvif = await canEncodeAvif();
-    const mime = useAvif ? 'image/avif' : 'image/webp';
-    const ext = useAvif ? 'avif' : 'webp';
+    // Try AVIF first (subject to capability probe), then fall back to
+    // WebP. The runtime check on `encoded.type` is the safety net for
+    // a probe false positive: per the canvas spec, an unsupported MIME
+    // yields a PNG blob, which we'd otherwise upload mislabelled as
+    // `.avif`.
+    if (await canEncodeAvif()) {
+      const encoded = await canvas.convertToBlob({
+        type: 'image/avif',
+        quality: quality,
+      });
+      if (encoded.type === 'image/avif') {
+        return { buffer: await encoded.arrayBuffer(), ext: 'avif' };
+      }
+      // Probe lied — invalidate the cache so we don't ask again.
+      _canAvif = false;
+    }
 
-    const encoded = await canvas.convertToBlob({ type: mime, quality: quality });
-    const buffer = await encoded.arrayBuffer();
-
-    return { buffer: buffer, ext: ext };
+    const encoded = await canvas.convertToBlob({
+      type: 'image/webp',
+      quality: quality,
+    });
+    return { buffer: await encoded.arrayBuffer(), ext: 'webp' };
   }
 
   // ── Expose to Dart via window globals ─────────────────────────

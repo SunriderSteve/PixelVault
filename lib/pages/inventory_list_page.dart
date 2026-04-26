@@ -30,6 +30,7 @@ import '../models/equipment_model.dart'; // Equipment
 import '../services/avif_converter.dart' as avif;
 import '../services/data_repository.dart';
 import '../widgets/admin_auth.dart';
+import '../widgets/pending_changes_fab.dart' show ensureNoPendingChangeFor;
 import 'guide_creator_page.dart' show GuideType;
 import 'inventory_create_dialog.dart';
 import 'inventory_edit_dialog.dart';
@@ -244,6 +245,11 @@ class _InventoryListPageState extends State<InventoryListPage> {
   ///                         uploaded, YAML patched in a single commit).
   ///   • inventory patch   — quantity / storage diff only.
   Future<void> _editItem(Equipment item) async {
+    // Block the edit dialog if a change for this item is already
+    // queued — layering a second edit (or worse, a delete after a
+    // create) on top is either confusing or contradictory.
+    if (!ensureNoPendingChangeFor(context, item.id)) return;
+
     final String initialCover =
         item.coverImages.isNotEmpty ? item.coverImages.first : '';
     final InventoryEditResult? res = await showInventoryEditDialog(

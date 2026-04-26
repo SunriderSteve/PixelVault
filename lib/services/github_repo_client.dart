@@ -280,9 +280,35 @@ class GitHubRepoClient {
   }
 
   /// Get just the SHA of a file (convenience for delete operations).
+  ///
+  /// Does NOT route through [readViaApi] because that path runs the
+  /// response body through `utf8.decode`, which throws on binary
+  /// files (AVIF/WebP images). The thrown FormatException was being
+  /// caught and silently turning every image existence check into a
+  /// `null`, so the batch-flush pre-filter dropped every image
+  /// delete and the repo grew orphaned image blobs forever. Here we
+  /// hit the Contents API ourselves and read only the `sha` field —
+  /// the binary content payload is irrelevant.
   Future<String?> getFileSha(String path, String token) async {
-    final result = await readViaApi(path, token);
-    return result?.sha;
+    try {
+      final uri = Uri.parse('${admin.apiBaseUrl}/$path?ref=${admin.branch}');
+      final resp = await http.get(uri, headers: _authHeaders(token));
+      if (resp.statusCode == 200) {
+        final body = jsonDecode(resp.body) as Map<String, dynamic>;
+        return body['sha'] as String?;
+      }
+      // 404 — the file genuinely doesn't exist; anything else is a
+      // real error worth surfacing in the debug log.
+      if (resp.statusCode != 404) {
+        debugPrint(
+          'getFileSha non-OK ${resp.statusCode}: ${resp.reasonPhrase}',
+        );
+      }
+      return null;
+    } catch (e) {
+      debugPrint('getFileSha exception for $path: $e');
+      return null;
+    }
   }
 
   // ── Batched commits via Git Data API ───────────────────────────
@@ -387,8 +413,10 @@ class GitHubRepoClient {
     final baseTreeSha =
         (commitBody['tree'] as Map<String, dynamic>)['sha'] as String;
 
-    // 3. Build the tree. For deletes, omit the sha (null) so the path
-    // is removed from the new tree.
+    // 3. Build the tree. Every entry must carry `mode` and `type` —
+    // GitHub rejects the request with "Must supply a valid tree.mode"
+    // otherwise — even for deletions, where `sha: null` is the actual
+    // signal that the path should be removed from the new tree.
     final treeEntries = <Map<String, dynamic>>[];
     for (final change in changes) {
       treeEntries.add({

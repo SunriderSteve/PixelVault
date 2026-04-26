@@ -24,6 +24,7 @@ import '../models/equipment_model.dart';
 import '../models/scenario_model.dart';
 import '../services/data_repository.dart';
 import '../widgets/admin_auth.dart';
+import '../widgets/pending_changes_fab.dart' show ensureNoPendingChangeFor;
 import 'guide_creator_page.dart';
 
 class ScenarioDetailPage extends StatefulWidget {
@@ -159,21 +160,27 @@ class _ScenarioDetailPageState extends State<ScenarioDetailPage> {
                         if (isAdmin)
                           IconButton(
                             icon: const Icon(Icons.edit, color: Colors.white),
-                            onPressed: () => showGuideEditor(
-                              context,
-                              GuideType.scenario,
-                              GuideEditData(
-                                name: _scenario.name,
-                                coverImages: _scenario.coverImages,
-                                sections: _scenario.sections
-                                    .map((s) => (
-                                          title: s.title,
-                                          body: s.body,
-                                          images: s.images,
-                                        ))
-                                    .toList(),
-                              ),
-                            ),
+                            onPressed: () {
+                              if (!ensureNoPendingChangeFor(
+                                  context, _scenario.id)) {
+                                return;
+                              }
+                              showGuideEditor(
+                                context,
+                                GuideType.scenario,
+                                GuideEditData(
+                                  name: _scenario.name,
+                                  coverImages: _scenario.coverImages,
+                                  sections: _scenario.sections
+                                      .map((s) => (
+                                            title: s.title,
+                                            body: s.body,
+                                            images: s.images,
+                                          ))
+                                      .toList(),
+                                ),
+                              );
+                            },
                             tooltip: 'Edit Guide',
                           ),
                         IconButton(

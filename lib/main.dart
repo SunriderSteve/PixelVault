@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'services/data_repository.dart';
 import 'router.dart'; // exports your GoRouter instance (e.g., `router`)
+import 'widgets/pending_changes_fab.dart';
 
 Future<void> main() async {
   // Needed because we're doing async work before runApp()
@@ -25,6 +26,22 @@ class PixelVaultApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0047BB)),
         useMaterial3: true,
       ),
+      // Global overlay: stacks the pending-changes FAB over every
+      // route so it's reachable anywhere in the app without each page
+      // having to wire it into its own Scaffold. The FAB self-hides
+      // for non-admins and when there's nothing to push.
+      builder: (context, child) {
+        return Stack(
+          children: [
+            if (child != null) Positioned.fill(child: child),
+            const Positioned(
+              right: 16,
+              bottom: 16,
+              child: PendingChangesFab(),
+            ),
+          ],
+        );
+      },
     );
   }
 }
