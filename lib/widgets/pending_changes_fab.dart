@@ -146,7 +146,7 @@ class _FabButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final double cooldownFraction = cooldown > Duration.zero
         ? cooldown.inMilliseconds /
-            BatchQueueService.cooldownDuration.inMilliseconds
+              BatchQueueService.cooldownDuration.inMilliseconds
         : 0;
 
     return SizedBox(
@@ -197,8 +197,7 @@ class _FabButton extends StatelessWidget {
               top: 6,
               right: 6,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: _kNlbRed,
                   borderRadius: BorderRadius.circular(10),
@@ -265,17 +264,13 @@ class _PendingChangesDialogState extends State<_PendingChangesDialog> {
     );
   }
 
-  Widget _buildDialog(
-    Duration cooldown,
-    Duration autoFlush,
-    bool isFlushing,
-  ) {
+  Widget _buildDialog(Duration cooldown, Duration autoFlush, bool isFlushing) {
     final ops = _queue.ops;
-    final creations =
-        ops.where((o) => o.kind == PendingOpKind.creation).toList();
+    final creations = ops
+        .where((o) => o.kind == PendingOpKind.creation)
+        .toList();
     final edits = ops.where((o) => o.kind == PendingOpKind.edit).toList();
-    final removals =
-        ops.where((o) => o.kind == PendingOpKind.removal).toList();
+    final removals = ops.where((o) => o.kind == PendingOpKind.removal).toList();
 
     return Dialog(
       backgroundColor: Colors.grey.shade900,
@@ -367,18 +362,14 @@ class _PendingChangesDialogState extends State<_PendingChangesDialog> {
         border: Border.all(color: _kNlbBlue.withValues(alpha: 0.35)),
       ),
       child: const Text(
-        'PixelVault pools guide + inventory edits into one Git push to '
-        'avoid GitHub\'s rapid-commit rate limits. Review the list below, '
+        'PixelVault pools guides & inventory edits into one Git push to '
+        'avoid GitHub\'s rapid-commit rate limits. \n\nReview the list below, '
         'remove anything you didn\'t mean to stage, then press Push. '
-        'After a push you must wait 10 minutes before pushing again; if '
+        '\n\nAfter a push you must wait 10 minutes before pushing again; if '
         'you leave changes pending they\'ll auto-push in 30 minutes. '
-        'Note: pending changes live only in this browser session — a '
-        'reload before pushing will lose them.',
-        style: TextStyle(
-          color: Colors.white70,
-          fontSize: 13,
-          height: 1.4,
-        ),
+        '\n\nNote: pending changes live only in this browser session — '
+        'meaning changes will be lost if you reload the browser before pushing.',
+        style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
       ),
     );
   }
@@ -490,7 +481,10 @@ class _PendingChangesDialogState extends State<_PendingChangesDialog> {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [for (final row in rows) Padding(padding: const EdgeInsets.only(bottom: 4), child: row)],
+      children: [
+        for (final row in rows)
+          Padding(padding: const EdgeInsets.only(bottom: 4), child: row),
+      ],
     );
   }
 
@@ -539,10 +533,7 @@ class _PendingChangesDialogState extends State<_PendingChangesDialog> {
       children: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text(
-            'Close',
-            style: TextStyle(color: Colors.white54),
-          ),
+          child: const Text('Close', style: TextStyle(color: Colors.white54)),
         ),
         const SizedBox(width: 8),
         ElevatedButton.icon(
@@ -563,8 +554,7 @@ class _PendingChangesDialogState extends State<_PendingChangesDialog> {
             foregroundColor: Colors.white,
             disabledBackgroundColor: Colors.white.withValues(alpha: 0.15),
             disabledForegroundColor: Colors.white.withValues(alpha: 0.4),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
@@ -596,10 +586,7 @@ class _PendingChangesDialogState extends State<_PendingChangesDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(
-              'Keep',
-              style: TextStyle(color: Colors.white54),
-            ),
+            child: const Text('Keep', style: TextStyle(color: Colors.white54)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -632,10 +619,7 @@ class _PendingChangesDialogState extends State<_PendingChangesDialog> {
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(
-          content: Text('Push failed: $e'),
-          backgroundColor: _kNlbRed,
-        ),
+        SnackBar(content: Text('Push failed: $e'), backgroundColor: _kNlbRed),
       );
     }
   }
