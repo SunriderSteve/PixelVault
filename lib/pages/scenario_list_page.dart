@@ -13,6 +13,7 @@ import 'package:go_router/go_router.dart';
 import '../models/scenario_model.dart';
 import '../services/data_repository.dart';
 import '../widgets/admin_auth.dart';
+import '../widgets/scroll_to_top_fab.dart';
 import 'guide_creator_page.dart';
 
 /// Grid page listing every production scenario loaded by
@@ -25,6 +26,9 @@ class ScenarioListPage extends StatefulWidget {
 }
 
 class _ScenarioListPageState extends State<ScenarioListPage> {
+  // ── Scroll ──────────────────────────────────────────────────────────
+  final ScrollController _scrollCtrl = ScrollController();
+
   @override
   void initState() {
     super.initState();
@@ -37,6 +41,7 @@ class _ScenarioListPageState extends State<ScenarioListPage> {
   @override
   void dispose() {
     DataRepository().guidesEpoch.removeListener(_onGuidesChanged);
+    _scrollCtrl.dispose();
     super.dispose();
   }
 
@@ -139,6 +144,7 @@ class _ScenarioListPageState extends State<ScenarioListPage> {
 
             // ── 3. Foreground content ──────────────────────────────
             CustomScrollView(
+              controller: _scrollCtrl,
               slivers: [
                 // Frosted pinned app bar.
                 SliverAppBar(
@@ -218,6 +224,9 @@ class _ScenarioListPageState extends State<ScenarioListPage> {
                 ),
               ],
             ),
+
+            // Back-to-top button — appears once the user has scrolled.
+            ScrollToTopFab(controller: _scrollCtrl),
           ],
         ),
     );

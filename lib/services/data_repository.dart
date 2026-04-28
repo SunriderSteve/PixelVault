@@ -719,6 +719,8 @@ class DataRepository {
     String equipmentId, {
     int? quantity,
     String? storage,
+    String? brand,
+    String? category,
   }) async {
     if (_admin == null) throw StateError('clients not ready');
     if (_admin!.accessToken.isEmpty) throw StateError('missing access token');
@@ -738,6 +740,8 @@ class DataRepository {
         equipmentId,
         quantity: quantity,
         storage: storage,
+        brand: brand,
+        category: category,
       ),
       commitSummary: 'Edit inventory for ${prevEquipment.name}',
       // Nothing to revert — the local cache was never touched.
@@ -1459,6 +1463,8 @@ class DataRepository {
     String equipmentId, {
     int? quantity,
     String? storage,
+    String? brand,
+    String? category,
   }) {
     // Split on document separator, preserving the structure.
     final docs = yamlContent.split(RegExp(r'^---\s*$', multiLine: true));
@@ -1494,6 +1500,28 @@ class DataRepository {
             );
           } else {
             updated = '$updated\nstorage: ${_yamlQuote(storage)}';
+          }
+        }
+
+        if (brand != null) {
+          if (RegExp(r'^brand:.*$', multiLine: true).hasMatch(updated)) {
+            updated = updated.replaceFirst(
+              RegExp(r'^brand:.*$', multiLine: true),
+              'brand: ${_yamlQuote(brand)}',
+            );
+          } else {
+            updated = '$updated\nbrand: ${_yamlQuote(brand)}';
+          }
+        }
+
+        if (category != null) {
+          if (RegExp(r'^category:.*$', multiLine: true).hasMatch(updated)) {
+            updated = updated.replaceFirst(
+              RegExp(r'^category:.*$', multiLine: true),
+              'category: ${_yamlQuote(category)}',
+            );
+          } else {
+            updated = '$updated\ncategory: ${_yamlQuote(category)}';
           }
         }
 

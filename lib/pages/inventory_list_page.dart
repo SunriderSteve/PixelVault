@@ -31,6 +31,7 @@ import '../services/avif_converter.dart' as avif;
 import '../services/data_repository.dart';
 import '../widgets/admin_auth.dart';
 import '../widgets/pending_changes_fab.dart' show ensureNoPendingChangeFor;
+import '../widgets/scroll_to_top_fab.dart';
 import 'guide_creator_page.dart' show GuideType;
 import 'inventory_create_dialog.dart';
 import 'inventory_edit_dialog.dart';
@@ -70,6 +71,9 @@ class _InventoryListPageState extends State<InventoryListPage> {
   late final List<String> _allCategories;
   late final List<String> _allBrands;
 
+  // ── Scroll ────────────────────────────────────────────────────────────
+  final ScrollController _scrollCtrl = ScrollController();
+
   @override
   void initState() {
     super.initState();
@@ -96,6 +100,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
     adminNotifier.removeListener(_onAdminChanged);
     DataRepository().overlayEpoch.removeListener(_onOverlayChanged);
     _search.dispose();
+    _scrollCtrl.dispose();
     super.dispose();
   }
 
@@ -218,12 +223,20 @@ class _InventoryListPageState extends State<InventoryListPage> {
 
   /// Persists an inventory edit through the repository, then shows a
   /// snackbar reporting success or failure.
-  Future<void> _onSavePatch(String id, int? newQty, String? newStorage) async {
+  Future<void> _onSavePatch(
+    String id, {
+    int? newQty,
+    String? newStorage,
+    String? newBrand,
+    String? newCategory,
+  }) async {
     try {
       await DataRepository().applyInventoryChanges(
         id,
         quantity: newQty,
         storage: newStorage,
+        brand: newBrand,
+        category: newCategory,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -257,6 +270,8 @@ class _InventoryListPageState extends State<InventoryListPage> {
       equipmentName: item.name,
       initialQuantity: item.quantity ?? 0,
       initialStorage: item.storage ?? '',
+      initialBrand: item.brand,
+      initialCategory: item.category,
       initialCoverImagePath: initialCover,
     );
     if (!mounted || res == null) return;
@@ -316,14 +331,37 @@ class _InventoryListPageState extends State<InventoryListPage> {
     final int? newQty = (res.quantity != item.quantity) ? res.quantity : null;
     final String? newStorage =
         (res.storage != item.storage) ? res.storage : null;
+    final String? newBrand =
+        (res.brand != item.brand) ? res.brand : null;
+    final String? newCategory =
+        (res.category != item.category) ? res.category : null;
 
-    if (newQty != null || newStorage != null) {
-      await _onSavePatch(item.id, newQty, newStorage);
+    if (newQty != null ||
+        newStorage != null ||
+        newBrand != null ||
+        newCategory != null) {
+      await _onSavePatch(
+        item.id,
+        newQty: newQty,
+        newStorage: newStorage,
+        newBrand: newBrand,
+        newCategory: newCategory,
+      );
     } else if (res.newImageBytes != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cover image updated.')),
       );
     }
+  }
+
+  /// Open the read-only equipment info popup. Available to admins and
+  /// regular users — admins still see (and can tap) the edit button on
+  /// the card, but a tap anywhere else on the card opens this view.
+  void _showInfoPopup(Equipment item) {
+    showDialog(
+      context: context,
+      builder: (_) => _InventoryInfoPopup(equipment: item),
+    );
   }
 
   // ── Build ─────────────────────────────────────────────────────────────
@@ -407,6 +445,7 @@ class _InventoryListPageState extends State<InventoryListPage> {
 
           // ── Foreground content ───────────────────────────────────────
           CustomScrollView(
+            controller: _scrollCtrl,
             slivers: [
               // Frosted app bar. The title doubles as a hidden admin
               // toggle — tapping it triggers the same flow as the person
@@ -743,12 +782,18 @@ class _InventoryListPageState extends State<InventoryListPage> {
                       item: item,
                       isAdmin: _isAdmin,
                       onEditTap: () => _editItem(item),
+                      onCardTap: () => _showInfoPopup(item),
                     );
                   }, childCount: _filtered.length),
                 ),
               ),
             ],
           ),
+
+          // Back-to-top button — appears once the user has scrolled.
+          // The global pending-changes FAB shifts up to stay visible
+          // above it (handled in main.dart).
+          ScrollToTopFab(controller: _scrollCtrl),
         ],
       ),
     );
@@ -837,11 +882,13 @@ class _GlassInventoryCard extends StatelessWidget {
   final Equipment item;
   final bool isAdmin;
   final VoidCallback? onEditTap;
+  final VoidCallback? onCardTap;
 
   const _GlassInventoryCard({
     required this.item,
     required this.isAdmin,
     this.onEditTap,
+    this.onCardTap,
   });
 
   @override
@@ -964,7 +1011,23 @@ class _GlassInventoryCard extends StatelessWidget {
             ),
           ),
 
-          // 4. Admin-only edit button, pinned to the top-right corner.
+          // 4. Tap ripple layer — opens the read-only info popup.
+          //    Positioned BEFORE the admin edit button so the
+          //    IconButton remains on top in the hit-test order and
+          //    keeps its own tap target unobstructed.
+          if (onCardTap != null)
+            Positioned.fill(
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onCardTap,
+                  highlightColor: Colors.white.withValues(alpha: 0.1),
+                  splashColor: Colors.white.withValues(alpha: 0.2),
+                ),
+              ),
+            ),
+
+          // 5. Admin-only edit button, pinned to the top-right corner.
           if (isAdmin)
             Positioned(
               top: 8,
@@ -987,6 +1050,214 @@ class _GlassInventoryCard extends StatelessWidget {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Read-only equipment info popup. Mirrors the production-shoot
+/// equipment popup but without the bring-quantity editor and remove
+/// action — it's the same dialog non-admins and admins both see when
+/// tapping an inventory card. Tapping the cover image opens a
+/// full-screen viewer.
+class _InventoryInfoPopup extends StatelessWidget {
+  final Equipment equipment;
+
+  const _InventoryInfoPopup({required this.equipment});
+
+  void _showFullImage(BuildContext context, String imagePath) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: GestureDetector(
+          onTap: () => Navigator.of(context).pop(),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SmartImage.network(
+              DataRepository().imageUrl(imagePath),
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => Container(
+                color: Colors.grey.shade800,
+                child: const Icon(
+                  Icons.image_not_supported,
+                  color: Colors.white38,
+                  size: 64,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final String imagePath = equipment.coverImages.isNotEmpty
+        ? equipment.coverImages.first
+        : '';
+    final int qty = equipment.quantity ?? 0;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 360),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade900.withValues(alpha: 0.95),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Align(
+                  alignment: Alignment.topRight,
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white54),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ),
+
+                if (imagePath.isNotEmpty) ...[
+                  GestureDetector(
+                    onTap: () => _showFullImage(context, imagePath),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: AspectRatio(
+                          aspectRatio: 4 / 3,
+                          child: SmartImage.network(
+                            DataRepository().imageUrl(imagePath),
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => Container(
+                              color: Colors.grey.shade800,
+                              child: const Icon(
+                                Icons.image_not_supported,
+                                color: Colors.white38,
+                                size: 48,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Press to view full image',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.35),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                ] else
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    height: 180,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade800,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.image_not_supported,
+                        color: Colors.white38,
+                        size: 48,
+                      ),
+                    ),
+                  ),
+
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        equipment.name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _InfoRow(label: 'Category', value: equipment.category),
+                      _InfoRow(label: 'Brand', value: equipment.brand),
+                      _InfoRow(
+                        label: 'Stock',
+                        value: qty > 0 ? '$qty' : 'Out of Stock',
+                      ),
+                      if (equipment.storage != null &&
+                          equipment.storage!.isNotEmpty)
+                        _InfoRow(
+                          label: 'Storage',
+                          value: equipment.storage!,
+                        ),
+                      if (equipment.description.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          equipment.description,
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.6),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _InfoRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.5),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+            ),
+          ),
         ],
       ),
     );

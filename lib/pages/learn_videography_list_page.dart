@@ -16,6 +16,7 @@ import 'package:go_router/go_router.dart';
 import '../models/videography_model.dart';
 import '../services/data_repository.dart';
 import '../widgets/admin_auth.dart';
+import '../widgets/scroll_to_top_fab.dart';
 import 'guide_creator_page.dart';
 
 class LearnVideographyListPage extends StatefulWidget {
@@ -36,6 +37,9 @@ class _LearnVideographyListPageState extends State<LearnVideographyListPage> {
   // tab appears without a reload.
   late List<VideographyGuide> _all;
   late List<VideographyGuide> _filtered;
+
+  // ── Scroll ──────────────────────────────────────────────────────────
+  final ScrollController _scrollCtrl = ScrollController();
 
   @override
   void initState() {
@@ -75,6 +79,7 @@ class _LearnVideographyListPageState extends State<LearnVideographyListPage> {
   void dispose() {
     DataRepository().guidesEpoch.removeListener(_onGuidesChanged);
     _searchCtrl.dispose();
+    _scrollCtrl.dispose();
     super.dispose();
   }
 
@@ -171,6 +176,7 @@ class _LearnVideographyListPageState extends State<LearnVideographyListPage> {
 
             // ── 3. Foreground content ──────────────────────────────
             CustomScrollView(
+              controller: _scrollCtrl,
               slivers: [
                 // Frosted pinned app bar.
                 SliverAppBar(
@@ -314,6 +320,9 @@ class _LearnVideographyListPageState extends State<LearnVideographyListPage> {
                 ),
               ],
             ),
+
+            // Back-to-top button — appears once the user has scrolled.
+            ScrollToTopFab(controller: _scrollCtrl),
           ],
         ),
     );

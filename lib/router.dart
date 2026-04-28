@@ -32,7 +32,6 @@ import 'pages/learn_equip_detail_page.dart';
 import 'pages/learn_equip_list_page.dart';
 import 'pages/learn_videography_detail_page.dart';
 import 'pages/learn_videography_list_page.dart';
-import 'pages/learning_list_page.dart';
 import 'pages/production_shoot_detail_page.dart';
 import 'pages/production_shoots_page.dart';
 import 'pages/scenario_detail_page.dart';
@@ -43,8 +42,7 @@ import 'pages/scenario_list_page.dart';
 /// `MaterialApp.builder`) can reach into the navigation tree to show
 /// dialogs — those widgets' own contexts sit ABOVE the Navigator and
 /// `Navigator.of(context)` would otherwise fail to resolve.
-final GlobalKey<NavigatorState> rootNavigatorKey =
-    GlobalKey<NavigatorState>();
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 /// Top-level router for the app. Wired into `MaterialApp.router` in
 /// `main.dart` — this is the single source of truth for navigation.
@@ -53,11 +51,6 @@ final GoRouter appRouter = GoRouter(
   routes: [
     // ── Home ──────────────────────────────────────────────────────
     GoRoute(path: '/', builder: (_, _) => const HomePage()),
-
-    // ── Learning Guides ───────────────────────────────────────────
-    // `/learn` is the hub page; the two subtrees below it host the
-    // equipment and videography catalogues.
-    GoRoute(path: '/learn', builder: (_, _) => const LearningListPage()),
     GoRoute(
       path: '/learn/equip-guides',
       builder: (_, _) => const LearnEquipListPage(),
@@ -95,10 +88,7 @@ final GoRouter appRouter = GoRouter(
     ),
 
     // ── Production Shoots ────────────────────────────────────────
-    GoRoute(
-      path: '/shoots',
-      builder: (_, _) => const ProductionShootsPage(),
-    ),
+    GoRoute(path: '/shoots', builder: (_, _) => const ProductionShootsPage()),
     GoRoute(
       path: '/shoots/:name',
       builder: (_, state) => ProductionShootDetailPage(

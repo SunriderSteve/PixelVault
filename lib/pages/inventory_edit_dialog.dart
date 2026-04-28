@@ -4,7 +4,7 @@
 // icon on an equipment card. It presents a two-step flow:
 //
 //   1. Edit mode    — lets the user change quantity (via +/- buttons or a
-//                     text field) and storage location (free-text).
+//                     text field), storage location, brand, and category.
 //   2. Confirm mode — shows a diff of what changed and requires the user
 //                     to confirm before the changes are returned.
 //
@@ -18,21 +18,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // FilteringTextInputFormatter + Uint8List.
 import 'package:image_picker/image_picker.dart';
 
+import '../services/data_repository.dart';
 import '../widgets/smart_image.dart';
 
 import '../services/clipboard_image_service.dart' as clipboard;
 
 /// Result returned by [showInventoryEditDialog] after the user confirms.
 ///
-/// [changed] is true if [quantity], [storage], or the cover image
-/// differs from the initial values. [removed] is true when the user
-/// confirmed removal of the item — in that case the caller should
-/// delete the equipment entirely and ignore the other fields.
-/// [newImageBytes] is non-null only when the user replaced the cover
-/// image; the caller is responsible for AVIF conversion + upload.
+/// [changed] is true if any of [quantity], [storage], [brand],
+/// [category], or the cover image differs from the initial values.
+/// [removed] is true when the user confirmed removal of the item — in
+/// that case the caller should delete the equipment entirely and ignore
+/// the other fields. [newImageBytes] is non-null only when the user
+/// replaced the cover image; the caller is responsible for AVIF
+/// conversion + upload.
 class InventoryEditResult {
   final int quantity;
   final String storage;
+  final String brand;
+  final String category;
   final bool changed;
   final bool removed;
   final Uint8List? newImageBytes;
@@ -40,6 +44,8 @@ class InventoryEditResult {
   InventoryEditResult({
     required this.quantity,
     required this.storage,
+    required this.brand,
+    required this.category,
     required this.changed,
     this.removed = false,
     this.newImageBytes,
@@ -57,6 +63,8 @@ Future<InventoryEditResult?> showInventoryEditDialog(
   required String equipmentName,
   required int initialQuantity,
   required String initialStorage,
+  required String initialBrand,
+  required String initialCategory,
   String initialCoverImagePath = '',
 }) {
   return showDialog<InventoryEditResult>(
@@ -67,6 +75,8 @@ Future<InventoryEditResult?> showInventoryEditDialog(
       equipmentName: equipmentName,
       initialQuantity: initialQuantity,
       initialStorage: initialStorage,
+      initialBrand: initialBrand,
+      initialCategory: initialCategory,
       initialCoverImagePath: initialCoverImagePath,
     ),
   );
@@ -79,12 +89,16 @@ class _InventoryEditDialog extends StatefulWidget {
   final String equipmentName;
   final int initialQuantity;
   final String initialStorage;
+  final String initialBrand;
+  final String initialCategory;
   final String initialCoverImagePath;
 
   const _InventoryEditDialog({
     required this.equipmentName,
     required this.initialQuantity,
     required this.initialStorage,
+    required this.initialBrand,
+    required this.initialCategory,
     required this.initialCoverImagePath,
   });
 
@@ -93,10 +107,12 @@ class _InventoryEditDialog extends StatefulWidget {
 }
 
 class _InventoryEditDialogState extends State<_InventoryEditDialog> {
-  // Controllers keep the quantity and storage fields editable from both
-  // the text inputs and the helper buttons (+/-, reset).
+  // Controllers keep the editable fields wired to both the text inputs
+  // and the helper buttons (+/-, reset).
   late final TextEditingController _qtyCtrl;
   late final TextEditingController _storageCtrl;
+  late final TextEditingController _brandCtrl;
+  late final TextEditingController _categoryCtrl;
 
   _StepMode _mode = _StepMode.edit;
 
@@ -107,17 +123,65 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
 
   final ImagePicker _imagePicker = ImagePicker();
 
+  // Autocomplete data for brand/category fields.
+  late final List<String> _allBrands;
+  late final List<String> _allCategories;
+  List<String> _brandSuggestions = const [];
+  List<String> _categorySuggestions = const [];
+
   @override
   void initState() {
     super.initState();
     _qtyCtrl = TextEditingController(text: '${widget.initialQuantity}');
     _storageCtrl = TextEditingController(text: widget.initialStorage);
+    _brandCtrl = TextEditingController(text: widget.initialBrand);
+    _categoryCtrl = TextEditingController(text: widget.initialCategory);
+
+    final allEquip = DataRepository().getAllEquipment();
+    _allBrands = allEquip
+        .map((e) => e.brand)
+        .where((b) => b.isNotEmpty && b != 'Unknown')
+        .toSet()
+        .toList()
+      ..sort();
+    _allCategories = allEquip
+        .map((e) => e.category)
+        .where((c) => c.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+
+    _brandCtrl.addListener(() {
+      final t = _brandCtrl.text;
+      setState(() {
+        _brandSuggestions = (t.isEmpty || t == widget.initialBrand)
+            ? const []
+            : _allBrands
+                .where((b) =>
+                    b.toLowerCase().contains(t.toLowerCase()) && b != t)
+                .toList();
+      });
+    });
+
+    _categoryCtrl.addListener(() {
+      final t = _categoryCtrl.text;
+      setState(() {
+        _categorySuggestions = (t.isEmpty || t == widget.initialCategory)
+            ? const []
+            : _allCategories
+                .where((c) =>
+                    c.toLowerCase().contains(t.toLowerCase()) && c != t)
+                .toList();
+      });
+    });
   }
 
   @override
   void dispose() {
     _qtyCtrl.dispose();
     _storageCtrl.dispose();
+    _brandCtrl.dispose();
+    _categoryCtrl.dispose();
     super.dispose();
   }
 
@@ -177,16 +241,22 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
     final int currentQty =
         int.tryParse(_qtyCtrl.text) ?? widget.initialQuantity;
     final String currentStorage = _storageCtrl.text.trim();
+    final String currentBrand = _brandCtrl.text.trim();
+    final String currentCategory = _categoryCtrl.text.trim();
 
     final bool changed =
         (currentQty != widget.initialQuantity) ||
         (currentStorage != widget.initialStorage) ||
+        (currentBrand != widget.initialBrand) ||
+        (currentCategory != widget.initialCategory) ||
         (_imageBytes != null);
 
     Navigator.of(context).pop(
       InventoryEditResult(
         quantity: currentQty,
         storage: currentStorage,
+        brand: currentBrand,
+        category: currentCategory,
         changed: changed,
         newImageBytes: _imageBytes,
       ),
@@ -207,6 +277,8 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
       InventoryEditResult(
         quantity: widget.initialQuantity,
         storage: widget.initialStorage,
+        brand: widget.initialBrand,
+        category: widget.initialCategory,
         changed: false,
         removed: true,
       ),
@@ -230,6 +302,16 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
   /// Reset the storage input back to the value the dialog opened with.
   void _resetStorage() => _storageCtrl.text = widget.initialStorage;
 
+  void _resetBrand() {
+    _brandCtrl.text = widget.initialBrand;
+    setState(() => _brandSuggestions = const []);
+  }
+
+  void _resetCategory() {
+    _categoryCtrl.text = widget.initialCategory;
+    setState(() => _categorySuggestions = const []);
+  }
+
   // ── Build ─────────────────────────────────────────────────────────────
 
   @override
@@ -239,147 +321,156 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              // Dark semi-transparent base so the blur still carries a
-              // strong glass tint instead of washing out.
-              color: Colors.grey.shade900.withValues(alpha: 0.85),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.1),
-                width: 1,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480, maxHeight: 720),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                // Dark semi-transparent base so the blur still carries a
+                // strong glass tint instead of washing out.
+                color: Colors.grey.shade900.withValues(alpha: 0.85),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  width: 1,
+                ),
               ),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Header — one label per step.
-                Text(
-                  switch (_mode) {
-                    _StepMode.edit => 'Edit Inventory',
-                    _StepMode.confirm => 'Confirm Changes',
-                    _StepMode.removeConfirm => 'Remove Item',
-                  },
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  widget.equipmentName,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white.withValues(alpha: 0.7),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-
-                // Body — one view per step.
-                switch (_mode) {
-                  _StepMode.edit => _buildEditForm(),
-                  _StepMode.confirm => _buildConfirmView(),
-                  _StepMode.removeConfirm => _buildRemoveConfirmView(),
-                },
-
-                const SizedBox(height: 24),
-
-                // Action bar. In edit mode, a red "Remove Item" button
-                // sits on the bottom-left; the Cancel / primary button
-                // group is right-aligned via a Spacer. The other two
-                // modes keep the simpler right-aligned layout.
-                Row(
-                  children: [
-                    if (_mode == _StepMode.edit)
-                      ElevatedButton(
-                        onPressed: _onRemovePressed,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.redAccent,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Text('Remove Item'),
-                      ),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(
-                        'Cancel',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.6),
-                        ),
-                      ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Header — one label per step.
+                  Text(
+                    switch (_mode) {
+                      _StepMode.edit => 'Edit Inventory',
+                      _StepMode.confirm => 'Confirm Changes',
+                      _StepMode.removeConfirm => 'Remove Item',
+                    },
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
-                    const SizedBox(width: 8),
-                    if (_mode == _StepMode.edit)
-                      ElevatedButton(
-                        onPressed: _onSavePressed,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(
-                            0xFF0047BB,
-                          ), // Brand Blue
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.equipmentName,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white.withValues(alpha: 0.7),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Body — one view per step. Wrapped in a flexible
+                  // scroll container so the brand/category fields don't
+                  // overflow on shorter viewports.
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: switch (_mode) {
+                        _StepMode.edit => _buildEditForm(),
+                        _StepMode.confirm => _buildConfirmView(),
+                        _StepMode.removeConfirm => _buildRemoveConfirmView(),
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Action bar. In edit mode, a red "Remove Item" button
+                  // sits on the bottom-left; the Cancel / primary button
+                  // group is right-aligned via a Spacer. The other two
+                  // modes keep the simpler right-aligned layout.
+                  Row(
+                    children: [
+                      if (_mode == _StepMode.edit)
+                        ElevatedButton(
+                          onPressed: _onRemovePressed,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.redAccent,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
+                          child: const Text('Remove Item'),
                         ),
-                        child: const Text('Review'),
-                      )
-                    else if (_mode == _StepMode.confirm) ...[
+                      const Spacer(),
                       TextButton(
-                        onPressed: _onBackToEdit,
-                        child: const Text(
-                          'Back',
-                          style: TextStyle(color: Colors.white),
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.6),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: _onConfirmPressed,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                      if (_mode == _StepMode.edit)
+                        ElevatedButton(
+                          onPressed: _onSavePressed,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(
+                              0xFF0047BB,
+                            ), // Brand Blue
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('Review'),
+                        )
+                      else if (_mode == _StepMode.confirm) ...[
+                        TextButton(
+                          onPressed: _onBackToEdit,
+                          child: const Text(
+                            'Back',
+                            style: TextStyle(color: Colors.white),
                           ),
                         ),
-                        child: const Text('Save'),
-                      ),
-                    ] else ...[
-                      TextButton(
-                        onPressed: _onBackToEdit,
-                        child: const Text(
-                          'Back',
-                          style: TextStyle(color: Colors.white),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: _onConfirmPressed,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('Save'),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: _onRemoveConfirmed,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.redAccent,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                      ] else ...[
+                        TextButton(
+                          onPressed: _onBackToEdit,
+                          child: const Text(
+                            'Back',
+                            style: TextStyle(color: Colors.white),
                           ),
                         ),
-                        child: const Text('Remove'),
-                      ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: _onRemoveConfirmed,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.redAccent,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('Remove'),
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -388,9 +479,9 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
   }
 
   /// Edit-mode body: cover image preview with upload/paste controls,
-  /// quantity stepper, storage text field, and a destructive Remove
-  /// Item button at the bottom. Each editable field has a reset-to-
-  /// initial helper.
+  /// quantity stepper, storage / brand / category text fields, and a
+  /// destructive Remove Item button at the bottom. Each editable field
+  /// has a reset-to-initial helper.
   Widget _buildEditForm() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -506,6 +597,72 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
               vertical: 14,
             ),
           ),
+        ),
+        const SizedBox(height: 16),
+
+        // ── Brand label + reset + autocomplete ──
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Brand',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh, size: 18, color: Colors.white70),
+              onPressed: _resetBrand,
+              tooltip: 'Reset Brand',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _AutocompleteField(
+          controller: _brandCtrl,
+          hint: 'Brand name',
+          suggestions: _brandSuggestions,
+          onSelect: (v) {
+            _brandCtrl.text = v;
+            _brandCtrl.selection = TextSelection.collapsed(offset: v.length);
+            setState(() => _brandSuggestions = const []);
+          },
+        ),
+        const SizedBox(height: 16),
+
+        // ── Category label + reset + autocomplete ──
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Category',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh, size: 18, color: Colors.white70),
+              onPressed: _resetCategory,
+              tooltip: 'Reset Category',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _AutocompleteField(
+          controller: _categoryCtrl,
+          hint: 'Category',
+          suggestions: _categorySuggestions,
+          onSelect: (v) {
+            _categoryCtrl.text = v;
+            _categoryCtrl.selection = TextSelection.collapsed(offset: v.length);
+            setState(() => _categorySuggestions = const []);
+          },
         ),
       ],
     );
@@ -643,6 +800,8 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
     final int currentQty =
         int.tryParse(_qtyCtrl.text) ?? widget.initialQuantity;
     final String currentStorage = _storageCtrl.text.trim();
+    final String currentBrand = _brandCtrl.text.trim();
+    final String currentCategory = _categoryCtrl.text.trim();
 
     final List<Widget> changes = [];
 
@@ -664,6 +823,28 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
               ? '(none)'
               : widget.initialStorage,
           newValue: currentStorage.isEmpty ? '(none)' : currentStorage,
+        ),
+      );
+    }
+
+    if (currentBrand != widget.initialBrand) {
+      changes.add(
+        _DiffRow(
+          label: 'Brand',
+          oldValue: widget.initialBrand.isEmpty ? '(none)' : widget.initialBrand,
+          newValue: currentBrand.isEmpty ? '(none)' : currentBrand,
+        ),
+      );
+    }
+
+    if (currentCategory != widget.initialCategory) {
+      changes.add(
+        _DiffRow(
+          label: 'Category',
+          oldValue: widget.initialCategory.isEmpty
+              ? '(none)'
+              : widget.initialCategory,
+          newValue: currentCategory.isEmpty ? '(none)' : currentCategory,
         ),
       );
     }
@@ -843,6 +1024,74 @@ class _DiffRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Text field with a simple suggestion drop-down underneath. Used for
+/// the brand and category inputs so the admin can re-use existing
+/// taxonomy values without typos. Mirrors the autocomplete pattern in
+/// the inventory create dialog.
+class _AutocompleteField extends StatelessWidget {
+  final TextEditingController controller;
+  final String hint;
+  final List<String> suggestions;
+  final ValueChanged<String> onSelect;
+
+  const _AutocompleteField({
+    required this.controller,
+    required this.hint,
+    required this.suggestions,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: controller,
+          style: const TextStyle(color: Colors.black),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(color: Colors.black.withValues(alpha: 0.4)),
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+          ),
+        ),
+        if (suggestions.isNotEmpty)
+          Container(
+            constraints: const BoxConstraints(maxHeight: 150),
+            margin: const EdgeInsets.only(top: 4),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade900,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+            ),
+            child: ListView.builder(
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              itemCount: suggestions.length,
+              itemBuilder: (ctx, i) => ListTile(
+                dense: true,
+                title: Text(
+                  suggestions[i],
+                  style: const TextStyle(color: Colors.white),
+                ),
+                onTap: () => onSelect(suggestions[i]),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

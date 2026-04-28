@@ -19,6 +19,7 @@ import 'package:go_router/go_router.dart';
 import '../models/equipment_model.dart';
 import '../services/data_repository.dart';
 import '../widgets/admin_auth.dart';
+import '../widgets/scroll_to_top_fab.dart';
 import 'guide_creator_page.dart';
 
 class LearnEquipListPage extends StatefulWidget {
@@ -53,6 +54,9 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
   late List<Equipment> _filteredItems;
   late List<String> _allCategories;
   late List<String> _allBrands;
+
+  // ── Scroll ──────────────────────────────────────────────────────────
+  final ScrollController _scrollCtrl = ScrollController();
 
   @override
   void initState() {
@@ -90,6 +94,7 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
   void dispose() {
     DataRepository().overlayEpoch.removeListener(_onOverlayChanged);
     _searchController.dispose();
+    _scrollCtrl.dispose();
     super.dispose();
   }
 
@@ -213,6 +218,7 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
 
             // ── 3. Foreground content ──────────────────────────────
             CustomScrollView(
+              controller: _scrollCtrl,
               slivers: [
                 // Frosted pinned app bar.
                 SliverAppBar(
@@ -526,6 +532,9 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
                 ),
               ],
             ),
+
+            // Back-to-top button — appears once the user has scrolled.
+            ScrollToTopFab(controller: _scrollCtrl),
           ],
         ),
     );
