@@ -17,6 +17,7 @@ import 'package:image_picker/image_picker.dart';
 import '../services/avif_converter.dart' as avif;
 import '../services/clipboard_image_service.dart' as clipboard;
 import '../services/data_repository.dart';
+import '../widgets/smart_image.dart';
 import 'guide_creator_page.dart' show GuideType;
 
 // ══════════════════════════════════════════════════════════════════
@@ -402,7 +403,7 @@ class _InventoryCreatePageState extends State<_InventoryCreatePage> {
                                     // visible vertically even if it means
                                     // some horizontal empty space.
                                     Center(
-                                      child: Image.memory(
+                                      child: SmartImage.memory(
                                         _imageBytes!,
                                         fit: BoxFit.fitHeight,
                                       ),

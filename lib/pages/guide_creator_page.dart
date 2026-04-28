@@ -2114,7 +2114,7 @@ class _GuideCreatorPageState extends State<_GuideCreatorPage>
                       ),
                     )
                   : entry.bytes != null
-                  ? Image.memory(entry.bytes!, fit: BoxFit.cover)
+                  ? SmartImage.memory(entry.bytes!, fit: BoxFit.cover)
                   : entry.isAsset
                   ? SmartImage.network(
                       DataRepository().imageUrl(entry.assetPath!),

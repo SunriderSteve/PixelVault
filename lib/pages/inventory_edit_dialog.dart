@@ -18,6 +18,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // FilteringTextInputFormatter + Uint8List.
 import 'package:image_picker/image_picker.dart';
 
+import '../widgets/smart_image.dart';
+
 import '../services/clipboard_image_service.dart' as clipboard;
 
 /// Result returned by [showInventoryEditDialog] after the user confirms.
@@ -544,7 +546,7 @@ class _InventoryEditDialogState extends State<_InventoryEditDialog> {
                       // Fit-to-height so the full image is visible
                       // vertically, matching the create dialog.
                       Center(
-                        child: Image.memory(_imageBytes!,
+                        child: SmartImage.memory(_imageBytes!,
                             fit: BoxFit.fitHeight),
                       ),
                       Positioned(
