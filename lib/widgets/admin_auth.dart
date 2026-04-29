@@ -17,7 +17,7 @@ const String adminStorageKey = 'pv_admin_mode';
 ///
 /// This is a UI gate only — the source is visible in the shipped bundle.
 /// Real authorisation must be enforced server-side on the gist endpoint.
-const String adminPassword = 'admin123';
+const String adminPassword = 'PixelStudio#0301';
 
 /// App-wide admin state. Pages should listen to this notifier so that
 /// a login on any page propagates everywhere instantly.

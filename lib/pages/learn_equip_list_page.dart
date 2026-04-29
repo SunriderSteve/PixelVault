@@ -80,6 +80,12 @@ class _LearnEquipListPageState extends State<LearnEquipListPage> {
     // regardless of YAML load order.
     _allCategories = _allItems.map((e) => e.category).toSet().toList()..sort();
     _allBrands = _allItems.map((e) => e.brand).toSet().toList()..sort();
+
+    // Drop any active selections whose chip just disappeared (e.g. the
+    // last item in that category was removed). Without this the chip is
+    // gone but the filter silently keeps excluding everything.
+    _selectedCategories.retainAll(_allCategories);
+    _selectedBrands.retainAll(_allBrands);
   }
 
   /// Repository signalled an equipment change — refetch and re-apply

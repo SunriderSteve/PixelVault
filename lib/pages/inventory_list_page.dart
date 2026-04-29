@@ -68,8 +68,11 @@ class _InventoryListPageState extends State<InventoryListPage> {
   // ── Data ──────────────────────────────────────────────────────────────
   late final List<Equipment> _all; // Source list straight from the repo.
   late List<Equipment> _filtered; // Post-search/filter/sort view.
-  late final List<String> _allCategories;
-  late final List<String> _allBrands;
+  // Category / brand option lists for the filter panel. Recomputed on
+  // every overlay tick so newly-added equipment surfaces fresh chips
+  // and removed equipment drops them.
+  late List<String> _allCategories;
+  late List<String> _allBrands;
 
   // ── Scroll ────────────────────────────────────────────────────────────
   final ScrollController _scrollCtrl = ScrollController();
@@ -80,9 +83,6 @@ class _InventoryListPageState extends State<InventoryListPage> {
     final repo = DataRepository();
     _all = List.of(repo.getAllEquipment());
 
-    // Pre-compute the unique category / brand universes for the filter
-    // panel once — the inventory edit flow only mutates quantity and
-    // storage, so these sets never change for the life of this page.
     _allCategories = _all.map((e) => e.category).toSet().toList()..sort();
     _allBrands = _all.map((e) => e.brand).toSet().toList()..sort();
 
@@ -111,14 +111,26 @@ class _InventoryListPageState extends State<InventoryListPage> {
 
   /// Called when [DataRepository] signals that the overlay (edits) changed
   /// — e.g. another tab just pushed a quantity update. We refetch the full
-  /// equipment list so our view reflects the new truth, then re-apply the
-  /// current search/filter/sort.
+  /// equipment list so our view reflects the new truth, rebuild the
+  /// category / brand option lists, then re-apply the current
+  /// search/filter/sort.
   void _onOverlayChanged() {
     if (!mounted) return;
     final fresh = DataRepository().getAllEquipment();
     _all
       ..clear()
       ..addAll(fresh);
+
+    // Rebuild the filter universes so newly-added equipment shows up as
+    // selectable chips and removed values drop off.
+    _allCategories = _all.map((e) => e.category).toSet().toList()..sort();
+    _allBrands = _all.map((e) => e.brand).toSet().toList()..sort();
+
+    // Drop any active selections that no longer exist — otherwise the
+    // chip disappears but the filter silently keeps excluding everything.
+    _selectedCategories.retainAll(_allCategories);
+    _selectedBrands.retainAll(_allBrands);
+
     _applyFilters(); // already wraps its work in setState
   }
 
