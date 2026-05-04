@@ -1,8 +1,8 @@
 github:
-  owner: SunriderSteve
+  owner: PixelStudio0301
   repo: PixelVault-Data
   branch: main
-  access_token: bck_i9LuVTIWvPkvtkgBYT5OPQefyEr8hH0Lge59
+  access_token: bck_Kb0nE4IlSnjLcgZ9cEbI7VcyACGBOS23OS37
   caesar_shift: 99 # How many letters the access token is shifted by
   poll_seconds: 5 # optional, default to 5 if missing
   equipment_file: data/equipment.yaml
